@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Academic Cap / Mortarboard Crest -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M54,28 L78,39 L54,50 L30,39 Z" />
+    <!-- Cap Rim & Tassel -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M78,39 L78,54 L76,54 L76,40 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M74,54 A3,3 0 1,0 80,54 A3,3 0 1,0 74,54 Z" />
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M40,44.5 L40,55 C40,61 46,65 54,65 C62,65 68,61 68,55 L68,44.5 C64,48 59,50 54,50 C49,50 44,48 40,44.5 Z" />
+    <!-- Enterprise Pillars / Shield Emblem -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M34,68 L74,68 L71,76 L37,76 Z" />
+    <path
+        android:fillColor="#60A5FA"
+        android:pathData="M37,78 L71,78 C71,85 63,91 54,93 C45,91 37,85 37,78 Z" />
+</vector>

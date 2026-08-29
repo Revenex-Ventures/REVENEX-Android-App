@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for security and role assertion
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return request.auth.token;
+    }
+
+    function isPrincipal() {
+      return isAuthenticated() && (
+        getUserData().role == 'PRINCIPAL' ||
+        request.auth.token.email.matches('.*principal.*') ||
+        request.auth.token.email.matches('.*admin.*')
+      );
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && (
+        getUserData().role == 'TEACHER' ||
+        request.auth.token.email.matches('.*teacher.*') ||
+        request.auth.token.email.matches('.*faculty.*')
+      );
+    }
+
+    function isParent() {
+      return isAuthenticated() && (
+        getUserData().role == 'PARENT' ||
+        request.auth.token.email.matches('.*parent.*')
+      );
+    }
+
+    function isStudent() {
+      return isAuthenticated();
+    }
+
+    // Tenant Isolation: Match all documents under /schools/{schoolId}
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated();
+      allow write: if isPrincipal();
+
+      // Users Collection
+      match /users/{userId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal() || (isAuthenticated() && request.auth.uid == userId);
+      }
+
+      // Students Directory & Profiles
+      match /students/{studentId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal();
+      }
+
+      // Faculty / Teachers Directory
+      match /teachers/{teacherId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal();
+      }
+
+      // Attendance Records
+      match /attendance/{attendanceId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isTeacher() || isPrincipal();
+        allow delete: if isPrincipal();
+      }
+
+      // Fee Ledger & Payment Transactions
+      match /fees/{feeId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isPrincipal() || isParent();
+        allow delete: if isPrincipal();
+      }
+
+      // Leave Requests
+      match /leaves/{leaveId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isPrincipal();
+        allow delete: if isPrincipal();
+      }
+
+      // Homework & Assignments
+      match /assignments/{assignmentId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isTeacher() || isPrincipal();
+        allow delete: if isTeacher() || isPrincipal();
+      }
+
+      // Study Materials
+      match /study_materials/{materialId} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isTeacher() || isPrincipal();
+      }
+
+      // Examination Schedules & Results
+      match /exams/{examId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal() || isTeacher();
+      }
+
+      match /report_cards/{cardId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal() || isTeacher();
+      }
+
+      // Timetable
+      match /timetable/{slotId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal();
+      }
+
+      // School Notices & Circulars
+      match /notices/{noticeId} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isPrincipal();
+      }
+
+      // System & Role Notifications
+      match /notifications/{notificationId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAuthenticated();
+      }
+
+      // Transport Routes
+      match /transport/{routeId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal();
+      }
+
+      // Library Catalog
+      match /library/{bookId} {
+        allow read: if isAuthenticated();
+        allow write: if isPrincipal() || isTeacher();
+      }
+
+      // Inventory Assets
+      match /inventory/{assetId} {
+        allow read: if isPrincipal() || isTeacher();
+        allow write: if isPrincipal();
+      }
+    }
+  }
+}

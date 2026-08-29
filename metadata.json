@@ -1,0 +1,6 @@
+{
+  "name": "REVENEX School ERP",
+  "description": "Comprehensive School Enterprise Resource Planning system connecting Principals, Teachers, Students, and Parents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
