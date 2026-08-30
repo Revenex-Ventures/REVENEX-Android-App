@@ -54,7 +54,7 @@ fun PrincipalDashboardScreen(
   val totalFaculty = teachers.size
   val pendingLeaves = leaveRequests.filter { it.status == LeaveStatus.PENDING }
 
-  val totalFeeDues = feeRecords.sumOf { it.totalFee }.coerceAtLeast(1.0)
+  val totalFeeDues = feeRecords.sumOf { it.totalFee }.coerceAtLeast(1L)
   val totalCollected = feeRecords.sumOf { it.paidAmount }
   val totalPending = feeRecords.sumOf { it.pendingAmount }
 
@@ -287,11 +287,11 @@ fun PrincipalDashboardScreen(
               .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
           ) {
-            val collectionPercent = ((totalCollected / totalFeeDues) * 100).toInt()
+            val collectionPercent = ((totalCollected.toDouble() / totalFeeDues.toDouble()) * 100).toInt()
             StatCard(
               title = "Fees Realized",
-              value = "₹${(totalCollected / 1000).toInt()}k",
-              sublabel = "Target: ₹${(totalFeeDues / 1000).toInt()}k",
+              value = "₹${totalCollected / 100000L}k",
+              sublabel = "Target: ₹${totalFeeDues / 100000L}k",
               icon = Icons.Default.AccountBalanceWallet,
               iconTint = Color(0xFF15803D),
               iconBackground = Color(0xFFDCFCE7),
@@ -302,7 +302,7 @@ fun PrincipalDashboardScreen(
             )
             StatCard(
               title = "Pending Dues",
-              value = "₹${(totalPending / 1000).toInt()}k",
+              value = "₹${totalPending / 100000L}k",
               sublabel = "${feeRecords.count { it.status == FeeStatus.PENDING || it.status == FeeStatus.OVERDUE }} Students Pending",
               icon = Icons.Default.HourglassEmpty,
               iconTint = StatusErrorText,

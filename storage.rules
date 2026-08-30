@@ -1,15 +1,62 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // School Tenant Isolation: Path structure /schools/{schoolId}/{category}/{fileName}
-    match /schools/{schoolId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && request.resource.size < 10 * 1024 * 1024 // Limit 10MB
-                   && (request.resource.contentType.matches('application/pdf')
-                       || request.resource.contentType.matches('image/.*')
-                       || request.resource.contentType.matches('application/msword')
-                       || request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*'));
+
+    // =========================================================================
+    // REVENEX ERP — Cloud Storage Rules (Phase 0 rewrite)
+    // Default deny. Paths are school-scoped (/schools/{schoolId}/...).
+    // Reads are tied to the caller's school claim + role; student documents
+    // are further restricted to the student, their linked parent, and staff.
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null;
     }
+    function roleIs(role) {
+      return isSignedIn() && request.auth.token.role == role;
+    }
+    function isSchoolAdmin()  { return roleIs('PRINCIPAL') || roleIs('ADMIN'); }
+    function isTeacher()      { return roleIs('TEACHER') || roleIs('CLASS_TEACHER'); }
+    function isStaff() {
+      return isSignedIn() && (roleIs('PRINCIPAL') || roleIs('ADMIN') || roleIs('ACCOUNTANT')
+        || roleIs('TEACHER') || roleIs('CLASS_TEACHER') || roleIs('TRANSPORT_MANAGER')
+        || roleIs('LIBRARIAN'));
+    }
+    function isLinked(studentUid) {
+      return roleIs('PARENT')
+        && request.auth.token.studentIds != null
+        && studentUid in request.auth.token.studentIds;
+    }
+    function sameSchool(schoolId) {
+      return isSignedIn() && request.auth.token.schoolId == schoolId;
+    }
+
+    // Upload validation: 10 MB cap + safe MIME allowlist.
+    function isValidDocument() {
+      return request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('application/pdf')
+            || request.resource.contentType.matches('image/(jpeg|png|jpg|webp|heic)')
+            || request.resource.contentType.matches('application/msword')
+            || request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*'));
+    }
+
+    // ---- Student documents (Aadhaar, TC, birth certificate, ID photos) ------
+    match /schools/{schoolId}/students/{studentUid}/{allPaths=**} {
+      allow read: if sameSchool(schoolId)
+                    && (isStaff() || request.auth.uid == studentUid || isLinked(studentUid));
+      allow write: if sameSchool(schoolId) && isStaff() && isValidDocument();
+      allow delete: if sameSchool(schoolId) && isSchoolAdmin();
+    }
+
+    // ---- Everything else under a school (materials, assignments, exports) ----
+    match /schools/{schoolId}/{allPaths=**} {
+      allow read: if sameSchool(schoolId);
+      allow write: if sameSchool(schoolId)
+                    && (isTeacher() || isSchoolAdmin())
+                    && isValidDocument();
+      allow delete: if sameSchool(schoolId) && (isTeacher() || isSchoolAdmin());
+    }
+
+    // ---- Everything outside /schools/{schoolId} -> DEFAULT DENY --------------
   }
 }

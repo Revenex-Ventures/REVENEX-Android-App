@@ -235,38 +235,15 @@ fun AuthScreen(
                   return@ProductionModeLoginContent
                 }
                 isLoggingIn = true
-                val teachers = repository.teachers.value
-                val matchedTeacher = teachers.firstOrNull { t ->
-                  t.employeeId.equals(teacherEmployeeId.trim(), ignoreCase = true)
-                }
-                if (matchedTeacher != null) {
-                  val normalizedDob = teacherDob.trim().replace("-", "/")
-                  val dobPattern = Regex("""^\d{2}/\d{2}/\d{4}$""")
-                  if (!dobPattern.matches(normalizedDob)) {
-                    isLoggingIn = false
-                    errorMessage = "Date of Birth must be in DD/MM/YYYY format."
-                    return@ProductionModeLoginContent
-                  }
-                  if (matchedTeacher.dob != normalizedDob) {
-                    isLoggingIn = false
-                    errorMessage = "Invalid Employee ID or Date of Birth."
-                    return@ProductionModeLoginContent
-                  }
-                  if (matchedTeacher.status != "ACTIVE") {
-                    isLoggingIn = false
-                    errorMessage = "This teacher account is inactive. Please contact school administrator."
-                    return@ProductionModeLoginContent
-                  }
-                  repository.loginCustom(
-                    email = matchedTeacher.email,
-                    role = UserRole.TEACHER,
-                    name = matchedTeacher.name
-                  )
+                val normalizedDob = teacherDob.trim().replace(Regex("[-/\\s]"), "")
+                val email = "${teacherEmployeeId.trim().lowercase()}@revenex.edu.in"
+                repository.loginWithFirebase(email, normalizedDob) { success, err ->
                   isLoggingIn = false
-                  onLoginSuccess()
-                } else {
-                  isLoggingIn = false
-                  errorMessage = "No faculty member found with Employee ID: ${teacherEmployeeId.trim()}"
+                  if (success) {
+                    onLoginSuccess()
+                  } else {
+                    errorMessage = err ?: "Login failed. Verify Employee ID and DOB."
+                  }
                 }
               },
               onStudentLogin = {
@@ -275,40 +252,15 @@ fun AuthScreen(
                   return@ProductionModeLoginContent
                 }
                 isLoggingIn = true
-                val students = repository.students.value
-                val matchedStudent = students.firstOrNull { s ->
-                  s.admissionNumber.equals(studentAdmissionNo.trim(), ignoreCase = true)
-                }
-                if (matchedStudent != null) {
-                  val normalizedDob = studentDob.trim().replace("-", "/")
-                  val dobPattern = Regex("""^\d{2}/\d{2}/\d{4}$""")
-                  if (!dobPattern.matches(normalizedDob)) {
-                    isLoggingIn = false
-                    errorMessage = "Date of Birth must be in DD/MM/YYYY format."
-                    return@ProductionModeLoginContent
-                  }
-                  if (matchedStudent.dob != normalizedDob) {
-                    isLoggingIn = false
-                    errorMessage = "Invalid Student ID or Date of Birth."
-                    return@ProductionModeLoginContent
-                  }
-                  if (matchedStudent.status != "ACTIVE") {
-                    isLoggingIn = false
-                    errorMessage = "This student account is not active. Contact school administration."
-                    return@ProductionModeLoginContent
-                  }
-                  // Set the selected student and login as STUDENT role
-                  repository.setSelectedStudentId(matchedStudent.id)
-                  repository.loginCustom(
-                    email = matchedStudent.parentEmail.ifBlank { "student@revenex.edu.in" },
-                    role = UserRole.STUDENT,
-                    name = matchedStudent.name
-                  )
+                val normalizedDob = studentDob.trim().replace(Regex("[-/\\s]"), "")
+                val email = "${studentAdmissionNo.trim().lowercase()}@revenex.edu.in"
+                repository.loginWithFirebase(email, normalizedDob) { success, err ->
                   isLoggingIn = false
-                  onLoginSuccess()
-                } else {
-                  isLoggingIn = false
-                  errorMessage = "No student found with Admission Number: ${studentAdmissionNo.trim()}"
+                  if (success) {
+                    onLoginSuccess()
+                  } else {
+                    errorMessage = err ?: "Login failed. Verify Admission Number and DOB."
+                  }
                 }
               }
             )

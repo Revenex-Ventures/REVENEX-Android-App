@@ -33,7 +33,7 @@ import com.example.ui.theme.*
 @Composable
 fun FeeManagementScreen(
   repository: ErpDataRepository,
-  onShowPaymentModal: (studentName: String, amountDue: Double) -> Unit
+  onShowPaymentModal: (studentName: String, amountDue: Long) -> Unit
 ) {
   val currentUser by repository.currentUser.collectAsState()
   val selectedStudentId by repository.selectedStudentId.collectAsState()
@@ -115,15 +115,15 @@ fun FeeManagementScreen(
             ) {
               Column {
                 Text("TOTAL REVENUE", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                Text("₹${(totalDemanded / 1000).toInt()}k", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("₹${(totalDemanded / 100000L)}k", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
               }
               Column {
                 Text("COLLECTED (PAID)", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                Text("₹${(totalCollected / 1000).toInt()}k", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = StatusSuccessContainer)
+                Text("₹${(totalCollected / 100000L)}k", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = StatusSuccessContainer)
               }
               Column {
                 Text("PENDING OUTSTANDING", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                Text("₹${(totalPending / 1000).toInt()}k", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = StatusErrorContainer)
+                Text("₹${(totalPending / 100000L)}k", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = StatusErrorContainer)
               }
             }
           }
@@ -210,19 +210,19 @@ fun FeeManagementScreen(
             ) {
               Column {
                 Text("Total Fee", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("₹${record.totalFee.toInt()}", fontWeight = FontWeight.SemiBold)
+                Text("₹${record.totalFee / 100}", fontWeight = FontWeight.SemiBold)
               }
               Column {
                 Text("Paid Amount", style = MaterialTheme.typography.labelSmall, color = StatusSuccessText)
-                Text("₹${record.paidAmount.toInt()}", color = StatusSuccessText, fontWeight = FontWeight.Bold)
+                Text("₹${record.paidAmount / 100}", color = StatusSuccessText, fontWeight = FontWeight.Bold)
               }
               Column {
                 Text("Pending Balance", style = MaterialTheme.typography.labelSmall, color = StatusErrorText)
-                Text("₹${record.pendingAmount.toInt()}", color = StatusErrorText, fontWeight = FontWeight.Bold)
+                Text("₹${record.pendingAmount / 100}", color = StatusErrorText, fontWeight = FontWeight.Bold)
               }
             }
 
-            if (record.pendingAmount > 0) {
+            if (record.pendingAmount > 0L) {
               Spacer(modifier = Modifier.height(14.dp))
               Button(
                 onClick = { onShowPaymentModal(record.studentName, record.pendingAmount) },
@@ -233,7 +233,7 @@ fun FeeManagementScreen(
               ) {
                 Icon(Icons.Default.Payment, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Collect / Pay Online (₹${record.pendingAmount.toInt()})")
+                Text("Collect / Pay Online (₹${record.pendingAmount / 100})")
               }
             }
           }

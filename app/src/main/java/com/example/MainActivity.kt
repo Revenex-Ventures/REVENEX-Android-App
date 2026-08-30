@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
   companion object {
     var activeStudentId by mutableStateOf<String?>(null)
-    var activeAmount by mutableStateOf(0.0)
+    var activeAmount by mutableStateOf(0L)
     var isPaymentProcessing by mutableStateOf(false)
     var isPaymentCompleted by mutableStateOf(false)
     var razorpayPaymentId by mutableStateOf("")
@@ -83,14 +83,14 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
             isPaymentCompleted = false
             razorpayPaymentId = ""
             activeStudentId = null
-            activeAmount = 0.0
+            activeAmount = 0L
           }
         )
       }
     }
   }
 
-  private fun startRazorpayPayment(studentId: String, amount: Double) {
+  private fun startRazorpayPayment(studentId: String, amount: Long) {
     activeStudentId = studentId
     activeAmount = amount
     isPaymentProcessing = true
@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
       android.widget.Toast.makeText(this, "Razorpay Error: Actual Razorpay TEST Key ID is not configured in the environment.", android.widget.Toast.LENGTH_LONG).show()
       isPaymentProcessing = false
       activeStudentId = null
-      activeAmount = 0.0
+      activeAmount = 0L
       return
     }
     co.setKeyID(razorpayKey.trim())
@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
       options.put("image", "https://s3.amazonaws.com/rzp-mobile/images/rzp.png")
       options.put("theme.color", "#78350F") // Revenex Primary HSL Gold/Brown tone
       options.put("currency", "INR")
-      options.put("amount", (amount * 100).toInt()) // paise
+      options.put("amount", amount) // paise
 
       val prefill = JSONObject()
       prefill.put("email", "parent@revenex.com")
@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
       android.widget.Toast.makeText(this, "Razorpay error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
       isPaymentProcessing = false
       activeStudentId = null
-      activeAmount = 0.0
+      activeAmount = 0L
     }
   }
 
@@ -163,7 +163,7 @@ fun RevenexErpApp(
   isProcessing: Boolean,
   paymentCompleted: Boolean,
   razorpayPaymentId: String,
-  onStartPayment: (studentId: String, amount: Double) -> Unit,
+  onStartPayment: (studentId: String, amount: Long) -> Unit,
   onResetPayment: () -> Unit
 ) {
   val repository = remember { ErpDataRepository.getInstance() }
@@ -185,7 +185,7 @@ fun RevenexErpApp(
 
   var showFeePaymentModal by remember { mutableStateOf(false) }
   var paymentModalStudentName by remember { mutableStateOf("") }
-  var paymentModalAmount by remember { mutableStateOf(0.0) }
+  var paymentModalAmount by remember { mutableStateOf(0L) }
 
   val bottomNavItems = remember(currentUser.role) {
     NavConfig.getBottomNavItems(currentUser.role)

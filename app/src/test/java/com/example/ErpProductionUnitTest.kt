@@ -43,7 +43,7 @@ class ErpProductionUnitTest {
       admissionDate = "01 Jun 2026",
       attendancePercent = 95.0,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 10000.0,
+      feePendingAmount = 1000000L,
       schoolId = "revenex_school_001"
     )
 
@@ -97,7 +97,7 @@ class ErpProductionUnitTest {
     val recordBefore = initialFees.firstOrNull { it.studentId == studentId }
     assertNotNull(recordBefore)
 
-    val paymentAmount = 5000.0
+    val paymentAmount = 500000L
     val initialPaid = recordBefore!!.paidAmount
 
     val txn = dataSource.processFeePayment(studentId, paymentAmount, "UPI", "Term Fee")
@@ -110,7 +110,7 @@ class ErpProductionUnitTest {
     val recordAfter = feeRecordsAfter.firstOrNull { it.studentId == studentId }
 
     assertNotNull(recordAfter)
-    assertEquals(initialPaid + paymentAmount, recordAfter!!.paidAmount, 0.01)
+    assertEquals(initialPaid + paymentAmount, recordAfter!!.paidAmount)
   }
 
   @Test

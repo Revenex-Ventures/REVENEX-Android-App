@@ -32,7 +32,7 @@ fun StudentDetailScreen(
   studentId: String,
   repository: ErpDataRepository,
   onBack: () -> Unit,
-  onPayFee: (studentName: String, amountDue: Double) -> Unit
+  onPayFee: (studentName: String, amountDue: Long) -> Unit
 ) {
   val students by repository.students.collectAsState()
   val feeRecords by repository.feeRecords.collectAsState()
@@ -520,17 +520,17 @@ fun StudentDetailScreen(
                   horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                   Text("Paid Till Date", color = StatusSuccessText, fontWeight = FontWeight.SemiBold)
-                  Text("₹${feeRecord?.paidAmount?.toInt() ?: 50000}", color = StatusSuccessText, fontWeight = FontWeight.Bold)
+                  Text("₹${(feeRecord?.paidAmount ?: 5000000L) / 100}", color = StatusSuccessText, fontWeight = FontWeight.Bold)
                 }
                 Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                   Text("Pending Due Balance", color = StatusErrorText, fontWeight = FontWeight.SemiBold)
-                  Text("₹${feeRecord?.pendingAmount?.toInt() ?: student.feePendingAmount.toInt()}", color = StatusErrorText, fontWeight = FontWeight.Bold)
+                  Text("₹${(feeRecord?.pendingAmount ?: student.feePendingAmount) / 100}", color = StatusErrorText, fontWeight = FontWeight.Bold)
                 }
 
-                if (student.feePendingAmount > 0) {
+                if (student.feePendingAmount > 0L) {
                   Spacer(modifier = Modifier.height(16.dp))
                   Button(
                     onClick = { onPayFee(student.name, student.feePendingAmount) },
@@ -539,7 +539,7 @@ fun StudentDetailScreen(
                   ) {
                     Icon(Icons.Default.Payment, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Pay Outstanding Dues (₹${student.feePendingAmount.toInt()})")
+                    Text("Pay Outstanding Dues (₹${student.feePendingAmount / 100})")
                   }
                 }
               }

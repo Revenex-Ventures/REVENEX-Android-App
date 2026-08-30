@@ -125,13 +125,13 @@ class LocalDemoDataSource : ErpDataSource {
       studentName = student.name,
       classGrade = student.classGrade,
       division = student.division,
-      tuitionFee = 45000.0,
-      examFee = 3500.0,
-      transportFee = 12000.0,
-      labLibraryFee = 4500.0,
-      discountScholarship = 0.0,
-      totalFee = 65000.0,
-      paidAmount = (65000.0 - student.feePendingAmount).coerceAtLeast(0.0),
+      tuitionFee = 4500000L,
+      examFee = 350000L,
+      transportFee = 1200000L,
+      labLibraryFee = 450000L,
+      discountScholarship = 0L,
+      totalFee = 6500000L,
+      paidAmount = (6500000L - student.feePendingAmount).coerceAtLeast(0L),
       status = student.feeStatus,
       dueDate = "15 Sep 2026"
     )
@@ -241,7 +241,7 @@ class LocalDemoDataSource : ErpDataSource {
 
   override suspend fun processFeePayment(
     studentId: String,
-    amountPaid: Double,
+    amountPaid: Long,
     paymentMethod: String,
     feeHead: String,
     razorpayPaymentId: String?,
@@ -282,15 +282,15 @@ class LocalDemoDataSource : ErpDataSource {
       list.map { st ->
         if (st.id == studentId) {
           val currentPending = st.feePendingAmount - correctAmount
-          val newPending = currentPending.coerceAtLeast(0.0)
-          val newStatus = if (newPending == 0.0) FeeStatus.PAID else FeeStatus.PARTIAL
+          val newPending = currentPending.coerceAtLeast(0L)
+          val newStatus = if (newPending == 0L) FeeStatus.PAID else FeeStatus.PARTIAL
           st.copy(feePendingAmount = newPending, feeStatus = newStatus)
         } else st
       }
     }
 
     addNotification(
-      title = "Fee Payment Successful (₹${amountPaid.toInt()})",
+      title = "Fee Payment Successful (₹${amountPaid / 100})",
       message = "Receipt #${txn.receiptNo} generated via ${txn.method}. Account updated.",
       category = NotificationCategory.FEES
     )
@@ -542,6 +542,16 @@ class LocalDemoDataSource : ErpDataSource {
   }
 
   override fun getInventoryFlow(): Flow<List<InventoryAsset>> = _inventory.asStateFlow()
+
+  override suspend fun publishReportCard(studentId: String, term: String, published: Boolean) {
+    _reportCards.update { list ->
+      list.map {
+        if (it.studentId == studentId && it.term == term) {
+          it.copy(published = published)
+        } else it
+      }
+    }
+  }
 
   private fun getCurrentFormattedDate(): String {
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())

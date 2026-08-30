@@ -589,14 +589,13 @@ class FirebaseDataSource(
 
   override suspend fun processFeePayment(
     studentId: String,
-    amountPaid: Double,
+    amountPaid: Long,
     paymentMethod: String,
     feeHead: String,
     razorpayPaymentId: String?,
     razorpayOrderId: String?,
     razorpaySignature: String?
   ): FeePaymentTransaction = withContext(Dispatchers.IO) {
-    // Security check: Never trust client-provided payment amounts
     val pending = _feeRecords.value.firstOrNull { it.studentId == studentId }?.pendingAmount ?: amountPaid
     val correctAmount = minOf(amountPaid, pending)
     val finalTxnId = razorpayPaymentId ?: "TXN-REV-${(100000..999999).random()}"
@@ -634,8 +633,8 @@ class FirebaseDataSource(
       list.map { st ->
         if (st.id == studentId) {
           val currentPending = st.feePendingAmount - correctAmount
-          val newPending = currentPending.coerceAtLeast(0.0)
-          val newStatus = if (newPending == 0.0) FeeStatus.PAID else FeeStatus.PARTIAL
+          val newPending = currentPending.coerceAtLeast(0L)
+          val newStatus = if (newPending == 0L) FeeStatus.PAID else FeeStatus.PARTIAL
           val updated = st.copy(feePendingAmount = newPending, feeStatus = newStatus)
           getSchoolDoc()?.collection("students")?.document(st.id)?.update(
             mapOf("feePendingAmount" to newPending, "feeStatus" to newStatus.name)
@@ -1045,6 +1044,20 @@ class FirebaseDataSource(
 
   override fun getInventoryFlow(): Flow<List<InventoryAsset>> = _inventory.asStateFlow()
 
+  override suspend fun publishReportCard(studentId: String, term: String, published: Boolean) {
+    withContext(Dispatchers.IO) {
+      _reportCards.update { list ->
+        list.map {
+          if (it.studentId == studentId && it.term == term) {
+            val updated = it.copy(published = published)
+            getSchoolDoc()?.collection("reportCards")?.document(it.id)?.update("published", published)
+            updated
+          } else it
+        }
+      }
+    }
+  }
+
   private fun getCurrentFormattedDate(): String {
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     return sdf.format(Date())
@@ -1096,7 +1109,7 @@ class FirebaseDataSource(
         admissionDate = doc.getString("admissionDate") ?: "10 Jun 2022",
         attendancePercent = doc.getDouble("attendancePercent") ?: 95.0,
         feeStatus = try { FeeStatus.valueOf(doc.getString("feeStatus") ?: "PAID") } catch (e: Exception) { FeeStatus.PAID },
-        feePendingAmount = doc.getDouble("feePendingAmount") ?: 0.0,
+        feePendingAmount = doc.getLong("feePendingAmount") ?: 0L,
         rank = (doc.getLong("rank") ?: 1L).toInt(),
         gpa = doc.getDouble("gpa") ?: 9.0,
         avatarColorHex = doc.getLong("avatarColorHex") ?: 0xFF2563EB
@@ -1209,7 +1222,7 @@ class FirebaseDataSource(
         FeePaymentTransaction(
           transactionId = map["transactionId"] as? String ?: "TXN",
           receiptNo = map["receiptNo"] as? String ?: "REC",
-          amount = (map["amount"] as? Number)?.toDouble() ?: 0.0,
+          amount = (map["amount"] as? Number)?.toLong() ?: 0L,
           date = map["date"] as? String ?: "",
           method = map["method"] as? String ?: "UPI",
           status = map["status"] as? String ?: "SUCCESS",
@@ -1222,13 +1235,13 @@ class FirebaseDataSource(
         studentName = doc.getString("studentName") ?: "",
         classGrade = doc.getString("classGrade") ?: "10",
         division = doc.getString("division") ?: "A",
-        tuitionFee = doc.getDouble("tuitionFee") ?: 45000.0,
-        examFee = doc.getDouble("examFee") ?: 3500.0,
-        transportFee = doc.getDouble("transportFee") ?: 12000.0,
-        labLibraryFee = doc.getDouble("labLibraryFee") ?: 4500.0,
-        discountScholarship = doc.getDouble("discountScholarship") ?: 0.0,
-        totalFee = doc.getDouble("totalFee") ?: 65000.0,
-        paidAmount = doc.getDouble("paidAmount") ?: 0.0,
+        tuitionFee = doc.getLong("tuitionFee") ?: 4500000L,
+        examFee = doc.getLong("examFee") ?: 350000L,
+        transportFee = doc.getLong("transportFee") ?: 1200000L,
+        labLibraryFee = doc.getLong("labLibraryFee") ?: 450000L,
+        discountScholarship = doc.getLong("discountScholarship") ?: 0L,
+        totalFee = doc.getLong("totalFee") ?: 6500000L,
+        paidAmount = doc.getLong("paidAmount") ?: 0L,
         status = try { FeeStatus.valueOf(doc.getString("status") ?: "PENDING") } catch (e: Exception) { FeeStatus.PENDING },
         dueDate = doc.getString("dueDate") ?: "15 Sep 2026",
         lastPaymentDate = doc.getString("lastPaymentDate") ?: "",
@@ -1481,7 +1494,7 @@ class FirebaseDataSource(
         stops = (doc.get("stops") as? List<String>) ?: emptyList(),
         pickupStartTime = doc.getString("pickupStartTime") ?: "07:00 AM",
         dropStartTime = doc.getString("dropStartTime") ?: "03:30 PM",
-        monthlyFare = doc.getDouble("monthlyFare") ?: 2500.0
+        monthlyFare = doc.getLong("monthlyFare") ?: 250000L
       )
     } catch (e: Exception) {
       null
@@ -1509,7 +1522,7 @@ class FirebaseDataSource(
         quantity = (doc.getLong("quantity") ?: 1L).toInt(),
         condition = doc.getString("condition") ?: "Operational",
         purchaseDate = doc.getString("purchaseDate") ?: "2024",
-        estimatedValue = doc.getDouble("estimatedValue") ?: 50000.0
+        estimatedValue = doc.getLong("estimatedValue") ?: 5000000L
       )
     } catch (e: Exception) {
       null
@@ -1677,7 +1690,9 @@ class FirebaseDataSource(
     "totalStudents" to rc.totalStudents,
     "principalRemark" to rc.principalRemark,
     "issueDate" to rc.issueDate,
-    "schoolId" to rc.schoolId
+    "schoolId" to rc.schoolId,
+    "sessionId" to rc.sessionId,
+    "published" to rc.published
   )
  
   @Suppress("UNCHECKED_CAST")
@@ -1710,7 +1725,9 @@ class FirebaseDataSource(
         totalStudents = (doc.getLong("totalStudents") ?: 40L).toInt(),
         principalRemark = doc.getString("principalRemark") ?: "Excellent performance.",
         issueDate = doc.getString("issueDate") ?: "",
-        schoolId = doc.getString("schoolId") ?: "revenex_school_001"
+        schoolId = doc.getString("schoolId") ?: "revenex_school_001",
+        sessionId = doc.getString("sessionId") ?: "session_2026_2027",
+        published = doc.getBoolean("published") ?: false
       )
     } catch (e: Exception) {
       null

@@ -90,7 +90,7 @@ class ExampleRobolectricTest {
   @Test
   fun `test fee payment processing and balance reduction`() {
     val student = repository.students.value.first()
-    val paymentAmount = 5000.0
+    val paymentAmount = 500000L
 
     repository.processFeePayment(
       studentId = student.id,

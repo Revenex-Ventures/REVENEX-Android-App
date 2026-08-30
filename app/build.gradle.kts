@@ -69,6 +69,9 @@ secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
+  // Unused empty env keys would otherwise generate `String X = ;` and break the Java build.
+  ignoreList.add("CLOUDFLARE_WORKER_URL")
+  ignoreList.add("CLOUDFLARE_R2_BUCKET_URL")
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }

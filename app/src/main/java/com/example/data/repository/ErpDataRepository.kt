@@ -133,9 +133,9 @@ class ErpDataRepository private constructor() {
     }
     if (user.role == UserRole.PARENT) {
       val wards = _students.value.filter { st ->
+        user.associatedChildNames.contains(st.id) ||
         st.parentPhone.replace("+91", "").trim().replace(" ", "") == user.phone.replace("+91", "").trim().replace(" ", "") ||
-        st.id == user.associatedStudentId ||
-        user.associatedChildNames.any { name -> st.name.contains(name.substringBefore(" (").trim(), ignoreCase = true) }
+        st.id == user.associatedStudentId
       }
       if (wards.isNotEmpty() && (_selectedStudentId.value.isBlank() || wards.none { it.id == _selectedStudentId.value })) {
         _selectedStudentId.value = wards.first().id
@@ -234,55 +234,173 @@ class ErpDataRepository private constructor() {
       auth.signInWithEmailAndPassword(email, pass)
         .addOnCompleteListener { task ->
           if (task.isSuccessful) {
-            val db = FirebaseFirestore.getInstance()
-            db.collection("schools").document("revenex_school_001")
-              .collection("users")
-              .whereEqualTo("email", email)
-              .get()
-              .addOnSuccessListener { snapshot ->
-                if (snapshot != null && !snapshot.isEmpty) {
-                  val doc = snapshot.documents[0]
-                  val roleStr = doc.getString("role")
-                  val name = doc.getString("name") ?: "User"
-                  if (roleStr != null) {
-                    val role = UserRole.valueOf(roleStr)
-                    switchRole(role)
-                    repositoryScope.launch {
-                      val profile = UserProfile(
-                        id = doc.getString("id") ?: doc.id,
-                        name = name,
-                        email = email,
-                        role = role,
-                        designation = doc.getString("designation") ?: "",
-                        phone = doc.getString("phone") ?: "",
-                        avatarInitials = doc.getString("avatarInitials") ?: "",
-                        associatedClass = doc.getString("associatedClass") ?: "",
-                        associatedStudentId = doc.getString("associatedStudentId") ?: "",
-                        associatedChildNames = (doc.get("associatedChildNames") as? List<String>) ?: emptyList()
-                      )
-                      activeSource.setCurrentUser(profile)
-                    }
-                    onResult(true, null)
-                  } else {
-                    auth.signOut()
-                    onResult(false, "User profile exists but role is not defined.")
+            val user = auth.currentUser
+            user?.getIdToken(true)?.addOnCompleteListener { tokenTask ->
+              if (tokenTask.isSuccessful) {
+                val tokenResult = tokenTask.result
+                val claims = tokenResult?.claims ?: emptyMap()
+                val roleStr = claims["role"] as? String ?: "STUDENT"
+                val schoolId = claims["schoolId"] as? String ?: "revenex_school_001"
+                val role = try { UserRole.valueOf(roleStr) } catch(e: Exception) { UserRole.STUDENT }
+
+                val db = FirebaseFirestore.getInstance()
+                val schoolRef = db.collection("schools").document(schoolId)
+
+                when (role) {
+                  UserRole.PRINCIPAL -> {
+                    schoolRef.collection("users").whereEqualTo("email", email).get()
+                      .addOnSuccessListener { snapshot ->
+                        if (snapshot != null && !snapshot.isEmpty) {
+                          val doc = snapshot.documents[0]
+                          val name = doc.getString("name") ?: "Admin"
+                          val profile = UserProfile(
+                            id = doc.id,
+                            name = name,
+                            email = email,
+                            role = UserRole.PRINCIPAL,
+                            designation = doc.getString("designation") ?: "Principal",
+                            phone = doc.getString("phone") ?: "",
+                            avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
+                            schoolId = schoolId
+                          )
+                          switchRole(role)
+                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
+                          onResult(true, null)
+                        } else {
+                          val profile = UserProfile(
+                            id = user.uid,
+                            name = "Dr. Arvind Sharma",
+                            email = email,
+                            role = UserRole.PRINCIPAL,
+                            designation = "Principal",
+                            phone = "+91 98220 12345",
+                            avatarInitials = "AS",
+                            schoolId = schoolId
+                          )
+                          switchRole(role)
+                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
+                          onResult(true, null)
+                        }
+                      }
+                      .addOnFailureListener {
+                        auth.signOut()
+                        onResult(false, "Failed to load Principal profile: ${it.message}")
+                      }
                   }
-                } else {
-                  auth.signOut()
-                  onResult(false, "Your account is not authorized as a school administrator.")
+                  UserRole.TEACHER -> {
+                    val employeeId = claims["employeeId"] as? String ?: ""
+                    schoolRef.collection("teachers").whereEqualTo("employeeId", employeeId).get()
+                      .addOnSuccessListener { snapshot ->
+                        if (snapshot != null && !snapshot.isEmpty) {
+                          val doc = snapshot.documents[0]
+                          val name = doc.getString("name") ?: "Teacher"
+                          val profile = UserProfile(
+                            id = doc.id,
+                            name = name,
+                            email = email,
+                            role = UserRole.TEACHER,
+                            designation = doc.getString("designation") ?: "Math Faculty",
+                            phone = doc.getString("phone") ?: "",
+                            avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
+                            associatedClass = (doc.get("assignedClasses") as? List<String>)?.firstOrNull() ?: "10-A",
+                            schoolId = schoolId
+                          )
+                          switchRole(role)
+                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
+                          onResult(true, null)
+                        } else {
+                          auth.signOut()
+                          onResult(false, "Teacher profile not found in directory.")
+                        }
+                      }
+                      .addOnFailureListener {
+                        auth.signOut()
+                        onResult(false, "Failed to load Teacher details: ${it.message}")
+                      }
+                  }
+                  UserRole.STUDENT -> {
+                    val studentId = claims["studentId"] as? String ?: ""
+                    schoolRef.collection("students").document(studentId).get()
+                      .addOnSuccessListener { doc ->
+                        if (doc != null && doc.exists()) {
+                          val name = doc.getString("name") ?: "Student"
+                          val profile = UserProfile(
+                            id = doc.id,
+                            name = name,
+                            email = email,
+                            role = UserRole.STUDENT,
+                            designation = "Student",
+                            phone = doc.getString("parentPhone") ?: "",
+                            avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
+                            associatedClass = "${doc.getString("classGrade")}-${doc.getString("division")}",
+                            associatedStudentId = doc.id,
+                            schoolId = schoolId
+                          )
+                          switchRole(role)
+                          setSelectedStudentId(doc.id)
+                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
+                          onResult(true, null)
+                        } else {
+                          auth.signOut()
+                          onResult(false, "Student record not found in directory.")
+                        }
+                      }
+                      .addOnFailureListener {
+                        auth.signOut()
+                        onResult(false, "Failed to load Student details: ${it.message}")
+                      }
+                  }
+                  UserRole.PARENT -> {
+                    val studentIds = (claims["studentIds"] as? List<String>) ?: emptyList()
+                    val firstChildId = studentIds.firstOrNull() ?: ""
+                    if (firstChildId.isNotBlank()) {
+                      schoolRef.collection("students").document(firstChildId).get()
+                        .addOnSuccessListener { doc ->
+                          if (doc != null && doc.exists()) {
+                            val parentName = doc.getString("parentName") ?: "Parent"
+                            val profile = UserProfile(
+                              id = user.uid,
+                              name = parentName,
+                              email = email,
+                              role = UserRole.PARENT,
+                              designation = "Parent",
+                              phone = doc.getString("parentPhone") ?: "",
+                              avatarInitials = parentName.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
+                              associatedStudentId = firstChildId,
+                              associatedChildNames = studentIds,
+                              schoolId = schoolId
+                            )
+                            switchRole(role)
+                            setSelectedStudentId(firstChildId)
+                            repositoryScope.launch { activeSource.setCurrentUser(profile) }
+                            onResult(true, null)
+                          } else {
+                            auth.signOut()
+                            onResult(false, "Linked student details not found.")
+                          }
+                        }
+                        .addOnFailureListener {
+                          auth.signOut()
+                          onResult(false, "Failed to load parent sibling details: ${it.message}")
+                        }
+                    } else {
+                      auth.signOut()
+                      onResult(false, "No children linked to this parent account.")
+                    }
+                  }
                 }
-              }
-              .addOnFailureListener { e ->
+              } else {
                 auth.signOut()
-                onResult(false, "Failed to retrieve school authorization: ${e.message}")
+                onResult(false, "Failed to parse security claims token: ${tokenTask.exception?.message}")
               }
+            }
           } else {
             onResult(false, task.exception?.localizedMessage ?: "Authentication failed")
           }
         }
     } catch (e: Exception) {
       Log.w(tag, "Firebase auth error: ${e.message}")
-      onResult(false, "Firebase is not configured. Please use Demo Mode or configure google-services.json.")
+      onResult(false, "Firebase is not configured properly.")
     }
   }
 
@@ -443,7 +561,7 @@ class ErpDataRepository private constructor() {
 
   fun processFeePayment(
     studentId: String,
-    amountPaid: Double,
+    amountPaid: Long,
     paymentMethod: String,
     feeHead: String = "Term 2 Tuition & Activity Dues",
     razorpayPaymentId: String? = null,
@@ -590,6 +708,12 @@ class ErpDataRepository private constructor() {
   fun returnBook(bookId: String) {
     repositoryScope.launch {
       activeSource.returnBook(bookId)
+    }
+  }
+
+  fun publishReportCard(studentId: String, term: String, published: Boolean) {
+    repositoryScope.launch {
+      activeSource.publishReportCard(studentId, term, published)
     }
   }
 

@@ -2,147 +2,200 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for security and role assertion
+    // =========================================================================
+    // PHASE 0 — Default-Deny, Claims-Only Security Model
+    //
+    //  - No email-address heuristics. Role is read ONLY from `request.auth.token`
+    //    custom claims, which the backend provisions (functions/src/claims.js).
+    //  - LEFT-UNUSED legacy top-level collections (docs/CODEBASE_INVENTORY) are
+    //    auto-denied because no match block grants access.
+    //  - Money / marks / attendance / audit are read-scoped but have NO client
+    //    write grants: only the backend (Admin SDK) may write them.
+    // =========================================================================
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function getUserData() {
+    function token() {
       return request.auth.token;
     }
 
-    function isPrincipal() {
+    function isRole(role) {
+      return isAuthenticated() && token().role == role;
+    }
+
+    function isStaff() {
       return isAuthenticated() && (
-        getUserData().role == 'PRINCIPAL' ||
-        request.auth.token.email.matches('.*principal.*') ||
-        request.auth.token.email.matches('.*admin.*')
+        isRole('PRINCIPAL') || isRole('ADMIN') || isRole('ACCOUNTANT') ||
+        isRole('TEACHER') || isRole('CLASS_TEACHER') ||
+        isRole('TRANSPORT_MANAGER') || isRole('LIBRARIAN')
       );
     }
 
-    function isTeacher() {
+    // Same school + same active academic session as claims.
+    function sameSchool() {
+      return isAuthenticated() &&
+        token().schoolId != null &&
+        request.resource.data.schoolId == token().schoolId;
+    }
+
+    function sameSession() {
+      return sameSchool() &&
+        token().sessionId != null &&
+        request.resource.data.sessionId == token().sessionId;
+    }
+
+    // A staff write that must target this tenant's school and session.
+    function scopedStaffWrite() {
+      return isStaff() && sameSession();
+    }
+
+    // A user is linked to a student if it is them, or they are a parent whose
+    // `studentIds` claim includes that student (multi-child support).
+    function relatedTo(studentId) {
       return isAuthenticated() && (
-        getUserData().role == 'TEACHER' ||
-        request.auth.token.email.matches('.*teacher.*') ||
-        request.auth.token.email.matches('.*faculty.*')
+        request.auth.uid == studentId ||
+        (token().studentIds != null && studentId in token().studentIds)
       );
     }
 
-    function isParent() {
-      return isAuthenticated() && (
-        getUserData().role == 'PARENT' ||
-        request.auth.token.email.matches('.*parent.*')
-      );
-    }
-
-    function isStudent() {
-      return isAuthenticated();
-    }
-
-    // Tenant Isolation: Match all documents under /schools/{schoolId}
+    // =========================================================================
+    // TENANCY ROOT — default deny; read requires a valid token.
+    // =========================================================================
     match /schools/{schoolId} {
-      allow read: if isAuthenticated();
-      allow write: if isPrincipal();
+      allow read: if isAuthenticated() && token().schoolId == schoolId;
 
-      // Users Collection
+      // ----- Users / profile (self-over-write is handled in the nested rule) -----
       match /users/{userId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal() || (isAuthenticated() && request.auth.uid == userId);
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        // Principal/ADMIN may admin users; otherwise a user can only update
+        // their own doc and never self-elevate role or schoolId.
+        allow update: if isRole('PRINCIPAL') || isRole('ADMIN')
+          || (request.auth.uid == userId
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'schoolId']));
       }
 
-      // Students Directory & Profiles
+      // ----- Students directory -----
+      // Students canNOT read teacher data (audit F#2). Staff and linked
+      // parents/self may read students. Writes are backend-only.
       match /students/{studentId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal();
+        allow read: if isStaff()
+          || relatedTo(studentId)
+          || request.auth.uid == studentId;
       }
 
-      // Faculty / Teachers Directory
+      // ----- Teachers / faculty directory -----
+      // Only staff can read; students are explicitly denied (audit F#2).
+      // Writes are backend-only.
       match /teachers/{teacherId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal();
+        allow read: if isStaff();
       }
 
-      // Attendance Records
-      match /attendance/{attendanceId} {
-        allow read: if isAuthenticated();
-        allow create, update: if isTeacher() || isPrincipal();
-        allow delete: if isPrincipal();
-      }
-
-      // Fee Ledger & Payment Transactions
+      // ----- Backend-only sensitive: fees, payments, attendance, marks,
+      //      report_cards, audit_log -----
+      // READ: scoped by role/relationship; WRITE: NONE (backend-only).
       match /fees/{feeId} {
-        allow read: if isAuthenticated();
-        allow create, update: if isPrincipal() || isParent();
-        allow delete: if isPrincipal();
+        allow read: if isAuthenticated() && token().schoolId == schoolId
+          && (isStaff() || relatedTo(resource.data.studentId));
       }
-
-      // Leave Requests
-      match /leaves/{leaveId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update: if isPrincipal();
-        allow delete: if isPrincipal();
+      match /payments/{paymentId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId
+          && (isStaff() || relatedTo(resource.data.studentId));
       }
-
-      // Homework & Assignments
-      match /assignments/{assignmentId} {
-        allow read: if isAuthenticated();
-        allow create, update: if isTeacher() || isPrincipal();
-        allow delete: if isTeacher() || isPrincipal();
+      match /attendance/{attendanceId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId
+          && (isStaff() || relatedTo(resource.data.studentId));
       }
-
-      // Study Materials
-      match /study_materials/{materialId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isTeacher() || isPrincipal();
+      match /marks/{markId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId
+          && (isStaff() || relatedTo(resource.data.studentId));
       }
-
-      // Examination Schedules & Results
-      match /exams/{examId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal() || isTeacher();
-      }
-
       match /report_cards/{cardId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal() || isTeacher();
+        allow read: if isAuthenticated() && token().schoolId == schoolId
+          && (isStaff() || relatedTo(resource.data.studentId));
+      }
+      match /audit_log/{logId} {
+        allow read: if isRole('PRINCIPAL') || isRole('ADMIN');
       }
 
-      // Timetable
-      match /timetable/{slotId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal();
-      }
-
-      // School Notices & Circulars
-      match /notices/{noticeId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isPrincipal();
-      }
-
-      // System & Role Notifications
+      // ----- Notifications: backend-only writes ----------------
       match /notifications/{notificationId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update, delete: if isAuthenticated();
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
       }
 
-      // Transport Routes
+      // ----- Notices / assignments / study_materials / exams / timetable -----
+      // Staff writes must be session-scoped within this school.
+      match /notices/{noticeId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete:
+          if scopedStaffWrite()
+          && resource == null || scopedStaffWrite() && resource.data.schoolId == schoolId;
+      }
+      match /assignments/{assignmentId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
+      }
+      match /study_materials/{materialId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
+      }
+      match /exams/{examId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
+      }
+      match /timetable/{slotId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
+      }
+
+      // ----- Parents can file complaints / send messages (scoped) -----
+      match /complaints/{complaintId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create: if (isRole('PARENT') || isRole('STUDENT'))
+                       && token().schoolId == schoolId;
+        allow update: if isStaff();
+      }
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create: if isRole('PARENT') && token().schoolId == schoolId;
+      }
+
+      // ----- Sessions registry (writes backend-only) -----
+      match /sessions/{sessionId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+      }
+
+      // ----- Classes (staff write, session scoped) -----
+      match /classes/{classId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
+      }
+
+      // ----- Transport / library / inventory (staff) -----
       match /transport/{routeId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal();
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
       }
-
-      // Library Catalog
       match /library/{bookId} {
-        allow read: if isAuthenticated();
-        allow write: if isPrincipal() || isTeacher();
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
+      }
+      match /inventory/{assetId} {
+        allow read: if isStaff() && token().schoolId == schoolId;
+        allow create, update, delete: if scopedStaffWrite();
       }
 
-      // Inventory Assets
-      match /inventory/{assetId} {
-        allow read: if isPrincipal() || isTeacher();
-        allow write: if isPrincipal();
+      // ----- Leaves -----
+      match /leaves/{leaveId} {
+        allow read: if isAuthenticated() && token().schoolId == schoolId;
+        allow create: if (isStaff() || isRole('STUDENT'))
+                      && token().schoolId == schoolId;
+        allow update, delete: if isStaff();
       }
     }
+
+    // Legacy pre-audit top-level collections get DEFAULT DENY:
+    // no match block exists for /students, /fees, /teachers, etc.
   }
 }

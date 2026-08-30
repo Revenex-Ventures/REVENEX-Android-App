@@ -35,7 +35,7 @@ import com.example.ui.theme.*
 fun ParentDashboardScreen(
   repository: ErpDataRepository,
   onNavigateTo: (String) -> Unit,
-  onShowPaymentDialog: (studentName: String, amountDue: Double) -> Unit,
+  onShowPaymentDialog: (studentName: String, amountDue: Long) -> Unit,
   onShowApplyLeave: () -> Unit
 ) {
   val currentUser by repository.currentUser.collectAsState()
@@ -74,7 +74,7 @@ fun ParentDashboardScreen(
         admissionDate = "",
         attendancePercent = 96.4,
         feeStatus = FeeStatus.PENDING,
-        feePendingAmount = 14500.0,
+        feePendingAmount = 1450000L,
         rank = 3,
         gpa = 9.4
       )
@@ -221,7 +221,7 @@ fun ParentDashboardScreen(
     }
 
     // Fee Dues Reminder Card (If Pending)
-    if (childPendingFee > 0) {
+    if (childPendingFee > 0L) {
       item {
         Card(
           modifier = Modifier
@@ -245,7 +245,7 @@ fun ParentDashboardScreen(
                 color = StatusWarningText
               )
               Text(
-                text = "Amount: ₹${childPendingFee.toInt()} • Due by 15th Sep 2026",
+                text = "Amount: ₹${childPendingFee / 100} • Due by 15th Sep 2026",
                 style = MaterialTheme.typography.bodySmall,
                 color = StatusWarningText.copy(alpha = 0.9f)
               )

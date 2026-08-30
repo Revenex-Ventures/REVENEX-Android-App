@@ -43,7 +43,7 @@ interface ErpDataSource {
   fun getFeeRecordsFlow(): Flow<List<FeeRecord>>
   suspend fun processFeePayment(
     studentId: String,
-    amountPaid: Double,
+    amountPaid: Long,
     paymentMethod: String,
     feeHead: String,
     razorpayPaymentId: String? = null,
@@ -101,6 +101,7 @@ interface ErpDataSource {
   fun getLibraryBooksFlow(): Flow<List<LibraryBook>>
   suspend fun issueBook(bookId: String)
   suspend fun returnBook(bookId: String)
+  suspend fun publishReportCard(studentId: String, term: String, published: Boolean)
 
   fun getInventoryFlow(): Flow<List<InventoryAsset>>
 }

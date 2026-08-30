@@ -66,7 +66,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 94.8,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 14500.0,
+      feePendingAmount = 1450000L,
       rank = 3,
       gpa = 9.4,
       avatarColorHex = 0xFF2563EB
@@ -88,7 +88,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 98.2,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 1,
       gpa = 9.8,
       avatarColorHex = 0xFF8B5CF6
@@ -110,7 +110,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 88.5,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 8,
       gpa = 8.6,
       avatarColorHex = 0xFF059669
@@ -132,7 +132,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 96.0,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.6,
       avatarColorHex = 0xFFEC4899
@@ -154,7 +154,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 82.4,
       feeStatus = FeeStatus.OVERDUE,
-      feePendingAmount = 28000.0,
+      feePendingAmount = 2800000L,
       rank = 14,
       gpa = 7.8,
       avatarColorHex = 0xFFD97706
@@ -176,7 +176,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 91.5,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 6,
       gpa = 8.9,
       avatarColorHex = 0xFF0D9488
@@ -198,7 +198,7 @@ object SampleData {
       admissionDate = "10 Jun 2022",
       attendancePercent = 95.3,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.5,
       avatarColorHex = 0xFF6366F1
@@ -220,7 +220,7 @@ object SampleData {
       admissionDate = "12 Jun 2023",
       attendancePercent = 96.5,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.3,
       avatarColorHex = 0xFFF43F5E
@@ -242,7 +242,7 @@ object SampleData {
       admissionDate = "15 Jun 2021",
       attendancePercent = 93.0,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 1,
       gpa = 9.7,
       avatarColorHex = 0xFF0284C7
@@ -264,7 +264,7 @@ object SampleData {
       admissionDate = "02 Apr 2026",
       attendancePercent = 95.5,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 1,
       gpa = 9.8,
       avatarColorHex = 0xFF3B82F6
@@ -286,7 +286,7 @@ object SampleData {
       admissionDate = "02 Apr 2026",
       attendancePercent = 94.2,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 12000.0,
+      feePendingAmount = 1200000L,
       rank = 2,
       gpa = 9.5,
       avatarColorHex = 0xFF10B981
@@ -308,7 +308,7 @@ object SampleData {
       admissionDate = "03 Apr 2025",
       attendancePercent = 93.0,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.3,
       avatarColorHex = 0xFF8B5CF6
@@ -330,7 +330,7 @@ object SampleData {
       admissionDate = "03 Apr 2025",
       attendancePercent = 96.0,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 8500.0,
+      feePendingAmount = 850000L,
       rank = 1,
       gpa = 9.6,
       avatarColorHex = 0xFFEC4899
@@ -352,7 +352,7 @@ object SampleData {
       admissionDate = "05 Apr 2024",
       attendancePercent = 97.2,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 1,
       gpa = 9.7,
       avatarColorHex = 0xFFEF4444
@@ -374,7 +374,7 @@ object SampleData {
       admissionDate = "05 Apr 2024",
       attendancePercent = 92.5,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 9000.0,
+      feePendingAmount = 900000L,
       rank = 2,
       gpa = 9.2,
       avatarColorHex = 0xFFF59E0B
@@ -396,7 +396,7 @@ object SampleData {
       admissionDate = "08 Apr 2023",
       attendancePercent = 94.8,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.4,
       avatarColorHex = 0xFF10B981
@@ -418,7 +418,7 @@ object SampleData {
       admissionDate = "08 Apr 2023",
       attendancePercent = 98.0,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 1,
       gpa = 9.9,
       avatarColorHex = 0xFFD946EF
@@ -440,7 +440,7 @@ object SampleData {
       admissionDate = "06 Apr 2022",
       attendancePercent = 91.6,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 15000.0,
+      feePendingAmount = 1500000L,
       rank = 3,
       gpa = 9.0,
       avatarColorHex = 0xFF6366F1
@@ -462,7 +462,7 @@ object SampleData {
       admissionDate = "06 Apr 2022",
       attendancePercent = 95.8,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 1,
       gpa = 9.8,
       avatarColorHex = 0xFFEC4899
@@ -484,7 +484,7 @@ object SampleData {
       admissionDate = "10 Jun 2020",
       attendancePercent = 96.5,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.5,
       avatarColorHex = 0xFF14B8A6
@@ -506,7 +506,7 @@ object SampleData {
       admissionDate = "10 Jun 2020",
       attendancePercent = 97.4,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 5000.0,
+      feePendingAmount = 500000L,
       rank = 1,
       gpa = 9.7,
       avatarColorHex = 0xFFF43F5E
@@ -528,7 +528,7 @@ object SampleData {
       admissionDate = "12 Jun 2018",
       attendancePercent = 94.0,
       feeStatus = FeeStatus.PAID,
-      feePendingAmount = 0.0,
+      feePendingAmount = 0L,
       rank = 2,
       gpa = 9.3,
       avatarColorHex = 0xFF84CC16
@@ -550,7 +550,7 @@ object SampleData {
       admissionDate = "12 Jun 2018",
       attendancePercent = 98.1,
       feeStatus = FeeStatus.PENDING,
-      feePendingAmount = 11000.0,
+      feePendingAmount = 1100000L,
       rank = 1,
       gpa = 9.9,
       avatarColorHex = 0xFF06B6D4
@@ -675,13 +675,13 @@ object SampleData {
       studentName = "Aarav Patel",
       classGrade = "10",
       division = "A",
-      tuitionFee = 42000.0,
-      examFee = 4500.0,
-      transportFee = 12000.0,
-      labLibraryFee = 6000.0,
-      discountScholarship = 0.0,
-      totalFee = 64500.0,
-      paidAmount = 50000.0,
+      tuitionFee = 4200000L,
+      examFee = 450000L,
+      transportFee = 1200000L,
+      labLibraryFee = 600000L,
+      discountScholarship = 0L,
+      totalFee = 6450000L,
+      paidAmount = 5000000L,
       status = FeeStatus.PENDING,
       dueDate = "15 Sep 2026",
       lastPaymentDate = "10 Jul 2026",
@@ -689,7 +689,7 @@ object SampleData {
         FeePaymentTransaction(
           transactionId = "TXN-REV-984210",
           receiptNo = "REC-2026-0842",
-          amount = 50000.0,
+          amount = 5000000L,
           date = "10 Jul 2026",
           method = "UPI (Google Pay / HDFC)",
           status = "SUCCESS",
@@ -703,13 +703,13 @@ object SampleData {
       studentName = "Ananya Sharma",
       classGrade = "10",
       division = "A",
-      tuitionFee = 42000.0,
-      examFee = 4500.0,
-      transportFee = 12000.0,
-      labLibraryFee = 6000.0,
-      discountScholarship = 5000.0, // Academic Merit Scholarship
-      totalFee = 59500.0,
-      paidAmount = 59500.0,
+      tuitionFee = 4200000L,
+      examFee = 450000L,
+      transportFee = 1200000L,
+      labLibraryFee = 600000L,
+      discountScholarship = 500000L, // Academic Merit Scholarship
+      totalFee = 5950000L,
+      paidAmount = 5950000L,
       status = FeeStatus.PAID,
       dueDate = "15 Sep 2026",
       lastPaymentDate = "05 Jun 2026",
@@ -717,7 +717,7 @@ object SampleData {
         FeePaymentTransaction(
           transactionId = "TXN-REV-941032",
           receiptNo = "REC-2026-0119",
-          amount = 59500.0,
+          amount = 5950000L,
           date = "05 Jun 2026",
           method = "Net Banking (SBI Corp)",
           status = "SUCCESS",
@@ -731,13 +731,13 @@ object SampleData {
       studentName = "Vikram Reddy",
       classGrade = "10",
       division = "A",
-      tuitionFee = 42000.0,
-      examFee = 4500.0,
-      transportFee = 12000.0,
-      labLibraryFee = 6000.0,
-      discountScholarship = 0.0,
-      totalFee = 64500.0,
-      paidAmount = 36500.0,
+      tuitionFee = 4200000L,
+      examFee = 450000L,
+      transportFee = 1200000L,
+      labLibraryFee = 600000L,
+      discountScholarship = 0L,
+      totalFee = 6450000L,
+      paidAmount = 3650000L,
       status = FeeStatus.OVERDUE,
       dueDate = "15 Aug 2026",
       lastPaymentDate = "15 Apr 2026",
@@ -745,7 +745,7 @@ object SampleData {
         FeePaymentTransaction(
           transactionId = "TXN-REV-812004",
           receiptNo = "REC-2026-0044",
-          amount = 36500.0,
+          amount = 3650000L,
           date = "15 Apr 2026",
           method = "Credit Card (ICICI)",
           status = "SUCCESS",
@@ -777,7 +777,8 @@ object SampleData {
       rankInClass = 3,
       totalStudents = 42,
       principalRemark = "Aarav demonstrates outstanding academic diligence and leadership qualities. Keep up the high standard!",
-      issueDate = "24 Aug 2026"
+      issueDate = "24 Aug 2026",
+      published = true
     ),
     ReportCard(
       id = "rep_1002",
@@ -800,7 +801,8 @@ object SampleData {
       rankInClass = 1,
       totalStudents = 42,
       principalRemark = "Star pupil with exemplary discipline and academic mastery across all disciplines.",
-      issueDate = "24 Aug 2026"
+      issueDate = "24 Aug 2026",
+      published = true
     )
   )
 
@@ -1088,7 +1090,7 @@ object SampleData {
       stops = listOf("Aundh D-Mart (07:15 AM)", "Baner Phata (07:30 AM)", "University Gate (07:45 AM)", "Model Colony (08:00 AM)", "School Gate (08:15 AM)"),
       pickupStartTime = "07:15 AM",
       dropStartTime = "02:15 PM",
-      monthlyFare = 2400.0
+      monthlyFare = 240000L
     ),
     TransportRoute(
       id = "tr_602",
@@ -1102,7 +1104,7 @@ object SampleData {
       stops = listOf("Chandani Chowk (07:05 AM)", "Kothrud Stand (07:20 AM)", "Nal Stop (07:35 AM)", "Deccan Gymkhana (07:50 AM)", "School Gate (08:15 AM)"),
       pickupStartTime = "07:05 AM",
       dropStartTime = "02:15 PM",
-      monthlyFare = 2600.0
+      monthlyFare = 260000L
     ),
     TransportRoute(
       id = "tr_603",
@@ -1116,7 +1118,7 @@ object SampleData {
       stops = listOf("Phoenix Mall (07:10 AM)", "Kalyani Bridge (07:25 AM)", "Gunjan Cinema (07:40 AM)", "School Gate (08:15 AM)"),
       pickupStartTime = "07:10 AM",
       dropStartTime = "02:15 PM",
-      monthlyFare = 2500.0
+      monthlyFare = 250000L
     )
   )
 
@@ -1176,7 +1178,7 @@ object SampleData {
       quantity = 24,
       condition = "Operational",
       purchaseDate = "15 May 2024",
-      estimatedValue = 3600000.0
+      estimatedValue = 360000000L
     ),
     InventoryAsset(
       id = "inv_802",
@@ -1186,7 +1188,7 @@ object SampleData {
       quantity = 60,
       condition = "Operational",
       purchaseDate = "10 Jan 2024",
-      estimatedValue = 4200000.0
+      estimatedValue = 420000000L
     ),
     InventoryAsset(
       id = "inv_803",
@@ -1196,7 +1198,7 @@ object SampleData {
       quantity = 35,
       condition = "Operational",
       purchaseDate = "05 Aug 2023",
-      estimatedValue = 525000.0
+      estimatedValue = 52500000L
     ),
     InventoryAsset(
       id = "inv_804",
@@ -1206,7 +1208,7 @@ object SampleData {
       quantity = 40,
       condition = "Operational",
       purchaseDate = "01 Jul 2026",
-      estimatedValue = 96000.0
+      estimatedValue = 9600000L
     )
   )
 

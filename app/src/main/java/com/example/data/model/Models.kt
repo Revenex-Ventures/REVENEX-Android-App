@@ -38,12 +38,13 @@ data class Student(
   val admissionDate: String,
   val attendancePercent: Double,
   val feeStatus: FeeStatus,
-  val feePendingAmount: Double,
+  val feePendingAmount: Long,
   val rank: Int = 1,
   val gpa: Double = 9.2,
   val avatarColorHex: Long = 0xFF2563EB,
   val schoolId: String = "revenex_school_001",
-  val status: String = "ACTIVE"
+  val status: String = "ACTIVE",
+  val sessionId: String = "session_2026_2027"
 ) {
   val fullClass: String get() = "$classGrade-$division"
 }
@@ -66,7 +67,8 @@ data class Teacher(
   val experienceYears: Int,
   val joiningDate: String,
   val schoolId: String = "revenex_school_001",
-  val status: String = "ACTIVE"
+  val status: String = "ACTIVE",
+  val sessionId: String = "session_2026_2027"
 )
 
 enum class AttendanceStatus(val label: String) {
@@ -96,7 +98,8 @@ data class ClassAttendanceRecord(
   val leaveCount: Int,
   val markedBy: String,
   val studentList: List<StudentAttendance>,
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "revenex_school_001",
+  val sessionId: String = "session_2026_2027"
 ) {
   val percentage: Double
     get() = if (totalStudents > 0) ((presentCount + lateCount).toDouble() / totalStudents) * 100 else 0.0
@@ -135,11 +138,12 @@ enum class FeeStatus(val label: String) {
 data class FeePaymentTransaction(
   val transactionId: String,
   val receiptNo: String,
-  val amount: Double,
+  val amount: Long,
   val date: String,
   val method: String, // UPI, Credit Card, Net Banking, Cash
   val status: String = "SUCCESS",
-  val feeHead: String = "Tuition & Term Fee"
+  val feeHead: String = "Tuition & Term Fee",
+  val sessionId: String = "session_2026_2027"
 )
 
 data class FeeRecord(
@@ -148,20 +152,21 @@ data class FeeRecord(
   val studentName: String,
   val classGrade: String,
   val division: String,
-  val tuitionFee: Double,
-  val examFee: Double,
-  val transportFee: Double,
-  val labLibraryFee: Double,
-  val discountScholarship: Double,
-  val totalFee: Double,
-  val paidAmount: Double,
+  val tuitionFee: Long,
+  val examFee: Long,
+  val transportFee: Long,
+  val labLibraryFee: Long,
+  val discountScholarship: Long,
+  val totalFee: Long,
+  val paidAmount: Long,
   val status: FeeStatus,
   val dueDate: String,
   val lastPaymentDate: String = "",
   val transactions: List<FeePaymentTransaction> = emptyList(),
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "revenex_school_001",
+  val sessionId: String = "session_2026_2027"
 ) {
-  val pendingAmount: Double get() = (totalFee - paidAmount).coerceAtLeast(0.0)
+  val pendingAmount: Long get() = (totalFee - paidAmount).coerceAtLeast(0L)
 }
 
 data class ExamSchedule(
@@ -173,7 +178,8 @@ data class ExamSchedule(
   val endDate: String,
   val isPublished: Boolean = false,
   val subjects: List<ExamSubject>,
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "revenex_school_001",
+  val sessionId: String = "session_2026_2027"
 )
 
 data class ExamSubject(
@@ -210,18 +216,22 @@ data class ReportCard(
   val totalStudents: Int,
   val principalRemark: String,
   val issueDate: String,
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "revenex_school_001",
+  val sessionId: String = "session_2026_2027",
+  val published: Boolean = false
 ) {
   val totalObtained: Int get() = scores.sumOf { it.obtainedMarks }
   val totalMax: Int get() = scores.sumOf { it.maxMarks }
   val percentage: Double get() = if (totalMax > 0) (totalObtained.toDouble() / totalMax) * 100 else 0.0
   val overallGrade: String get() = when {
-    percentage >= 90.0 -> "A+"
-    percentage >= 80.0 -> "A"
-    percentage >= 70.0 -> "B+"
-    percentage >= 60.0 -> "B"
-    percentage >= 50.0 -> "C"
-    else -> "D"
+    percentage >= 91.0 -> "A1"
+    percentage >= 81.0 -> "A2"
+    percentage >= 71.0 -> "B1"
+    percentage >= 61.0 -> "B2"
+    percentage >= 51.0 -> "C1"
+    percentage >= 41.0 -> "C2"
+    percentage >= 33.0 -> "D"
+    else -> "E"
   }
 }
 
@@ -241,7 +251,8 @@ data class HomeworkAssignment(
   val maxPoints: Int = 20,
   val isCompletedByStudent: Boolean = false,
   val submissionStatus: String = "Pending", // Pending, Submitted, Graded
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "revenex_school_001",
+  val sessionId: String = "session_2026_2027"
 )
 
 data class StudyMaterial(
@@ -364,7 +375,8 @@ data class TimetableSlot(
   val roomNumber: String,
   val classGrade: String,
   val division: String,
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "revenex_school_001",
+  val sessionId: String = "session_2026_2027"
 )
 
 data class TransportRoute(
@@ -379,7 +391,7 @@ data class TransportRoute(
   val stops: List<String>,
   val pickupStartTime: String,
   val dropStartTime: String,
-  val monthlyFare: Double,
+  val monthlyFare: Long,
   val schoolId: String = "revenex_school_001"
 )
 
@@ -404,6 +416,6 @@ data class InventoryAsset(
   val quantity: Int,
   val condition: String, // Operational, Under Maintenance, Needs Replacement
   val purchaseDate: String,
-  val estimatedValue: Double,
+  val estimatedValue: Long,
   val schoolId: String = "revenex_school_001"
 )

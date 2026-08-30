@@ -344,7 +344,7 @@ fun AddStudentDialog(
                   admissionDate = indiaDateFormat.format(java.util.Date()),
                   attendancePercent = 100.0,
                   feeStatus = FeeStatus.PENDING,
-                  feePendingAmount = 45000.0,
+                  feePendingAmount = 4500000L,
                   rank = 1,
                   gpa = 0.0,
                   status = "ACTIVE"
@@ -1183,7 +1183,7 @@ fun ApplyLeaveDialog(
 @Composable
 fun FeePaymentDialog(
   studentName: String,
-  amountDue: Double,
+  amountDue: Long,
   isProcessing: Boolean,
   paymentCompleted: Boolean,
   razorpayPaymentId: String,
@@ -1279,7 +1279,7 @@ fun FeePaymentDialog(
                   color = RevenexOnPrimaryContainer
                 )
                 Text(
-                  text = "â‚¹${String.format(java.util.Locale.US, "%,.0f", amountDue)}",
+                  text = "₹${String.format(java.util.Locale.US, "%,d", amountDue / 100)}",
                   style = MaterialTheme.typography.headlineMedium,
                   fontWeight = FontWeight.Bold,
                   color = RevenexOnPrimaryContainer

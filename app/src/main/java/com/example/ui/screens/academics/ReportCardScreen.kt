@@ -27,6 +27,7 @@ import com.example.data.model.ReportCard
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.theme.*
+import com.example.ui.components.StatusBadge
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -53,7 +54,8 @@ fun ReportCardScreen(
     rankInClass = 3,
     totalStudents = 42,
     principalRemark = "Exemplary performance across analytical and computational subjects.",
-    issueDate = "24 Aug 2026"
+    issueDate = "24 Aug 2026",
+    published = true
   )
 
   LazyColumn(
@@ -117,12 +119,73 @@ fun ReportCardScreen(
               }
             }
           }
+
+          if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.TEACHER) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              StatusBadge(status = if (activeReport.published) "PUBLISHED" else "DRAFT")
+              if (currentUser.role == UserRole.PRINCIPAL) {
+                Button(
+                  onClick = { repository.publishReportCard(activeReport.studentId, activeReport.term, !activeReport.published) },
+                  colors = ButtonDefaults.buttonColors(containerColor = if (activeReport.published) Color.Gray else RevenexGold),
+                  contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                  modifier = Modifier.height(32.dp).testTag("publish_report_card_btn")
+                ) {
+                  Text(
+                    text = if (activeReport.published) "Unpublish" else "Publish",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+              }
+            }
+          }
         }
       }
     }
 
-    // Subject Scores Table
-    item {
+    if (!activeReport.published && (currentUser.role == UserRole.STUDENT || currentUser.role == UserRole.PARENT)) {
+      item {
+        Card(
+          modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+          shape = RoundedCornerShape(16.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        ) {
+          Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.Lock,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.error,
+              modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+              text = "Results Pending Release",
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+              text = "This report card is currently in draft. Official marks and grades are pending final approval and release from the Principal's office.",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              textAlign = TextAlign.Center
+            )
+          }
+        }
+      }
+    } else {
+      // Subject Scores Table
+      item {
       Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -569,5 +632,6 @@ fun ReportCardScreen(
         }
       }
     }
+  }
   }
 }
