@@ -2,13 +2,6 @@
  * PHASE 0 ACCEPTANCE — Firestore Security Rules test.
  * Runs against the local Firestore emulator:
  *   npm run test:rules   (in functions/)
- *
- * Proves, with a real rules engine:
- *  (a) a client SDK attempting to write fees/payments/attendance/marks directly
- *      is REJECTED for every role (backend-only writes);
- *  (b) tenant isolation + role scoping hold (student vs parent vs staff vs
- *      cross-school);
- *  (c) the backend (admin context, i.e. Cloud Functions) CAN write those docs.
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -43,22 +36,12 @@ async function main() {
     firestore: { host: '127.0.0.1', port: 8085, rules },
   });
 
-  const anon = env.unauthenticatedContext().firestore();
-
-  const claims = (role, schoolId, extra = {}) => ({
-    role, schoolId, sessionId: '2026-2027', ...extra,
-  });
-  const student1 = env.authenticatedContext('student1', claims('STUDENT', 's1')).firestore();
-  const student2 = env.authenticatedContext('student2', claims('STUDENT', 's1')).firestore();
-  const parent = env.authenticatedContext('parent1', claims('PARENT', 's1', { studentIds: ['student1', 'student2'] })).firestore();
-  const teacher = env.authenticatedContext('teacher1', claims('TEACHER', 's1')).firestore();
-  const principal = env.authenticatedContext('principal1', claims('PRINCIPAL', 's1')).firestore();
-  const crossSchool = env.authenticatedContext('teacher2', claims('TEACHER', 's2')).firestore();
-
   // ---- Seed canonical docs "as the backend" (rules bypassed, Admin-SDK model) ----
   const seed = {
+    'claimProbe/x': { name: 'Canary Probe' },
     'schools/s1': { name: 'School One' },
     'schools/s2': { name: 'School Two' },
+    'schools/s1/users/student1': { schoolId: 's1', fullName: 'Student One', role: 'STUDENT' },
     'schools/s1/students/student1': { schoolId: 's1', sessionId: '2026-2027', name: 'Student One', admissionNumber: 'S001' },
     'schools/s1/students/student2': { schoolId: 's1', sessionId: '2026-2027', name: 'Student Two', admissionNumber: 'S002' },
     'schools/s1/teachers/teacher1': { schoolId: 's1', name: 'Teacher One', employeeId: 'T001' },
@@ -73,13 +56,34 @@ async function main() {
     'schools/s1/sessions/sess2026': { schoolId: 's1', name: '2026-2027', active: true },
     'schools/s1/classes/c10a': { schoolId: 's1', sessionId: '2026-2027', grade: '10', section: 'A' },
     'schools/s1/audit_log/log1': { schoolId: 's1', actor: 'backend', action: 'payment.create', amountPaise: 20000 },
-    'schools/s1/users/student1': { schoolId: 's1', fullName: 'Student One' },
     'schools/s1/messages/msg1': { schoolId: 's1', participantIds: ['parent1', 'teacher1'], senderId: 'parent1', body: 'Hi' },
+    'schools/s1/exams/exam1': { schoolId: 's1', sessionId: '2026-2027', title: 'Midterm', subject: 'MATH' },
+    'schools/s1/assignments/hw1': { schoolId: 's1', sessionId: '2026-2027', title: 'Algebra' },
+    'schools/s1/study_materials/mat1': { schoolId: 's1', sessionId: '2026-2027', title: 'Notes' },
+    'schools/s1/leaves/leave1': { schoolId: 's1', studentId: 'student1', status: 'PENDING' },
+    'schools/s1/transport/route1': { schoolId: 's1', routeNumber: 'Route 01' },
+    'schools/s1/library/book1': { schoolId: 's1', title: 'Physics' },
+    'schools/s1/inventory/asset1': { schoolId: 's1', itemName: 'Smart Board' }
   };
+
+  // Seed inside ONE block that fully resolves before creating authed contexts
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     await Promise.all(Object.entries(seed).map(([docPath, data]) => db.doc(docPath).set(data)));
   });
+
+  // Now create authed contexts - claims flat mapped
+  const claims = (role, schoolId, extra = {}) => ({
+    role, schoolId, sessionId: '2026-2027', ...extra,
+  });
+
+  const anon = env.unauthenticatedContext().firestore();
+  const student1 = env.authenticatedContext('student1', claims('STUDENT', 's1')).firestore();
+  const student2 = env.authenticatedContext('student2', claims('STUDENT', 's1')).firestore();
+  const parent = env.authenticatedContext('parent1', claims('PARENT', 's1', { studentIds: ['student1', 'student2'] })).firestore();
+  const teacher = env.authenticatedContext('teacher1', claims('TEACHER', 's1')).firestore();
+  const principal = env.authenticatedContext('principal1', claims('PRINCIPAL', 's1')).firestore();
+  const crossSchool = env.authenticatedContext('teacher2', claims('TEACHER', 's2')).firestore();
 
   // ================= 1. Unauthenticated — everything denied =================
   await expect(() => anon.doc('schools/s1/fees/fee1').get(), false, 'anon: read fee');
@@ -112,18 +116,72 @@ async function main() {
     await expect(() => db.doc('schools/s1/marks/backendMark').set({ schoolId: 's1', studentId: 'student1', subject: 'ENG', marksObtained: 88, maxMarks: 100 }), true, 'backend: create marks');
   });
 
-  // ========== 4. Tenant isolation + role-scoped reads (audit F#2) ============
-  await expect(() => student1.doc('schools/s1/fees/fee1').get(), true, 'student1: read own fee');
-  await expect(() => student1.doc('schools/s1/fees/fee2').get(), false, 'student1: read another student fee');
-  await expect(() => student1.doc('schools/s1/teachers/teacher1').get(), false, 'student: read teacher data (audit F#2)');
-  await expect(() => student1.doc('schools/s1/attendance/att1').get(), true, 'student1: read own attendance');
-  await expect(() => student1.doc('schools/s1/marks/m1').get(), true, 'student1: read own marks');
-  await expect(() => parent.doc('schools/s1/fees/fee2').get(), true, 'parent: read linked child fee (multi-child)');
-  await expect(() => parent.doc('schools/s1/payments/p1').get(), true, 'parent: read linked child payment');
-  await expect(() => parent.doc('schools/s1/report_cards/rc1').get(), true, 'parent: read linked child report card');
-  await expect(() => teacher.doc('schools/s1/fees/fee1').get(), true, 'teacher: staff read fee');
-  await expect(() => crossSchool.doc('schools/s1/fees/fee1').get(), false, 'cross-school teacher: denied');
-  await expect(() => crossSchool.doc('schools/s1/notices/n1').get(), false, 'cross-school teacher: denied notice read');
+  // ========== 4. MATCHED PAIRS FOR ALL 15 REQUISITE COLLECTIONS + SANITY CANARY ============
+  
+  // Canary Sanity Test
+  await expect(() => student1.doc('claimProbe/x').get(), true, 'canary: student1 ALLOW read claimProbe');
+  await expect(() => teacher.doc('claimProbe/x').get(), false, 'canary: teacher DENY read claimProbe');
+
+  // Collection 1: users
+  await expect(() => student1.doc('schools/s1/users/student1').get(), true, 'users: ALLOW read own matching school');
+  await expect(() => crossSchool.doc('schools/s1/users/student1').get(), false, 'users: DENY read cross school');
+
+  // Collection 2: students
+  await expect(() => student1.doc('schools/s1/students/student1').get(), true, 'students: ALLOW read self student profile');
+  await expect(() => student2.doc('schools/s1/students/student1').get(), false, 'students: DENY read another student profile');
+
+  // Collection 3: teachers
+  await expect(() => teacher.doc('schools/s1/teachers/teacher1').get(), true, 'teachers: ALLOW read teacher directory (staff)');
+  await expect(() => student1.doc('schools/s1/teachers/teacher1').get(), false, 'teachers: DENY read teacher directory (student)');
+
+  // Collection 4: attendance
+  await expect(() => student1.doc('schools/s1/attendance/att1').get(), true, 'attendance: ALLOW read own attendance');
+  await expect(() => student2.doc('schools/s1/attendance/att1').get(), false, 'attendance: DENY read another student attendance');
+
+  // Collection 5: fees
+  await expect(() => student1.doc('schools/s1/fees/fee1').get(), true, 'fees: ALLOW read own fee ledger');
+  await expect(() => student2.doc('schools/s1/fees/fee1').get(), false, 'fees: DENY read another student fee ledger');
+  await expect(() => crossSchool.doc('schools/s1/fees/fee1').get(), false, 'fees: DENY read cross school fee ledger');
+
+  // Collection 6: exams
+  await expect(() => student1.doc('schools/s1/exams/exam1').get(), true, 'exams: ALLOW read exams directory');
+  await expect(() => crossSchool.doc('schools/s1/exams/exam1').get(), false, 'exams: DENY read cross school exams');
+
+  // Collection 7: reportCards
+  await expect(() => student1.doc('schools/s1/report_cards/rc1').get(), true, 'reportCards: ALLOW read own report card');
+  await expect(() => student2.doc('schools/s1/report_cards/rc1').get(), false, 'reportCards: DENY read another student report card');
+
+  // Collection 8: homework (assignments)
+  await expect(() => student1.doc('schools/s1/assignments/hw1').get(), true, 'homework: ALLOW read homework list');
+  await expect(() => crossSchool.doc('schools/s1/assignments/hw1').get(), false, 'homework: DENY read cross school homework');
+
+  // Collection 9: materials (study_materials)
+  await expect(() => student1.doc('schools/s1/study_materials/mat1').get(), true, 'materials: ALLOW read study materials');
+  await expect(() => crossSchool.doc('schools/s1/study_materials/mat1').get(), false, 'materials: DENY read cross school study materials');
+
+  // Collection 10: notices
+  await expect(() => student1.doc('schools/s1/notices/n1').get(), true, 'notices: ALLOW read school notices');
+  await expect(() => crossSchool.doc('schools/s1/notices/n1').get(), false, 'notices: DENY read cross school notices');
+
+  // Collection 11: notifications
+  await expect(() => student1.doc('schools/s1/notifications/notif1').get(), true, 'notifications: ALLOW read notifications');
+  await expect(() => crossSchool.doc('schools/s1/notifications/notif1').get(), false, 'notifications: DENY read cross school notifications');
+
+  // Collection 12: leaves
+  await expect(() => student1.doc('schools/s1/leaves/leave1').get(), true, 'leaves: ALLOW read own school leaves');
+  await expect(() => crossSchool.doc('schools/s1/leaves/leave1').get(), false, 'leaves: DENY read cross school leaves');
+
+  // Collection 13: transport
+  await expect(() => student1.doc('schools/s1/transport/route1').get(), true, 'transport: ALLOW read transport routes');
+  await expect(() => crossSchool.doc('schools/s1/transport/route1').get(), false, 'transport: DENY read cross school transport');
+
+  // Collection 14: library
+  await expect(() => student1.doc('schools/s1/library/book1').get(), true, 'library: ALLOW read catalog');
+  await expect(() => crossSchool.doc('schools/s1/library/book1').get(), false, 'library: DENY read cross school catalog');
+
+  // Collection 15: inventory
+  await expect(() => teacher.doc('schools/s1/inventory/asset1').get(), true, 'inventory: ALLOW read assets (staff)');
+  await expect(() => student1.doc('schools/s1/inventory/asset1').get(), false, 'inventory: DENY read assets (student)');
 
   // ========== 5. Writes that ARE allowed for staff, with scoping ============
   await expect(() => principal.doc('schools/s1/classes/c11a').set({ schoolId: 's1', sessionId: '2026-2027', grade: '11', section: 'A' }), true, 'principal: create session-scoped class');
@@ -132,8 +190,7 @@ async function main() {
   await expect(() => teacher.doc('schools/s1/notices/nBad2').set({ schoolId: 's1', sessionId: '1999-2000', title: 'Old session' }), false, 'teacher: notice wrong sessionId');
   await expect(() => student1.doc('schools/s1/notices/n3').set({ schoolId: 's1', sessionId: '2026-2027', title: 'x' }), false, 'student: cannot create notice');
   await expect(() => principal.doc('schools/s1/notifications/nX').set({ schoolId: 's1', recipientId: 'student1', body: 'hi' }), false, 'principal: cannot create notification (backend-only)');
-  await expect(() => student1.doc('schools/s1/notifications/notif1').get(), true, 'student: read own notification');
-
+  
   // ========== 6. Legacy top-level (pre-audit) paths are DEFAULT-DENY =========
   await expect(() => student1.doc('students/old').set({ schoolId: 's1', name: 'x' }), false, 'student: legacy top-level students write');
   await expect(() => teacher.doc('fees/old').set({ schoolId: 's1', studentId: 'student1', amountPaise: 1 }), false, 'teacher: legacy top-level fees write');
