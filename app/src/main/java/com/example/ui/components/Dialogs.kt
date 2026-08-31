@@ -995,6 +995,15 @@ fun CreateAssignmentDialog(
             attachmentError = null
             val validClass = classGrade.trim().isNotEmpty()
             val validDivision = division.trim().isNotEmpty()
+            
+            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
+            val parsedDueDate = runCatching { sdf.parse(dueDate.trim()) }.getOrNull()
+            val todayMidnight = runCatching { sdf.parse(todayDate) }.getOrNull()
+            if (parsedDueDate != null && todayMidnight != null && parsedDueDate.before(todayMidnight)) {
+              attachmentError = "Due date cannot be in the past."
+              return@Button
+            }
+
             if (title.isNotBlank() && instructions.isNotBlank() && validClass && validDivision) {
               isUploading = true
               createScope.launch {
@@ -1067,6 +1076,7 @@ fun ApplyLeaveDialog(
   var endDate by remember { mutableStateOf("02 Sep 2026") }
   var daysCount by remember { mutableStateOf("2") }
   var reason by remember { mutableStateOf("") }
+  var dateError by remember { mutableStateOf<String?>(null) }
 
   Dialog(
     onDismissRequest = onDismiss,
@@ -1141,6 +1151,15 @@ fun ApplyLeaveDialog(
           )
         }
 
+        if (dateError != null) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Text(
+            text = dateError!!,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall
+          )
+        }
+
         Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedTextField(
@@ -1157,6 +1176,14 @@ fun ApplyLeaveDialog(
 
         Button(
           onClick = {
+            dateError = null
+            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
+            val start = runCatching { sdf.parse(startDate.trim()) }.getOrNull()
+            val end = runCatching { sdf.parse(endDate.trim()) }.getOrNull()
+            if (start != null && end != null && end.before(start)) {
+              dateError = "End date must be on or after start date."
+              return@Button
+            }
             if (reason.isNotBlank()) {
               onApply(
                 leaveType,

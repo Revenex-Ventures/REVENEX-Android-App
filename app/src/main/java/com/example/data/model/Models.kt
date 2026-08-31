@@ -377,7 +377,20 @@ data class TimetableSlot(
   val division: String,
   val schoolId: String = "revenex_school_001",
   val sessionId: String = "session_2026_2027"
-)
+) {
+  companion object {
+    fun hasConflict(existing: List<TimetableSlot>, newSlot: TimetableSlot): Boolean {
+      return existing.any { slot ->
+        slot.dayOfWeek.equals(newSlot.dayOfWeek, ignoreCase = true) &&
+        slot.periodNumber == newSlot.periodNumber &&
+        (
+          (slot.classGrade.equals(newSlot.classGrade, ignoreCase = true) && slot.division.equals(newSlot.division, ignoreCase = true)) ||
+          slot.teacherName.equals(newSlot.teacherName, ignoreCase = true)
+        )
+      }
+    }
+  }
+}
 
 data class TransportRoute(
   val id: String,
@@ -393,7 +406,13 @@ data class TransportRoute(
   val dropStartTime: String,
   val monthlyFare: Long,
   val schoolId: String = "revenex_school_001"
-)
+) {
+  companion object {
+    fun hasAvailableCapacity(route: TransportRoute): Boolean {
+      return route.assignedStudents < route.totalCapacity
+    }
+  }
+}
 
 data class LibraryBook(
   val id: String,
@@ -406,7 +425,13 @@ data class LibraryBook(
   val shelfLocation: String,
   val issuedCount: Int,
   val schoolId: String = "revenex_school_001"
-)
+) {
+  companion object {
+    fun isUniqueIsbn(existing: List<LibraryBook>, isbnToCheck: String): Boolean {
+      return existing.none { it.isbn.trim().replace("-", "").equals(isbnToCheck.trim().replace("-", ""), ignoreCase = true) }
+    }
+  }
+}
 
 data class InventoryAsset(
   val id: String,
@@ -418,4 +443,10 @@ data class InventoryAsset(
   val purchaseDate: String,
   val estimatedValue: Long,
   val schoolId: String = "revenex_school_001"
-)
+) {
+  companion object {
+    fun getAssetsNeedingMaintenance(assets: List<InventoryAsset>): List<InventoryAsset> {
+      return assets.filter { it.condition.equals("Needs Maintenance", ignoreCase = true) || it.condition.equals("Under Maintenance", ignoreCase = true) }
+    }
+  }
+}

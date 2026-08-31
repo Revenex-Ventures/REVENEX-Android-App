@@ -27,6 +27,9 @@ import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.StatusBadge
 import com.example.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Locale
+import com.example.data.model.UserRole
 
 @Composable
 fun NoticesScreen(
@@ -34,24 +37,49 @@ fun NoticesScreen(
   onShowCreateNotice: () -> Unit
 ) {
   val notices by repository.notices.collectAsState()
+  val currentUser by repository.currentUser.collectAsState()
   var selectedCategoryFilter by remember { mutableStateOf("All") }
+  var selectedAudienceFilter by remember { mutableStateOf("All") }
 
   val categories = listOf("All", "Circular", "Event", "Exam", "Holiday")
-  val filteredNotices = remember(notices, selectedCategoryFilter) {
-    if (selectedCategoryFilter == "All") notices
-    else notices.filter { it.category.label.equals(selectedCategoryFilter, ignoreCase = true) }
+  val audiences = listOf("All", "Class 10", "Faculty")
+  val dateSdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
+
+  val filteredNotices = remember(notices, selectedCategoryFilter, selectedAudienceFilter, currentUser) {
+    val accessible = notices.filter { notice ->
+      when (currentUser.role) {
+        UserRole.STUDENT, UserRole.PARENT -> {
+          !notice.targetAudience.equals("Faculty", ignoreCase = true)
+        }
+        else -> true
+      }
+    }
+
+    val catFiltered = if (selectedCategoryFilter == "All") accessible
+    else accessible.filter { it.category.label.equals(selectedCategoryFilter, ignoreCase = true) }
+
+    val audFiltered = if (selectedAudienceFilter == "All") catFiltered
+    else catFiltered.filter { it.targetAudience.contains(selectedAudienceFilter, ignoreCase = true) }
+
+    audFiltered.sortedWith { n1, n2 ->
+      val d1 = runCatching { dateSdf.parse(n1.publishedDate) }.getOrNull()
+      val d2 = runCatching { dateSdf.parse(n2.publishedDate) }.getOrNull()
+      if (d1 != null && d2 != null) d2.compareTo(d1) else 0
+    }
   }
 
   Scaffold(
     floatingActionButton = {
-      ExtendedFloatingActionButton(
-        onClick = onShowCreateNotice,
-        icon = { Icon(Icons.Default.Campaign, contentDescription = null) },
-        text = { Text("Publish Notice", fontWeight = FontWeight.Bold) },
-        containerColor = RevenexBlue,
-        contentColor = Color.White,
-        modifier = Modifier.testTag("fab_publish_notice")
-      )
+      if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.TEACHER) {
+        ExtendedFloatingActionButton(
+          onClick = onShowCreateNotice,
+          icon = { Icon(Icons.Default.Campaign, contentDescription = null) },
+          text = { Text("Publish Notice", fontWeight = FontWeight.Bold) },
+          containerColor = RevenexBlue,
+          contentColor = Color.White,
+          modifier = Modifier.testTag("fab_publish_notice")
+        )
+      }
     }
   ) { paddingValues ->
     LazyColumn(
@@ -62,17 +90,36 @@ fun NoticesScreen(
       contentPadding = PaddingValues(bottom = 100.dp)
     ) {
       item {
-        LazyRow(
-          modifier = Modifier.fillMaxWidth(),
-          contentPadding = PaddingValues(16.dp),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          items(categories) { cat ->
-            FilterChip(
-              selected = selectedCategoryFilter == cat,
-              onClick = { selectedCategoryFilter = cat },
-              label = { Text(cat) }
-            )
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+          Text("Category", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Spacer(modifier = Modifier.height(6.dp))
+          LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            items(categories) { cat ->
+              FilterChip(
+                selected = selectedCategoryFilter == cat,
+                onClick = { selectedCategoryFilter = cat },
+                label = { Text(cat) }
+              )
+            }
+          }
+          
+          Spacer(modifier = Modifier.height(12.dp))
+          Text("Target Audience", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Spacer(modifier = Modifier.height(6.dp))
+          LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            items(audiences) { aud ->
+              FilterChip(
+                selected = selectedAudienceFilter == aud,
+                onClick = { selectedAudienceFilter = aud },
+                label = { Text(aud) }
+              )
+            }
           }
         }
       }
