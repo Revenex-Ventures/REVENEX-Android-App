@@ -5,8 +5,10 @@ const { ROLE, ROLES } = require('./claims');
 // Tiny .env loader for local emulator runs (no dotenv dependency).
 // Real runtime secrets stay in environment variables only.
 function loadLocalEnv() {
-  const file = path.join(__dirname, '..', '.env');
-  if (!fs.existsSync(file)) return;
+  const file1 = path.join(__dirname, '..', '.env');
+  const file2 = path.join(__dirname, '..', '..', '.env');
+  const file = fs.existsSync(file1) ? file1 : (fs.existsSync(file2) ? file2 : null);
+  if (!file) return;
   for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
     const m = /^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
     if (m && !(m[1] in process.env)) process.env[m[1]] = m[2];

@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const crypto = require('node:crypto');
+const Razorpay = require('razorpay');
 
 const { config, validate } = require('./src/config');
 const log = require('./src/logger');
@@ -11,6 +12,14 @@ const { provisionUsers } = require('./src/provision');
 
 validate();
 admin.initializeApp();
+
+let razorpay = null;
+if (config.razorpayKeyId) {
+  razorpay = new Razorpay({
+    key_id: config.razorpayKeyId,
+    key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret',
+  });
+}
 
 const app = express();
 app.use(cors({ origin: true }));
@@ -221,6 +230,192 @@ app.post('/promoteStudents', async (req, res, next) => {
       message: `Successfully completed promotion rollover of ${results.promoted} students to Session ${targetSession}.`,
       results
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Create Razorpay Order endpoint -------------------------------------------
+app.post('/createOrder', async (req, res, next) => {
+  try {
+    const { amount, currency, receipt } = req.body;
+    if (!amount) {
+      return res.status(400).json({ status: 'ERROR', message: 'Missing amount parameter' });
+    }
+    if (!razorpay) {
+      log.info('Mocking Razorpay order creation (no key configured)');
+      return res.json({
+        status: 'SUCCESS',
+        order: {
+          id: `order_mock_${crypto.randomBytes(8).toString('hex')}`,
+          amount: amount,
+          currency: currency || 'INR',
+          receipt: receipt || 'receipt_1'
+        }
+      });
+    }
+
+    const order = await razorpay.orders.create({
+      amount: parseInt(amount, 10),
+      currency: currency || 'INR',
+      receipt: receipt || `receipt_${Date.now()}`
+    });
+
+    log.info('Razorpay order created successfully', { orderId: order.id });
+    res.json({ status: 'SUCCESS', order });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Razorpay Webhook listener endpoint -----------------------------------------
+app.post('/razorpayWebhook', async (req, res, next) => {
+  try {
+    const signature = req.headers['x-razorpay-signature'];
+    const rawBody = JSON.stringify(req.body);
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'dummy_secret';
+
+    let isValid = false;
+    if (signature) {
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(rawBody)
+        .digest('hex');
+      isValid = (signature === expectedSignature);
+    }
+
+    if (!isValid && config.isEmulator) {
+      log.info('Allowing webhook signature validation fallback in emulator mode');
+      isValid = true;
+    }
+
+    if (!isValid) {
+      log.warn('Invalid Razorpay signature matching failed');
+      return res.status(400).json({ status: 'ERROR', message: 'Invalid webhook signature' });
+    }
+
+    const event = req.body.event;
+    log.info('Processing Razorpay webhook event', { event });
+
+    if (event === 'payment.captured') {
+      const payment = req.body.payload.payment.entity;
+      const orderId = payment.order_id;
+      const paymentId = payment.id;
+      const amountPaid = payment.amount;
+      const studentId = payment.notes ? payment.notes.studentId : null;
+      const schoolId = payment.notes ? payment.notes.schoolId : config.schoolId;
+
+      if (!studentId) {
+        log.warn('Missing studentId in payment notes, skipping update');
+        return res.json({ status: 'SUCCESS', message: 'Skipped: missing studentId' });
+      }
+
+      const db = admin.firestore();
+      const schoolRef = db.collection('schools').doc(schoolId);
+
+      const txnRef = schoolRef.collection('payments').doc(paymentId);
+      const txnDoc = await txnRef.get();
+      if (txnDoc.exists) {
+        log.info('Payment transaction already processed', { paymentId });
+        return res.json({ status: 'SUCCESS', message: 'Already processed' });
+      }
+
+      await db.runTransaction(async (transaction) => {
+        transaction.set(txnRef, {
+          id: paymentId,
+          studentId,
+          amountPaise: amountPaid,
+          paymentMethod: 'Razorpay Online',
+          feeHead: 'Term 2 Tuition & Activity Dues',
+          razorpayPaymentId: paymentId,
+          razorpayOrderId: orderId,
+          status: 'SUCCESS',
+          timestamp: new Date().toISOString(),
+          schoolId,
+          sessionId: config.sessionId
+        });
+
+        const feeId = `fee_${studentId}`;
+        const feeRef = schoolRef.collection('fees').doc(feeId);
+        const feeSnap = await transaction.get(feeRef);
+
+        if (feeSnap.exists) {
+          const feeData = feeSnap.data();
+          const newPaid = (feeData.paidAmount || 0) + amountPaid;
+          const totalFee = feeData.totalFee || 2600000;
+          const newPending = Math.max(0, totalFee - newPaid);
+          const newStatus = newPending === 0 ? 'PAID' : (newPaid > 0 ? 'PARTIAL' : 'PENDING');
+
+          transaction.update(feeRef, {
+            paidAmount: newPaid,
+            feePendingAmount: newPending,
+            status: newStatus,
+            transactions: admin.firestore.FieldValue.arrayUnion(paymentId)
+          });
+        }
+      });
+
+      log.info('Razorpay payment processed successfully via webhook', { paymentId, studentId });
+    }
+
+    res.json({ status: 'SUCCESS' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Record Offline Cash/Cheque Payment endpoint -------------------------------
+app.post('/recordOfflinePayment', async (req, res, next) => {
+  try {
+    const { studentId, amountPaid, paymentMethod, feeHead, receivedBy } = req.body;
+    if (!studentId || !amountPaid) {
+      return res.status(400).json({ status: 'ERROR', message: 'Missing studentId or amountPaid parameter' });
+    }
+
+    const db = admin.firestore();
+    const sid = req.body.schoolId || config.schoolId;
+    const schoolRef = db.collection('schools').doc(sid);
+
+    const paymentId = `pay_offline_${crypto.randomBytes(8).toString('hex')}`;
+    const receiptNumber = `REV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    await db.runTransaction(async (transaction) => {
+      transaction.set(schoolRef.collection('payments').doc(paymentId), {
+        id: paymentId,
+        studentId,
+        amountPaise: parseInt(amountPaid, 10),
+        paymentMethod: paymentMethod || 'Cash',
+        feeHead: feeHead || 'Term 2 Tuition & Activity Dues',
+        status: 'SUCCESS',
+        receiptNumber,
+        receivedBy: receivedBy || 'School Accountant',
+        timestamp: new Date().toISOString(),
+        schoolId: sid,
+        sessionId: config.sessionId
+      });
+
+      const feeId = `fee_${studentId}`;
+      const feeRef = schoolRef.collection('fees').doc(feeId);
+      const feeSnap = await transaction.get(feeRef);
+
+      if (feeSnap.exists) {
+        const feeData = feeSnap.data();
+        const newPaid = (feeData.paidAmount || 0) + parseInt(amountPaid, 10);
+        const totalFee = feeData.totalFee || 2600000;
+        const newPending = Math.max(0, totalFee - newPaid);
+        const newStatus = newPending === 0 ? 'PAID' : (newPaid > 0 ? 'PARTIAL' : 'PENDING');
+
+        transaction.update(feeRef, {
+          paidAmount: newPaid,
+          feePendingAmount: newPending,
+          status: newStatus,
+          transactions: admin.firestore.FieldValue.arrayUnion(paymentId)
+        });
+      }
+    });
+
+    log.info('Offline payment recorded successfully', { paymentId, receiptNumber });
+    res.json({ status: 'SUCCESS', paymentId, receiptNumber });
   } catch (err) {
     next(err);
   }
