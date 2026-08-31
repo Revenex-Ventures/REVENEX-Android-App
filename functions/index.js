@@ -23,7 +23,12 @@ if (config.razorpayKeyId) {
 
 const app = express();
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // --- Request ID + structured logging -----------------------------------------
 app.use((req, res, next) => {
@@ -272,14 +277,13 @@ app.post('/createOrder', async (req, res, next) => {
 app.post('/razorpayWebhook', async (req, res, next) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
-    const rawBody = JSON.stringify(req.body);
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'dummy_secret';
 
     let isValid = false;
-    if (signature) {
+    if (signature && req.rawBody) {
       const expectedSignature = crypto
         .createHmac('sha256', webhookSecret)
-        .update(rawBody)
+        .update(req.rawBody)
         .digest('hex');
       isValid = (signature === expectedSignature);
     }
