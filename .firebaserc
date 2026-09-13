@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "revenex-erp-dev"
-  }
+    "default": "android-erp-system"
+  },
+  "targets": {},
+  "etags": {}
 }

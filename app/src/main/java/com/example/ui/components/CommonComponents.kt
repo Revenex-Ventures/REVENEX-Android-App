@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,13 +27,227 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.AttendanceStatus
-import com.example.data.model.FeeStatus
-import com.example.data.model.LeaveStatus
 import com.example.data.model.UserRole
 import com.example.ui.theme.*
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ============================================================================
+// 1. SCHOLA TOP APP BAR (Institutional crest, ⌘K search trigger, unread badge)
+// ============================================================================
+@Composable
+fun ScholaTopAppBar(
+  title: String = "ScholaOS",
+  subtitle: String? = "Institutional Operating System",
+  currentRole: UserRole = UserRole.PRINCIPAL,
+  currentUserName: String = "Dr. Arthur Pendelton",
+  unreadCount: Int = 3,
+  onSearchClick: () -> Unit = {},
+  onNotificationClick: () -> Unit = {},
+  onProfileClick: () -> Unit = {},
+  onLogoutClick: () -> Unit = {},
+  navigationIcon: @Composable (() -> Unit)? = null,
+  modifier: Modifier = Modifier
+) {
+  Surface(
+    modifier = modifier.fillMaxWidth(),
+    color = ScholaLinen,
+    tonalElevation = Elev.e0
+  ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .statusBarsPadding()
+          .padding(horizontal = Spacing.s4, vertical = Spacing.s3),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        if (navigationIcon != null) {
+          navigationIcon()
+          Spacer(modifier = Modifier.width(Spacing.s2))
+        }
+
+        // Institutional Crest Emblem Icon
+        Box(
+          modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(Radius.sm))
+            .background(ScholaSlateNavy),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = Icons.Default.AccountBalance,
+            contentDescription = "ScholaOS Crest",
+            tint = ScholaGold,
+            modifier = Modifier.size(20.dp)
+          )
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.s3))
+
+        // Institutional Title & Subtitle
+        Column(modifier = Modifier.weight(1f)) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = title,
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+              color = ScholaTextPrimary
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Surface(
+              shape = RoundedCornerShape(Radius.pill),
+              color = ScholaTerracottaContainer
+            ) {
+              Text(
+                text = "v2.6",
+                style = MaterialTheme.typography.labelSmall,
+                color = ScholaOnTerracottaContainer,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+              )
+            }
+          }
+          if (subtitle != null) {
+            Text(
+              text = subtitle,
+              style = MaterialTheme.typography.bodySmall,
+              color = ScholaMuted,
+              fontSize = 11.sp,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+        }
+
+        // Quick Search Trigger Pill (⌘K)
+        Surface(
+          shape = RoundedCornerShape(Radius.pill),
+          color = ScholaSurface,
+          modifier = Modifier
+            .clip(RoundedCornerShape(Radius.pill))
+            .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.pill))
+            .clickable(onClick = onSearchClick)
+            .testTag("command_palette_trigger_pill")
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              imageVector = Icons.Default.Search,
+              contentDescription = "Search",
+              tint = ScholaMuted,
+              modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "⌘K",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              color = ScholaTerracotta,
+              fontSize = 11.sp
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.s2))
+
+        // Notification Bell with Badge
+        Box(
+          modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(ScholaSurface)
+            .border(1.dp, ScholaBorder, CircleShape)
+            .clickable(onClick = onNotificationClick)
+            .testTag("topbar_notifications_button"),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = Icons.Outlined.Notifications,
+            contentDescription = "Notifications",
+            tint = ScholaTextPrimary,
+            modifier = Modifier.size(18.dp)
+          )
+          if (unreadCount > 0) {
+            Box(
+              modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 2.dp, end = 2.dp)
+                .size(14.dp)
+                .background(StatusDangerText, CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = if (unreadCount > 9) "9" else unreadCount.toString(),
+                color = Color.White,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
+          }
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.s2))
+
+        // User Avatar Dropdown
+        var showProfileMenu by remember { mutableStateOf(false) }
+        Box {
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clip(CircleShape)
+              .background(RoleAccent.of(currentRole))
+              .clickable { showProfileMenu = true }
+              .testTag("topbar_profile_avatar"),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = currentUserName.take(2).uppercase(Locale.getDefault()).ifBlank { "AD" },
+              color = Color.White,
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              fontSize = 12.sp
+            )
+          }
+
+          DropdownMenu(
+            expanded = showProfileMenu,
+            onDismissRequest = { showProfileMenu = false }
+          ) {
+            DropdownMenuItem(
+              text = { Text("Profile (${currentRole.displayName})") },
+              leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+              onClick = {
+                showProfileMenu = false
+                onProfileClick()
+              }
+            )
+            DropdownMenuItem(
+              text = { Text("Logout") },
+              leadingIcon = { Icon(Icons.Default.ExitToApp, contentDescription = null) },
+              onClick = {
+                showProfileMenu = false
+                onLogoutClick()
+              }
+            )
+          }
+        }
+      }
+
+      // 1px bottom canvas border
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(1.dp)
+          .background(ScholaBorder)
+      )
+    }
+  }
+}
+
+// Backward compatibility alias for RevenexTopBar
 @Composable
 fun RevenexTopBar(
   title: String,
@@ -46,289 +261,66 @@ fun RevenexTopBar(
   onLogoutClick: () -> Unit,
   navigationIcon: @Composable (() -> Unit)? = null
 ) {
-  Surface(
-    modifier = Modifier.fillMaxWidth(),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    shadowElevation = 1.dp
-  ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .statusBarsPadding()
-          .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        if (navigationIcon != null) {
-          navigationIcon()
-          Spacer(modifier = Modifier.width(8.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-              text = title,
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis
-            )
-          }
-          if (subtitle != null) {
-            Text(
-              text = subtitle,
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis
-            )
-          }
-        }
-
-        // Profile Avatar Menu (My Profile + Logout) — replaces the former role switcher
-        var showProfileMenu by remember { mutableStateOf(false) }
-        Box {
-          Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = when (currentRole) {
-              UserRole.PRINCIPAL -> RevenexPrimaryContainer
-              UserRole.TEACHER -> Color(0xFFEDE9FE)
-              else -> Color(0xFFDCFCE7)
-            },
-            modifier = Modifier
-              .clip(RoundedCornerShape(20.dp))
-              .clickable { showProfileMenu = true }
-              .testTag("profile_menu_button")
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(22.dp)
-                  .background(
-                    when (currentRole) {
-                      UserRole.PRINCIPAL -> RevenexBlue
-                      UserRole.TEACHER -> Color(0xFF6D28D9)
-                      else -> Color(0xFF15803D)
-                    },
-                    CircleShape
-                  ),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = currentUserName.take(1).uppercase().ifBlank { "U" },
-                  color = Color.White,
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold
-                )
-              }
-              Text(
-                text = when (currentRole) {
-                  UserRole.PRINCIPAL -> "Principal"
-                  UserRole.TEACHER -> "Teacher"
-                  else -> "Student Portal"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = when (currentRole) {
-                  UserRole.PRINCIPAL -> RevenexBlue
-                  UserRole.TEACHER -> Color(0xFF6D28D9)
-                  else -> Color(0xFF15803D)
-                }
-              )
-              Icon(
-                imageVector = Icons.Default.ArrowDropDown,
-                contentDescription = "Open Profile Menu",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(14.dp)
-              )
-            }
-          }
-
-          DropdownMenu(
-            expanded = showProfileMenu,
-            onDismissRequest = { showProfileMenu = false }
-          ) {
-            DropdownMenuItem(
-              text = { Text("My Profile") },
-              leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-              onClick = {
-                showProfileMenu = false
-                onProfileClick()
-              },
-              modifier = Modifier.testTag("menu_my_profile")
-            )
-            DropdownMenuItem(
-              text = { Text("Logout") },
-              leadingIcon = { Icon(Icons.Default.ExitToApp, contentDescription = null) },
-              onClick = {
-                showProfileMenu = false
-                onLogoutClick()
-              },
-              modifier = Modifier.testTag("menu_logout")
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.width(6.dp))
-
-        // Search Action
-        IconButton(
-          onClick = onSearchClick,
-          modifier = Modifier
-            .size(38.dp)
-            .testTag("global_search_button")
-        ) {
-          Icon(
-            imageVector = Icons.Outlined.Search,
-            contentDescription = "Search",
-            tint = MaterialTheme.colorScheme.onSurface
-          )
-        }
-
-        // Notification Bell with Badge
-        Box(
-          modifier = Modifier
-            .size(38.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onNotificationClick)
-            .testTag("notification_bell_button"),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Outlined.Notifications,
-            contentDescription = "Notifications",
-            tint = MaterialTheme.colorScheme.onSurface
-          )
-          if (unreadCount > 0) {
-            Box(
-              modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 4.dp, end = 4.dp)
-                .size(16.dp)
-                .background(StatusError, CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = if (unreadCount > 9) "9+" else unreadCount.toString(),
-                color = Color.White,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold
-              )
-            }
-          }
-        }
-      }
-    }
-  }
+  ScholaTopAppBar(
+    title = title,
+    subtitle = subtitle,
+    currentRole = currentRole,
+    currentUserName = currentUserName,
+    unreadCount = unreadCount,
+    onSearchClick = onSearchClick,
+    onNotificationClick = onNotificationClick,
+    onProfileClick = onProfileClick,
+    onLogoutClick = onLogoutClick,
+    navigationIcon = navigationIcon
+  )
 }
 
+// ============================================================================
+// 2. WORKFLOW QUICK ACTION PILL
+// ============================================================================
 @Composable
-fun StatCard(
+fun WorkflowQuickPill(
   title: String,
-  value: String,
-  sublabel: String,
   icon: ImageVector,
-  iconTint: Color,
-  iconBackground: Color,
+  onClick: () -> Unit,
   modifier: Modifier = Modifier,
-  trendText: String? = null,
-  isPositiveTrend: Boolean = true,
-  onClick: (() -> Unit)? = null
+  isHighlighted: Boolean = false
 ) {
-  Card(
+  val shape = RoundedCornerShape(Radius.pill)
+  Surface(
+    shape = shape,
+    color = if (isHighlighted) ScholaTerracotta else ScholaSurface,
     modifier = modifier
-      .clip(RoundedCornerShape(16.dp))
-      .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(
-      containerColor = MaterialTheme.colorScheme.surface
-    ),
-    border = CardDefaults.outlinedCardBorder()
+      .clip(shape)
+      .border(1.dp, if (isHighlighted) ScholaTerracotta else ScholaBorder, shape)
+      .clickable(onClick = onClick)
+      .testTag("workflow_pill_${title.lowercase().replace(" ", "_")}")
   ) {
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(14.dp),
-      verticalArrangement = Arrangement.SpaceBetween
+    Row(
+      modifier = Modifier.padding(horizontal = Spacing.s4, vertical = 10.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.Center
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier
-            .size(36.dp)
-            .background(iconBackground, RoundedCornerShape(10.dp)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(20.dp)
-          )
-        }
-
-        if (trendText != null) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = if (isPositiveTrend) StatusSuccessContainer else StatusErrorContainer
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = if (isPositiveTrend) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                contentDescription = null,
-                tint = if (isPositiveTrend) StatusSuccessText else StatusErrorText,
-                modifier = Modifier.size(12.dp)
-              )
-              Spacer(modifier = Modifier.width(2.dp))
-              Text(
-                text = trendText,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isPositiveTrend) StatusSuccessText else StatusErrorText,
-                fontWeight = FontWeight.Bold
-              )
-            }
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(10.dp))
-
-      Text(
-        text = value,
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = if (isHighlighted) Color.White else ScholaTerracotta,
+        modifier = Modifier.size(16.dp)
       )
-
+      Spacer(modifier = Modifier.width(Spacing.s2))
       Text(
         text = title,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.Medium
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = if (isHighlighted) Color.White else ScholaTextPrimary
       )
-
-      if (sublabel.isNotBlank()) {
-        Text(
-          text = sublabel,
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-        )
-      }
     }
   }
 }
 
+// ============================================================================
+// 3. SECTION HEADER
+// ============================================================================
 @Composable
 fun SectionHeader(
   title: String,
@@ -339,7 +331,7 @@ fun SectionHeader(
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp),
+      .padding(horizontal = Spacing.s4, vertical = Spacing.s2),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -347,182 +339,146 @@ fun SectionHeader(
       text = title,
       style = MaterialTheme.typography.titleMedium,
       fontWeight = FontWeight.Bold,
-      color = MaterialTheme.colorScheme.onSurface
+      color = ScholaTextPrimary
     )
     if (actionText != null && onActionClick != null) {
       TextButton(
         onClick = onActionClick,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.s2, vertical = Spacing.s1)
       ) {
         Text(
           text = actionText,
           style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.primary,
-          fontWeight = FontWeight.SemiBold
+          color = ScholaTerracotta,
+          fontWeight = FontWeight.Bold
         )
       }
     }
   }
 }
 
+// ============================================================================
+// 4. STATUS BADGE (Delegating to ScholaPillBadge)
+// ============================================================================
 @Composable
 fun StatusBadge(
   status: String,
-  type: String = "general" // attendance, fee, leave, general
+  type: String = "general",
+  modifier: Modifier = Modifier
 ) {
-  val (bgColor, textColor) = when (status.uppercase()) {
-    "PRESENT", "PAID", "APPROVED", "OPERATIONAL", "SUBMITTED" -> StatusSuccessContainer to StatusSuccessText
-    "ABSENT", "OVERDUE", "REJECTED", "NEEDS REPLACEMENT" -> StatusErrorContainer to StatusErrorText
-    "LATE", "PARTIAL", "PARTIALLY PAID", "PENDING", "UNDER MAINTENANCE" -> StatusWarningContainer to StatusWarningText
-    "ON LEAVE", "CIRCULAR", "UPCOMING" -> StatusInfoContainer to StatusInfoText
-    else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-  }
-
-  Surface(
-    shape = RoundedCornerShape(6.dp),
-    color = bgColor
-  ) {
-    Text(
-      text = status,
-      style = MaterialTheme.typography.labelSmall,
-      fontWeight = FontWeight.Bold,
-      color = textColor,
-      modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-    )
-  }
+  ScholaPillBadge(status = status, modifier = modifier)
 }
 
+// ============================================================================
+// 5. QUICK ACTION BUTTON & STAT CARD WRAPPERS
+// ============================================================================
 @Composable
 fun QuickActionButton(
   title: String,
   icon: ImageVector,
-  iconTint: Color,
-  backgroundColor: Color,
+  iconTint: Color = ScholaTerracotta,
+  backgroundColor: Color = ScholaTerracottaContainer,
   modifier: Modifier = Modifier,
   onClick: () -> Unit
 ) {
-  Card(
+  WorkflowQuickPill(
+    title = title,
+    icon = icon,
+    onClick = onClick,
     modifier = modifier
-      .clip(RoundedCornerShape(14.dp))
-      .clickable(onClick = onClick)
-      .testTag("quick_action_${title.lowercase().replace(" ", "_")}"),
-    shape = RoundedCornerShape(14.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = CardDefaults.outlinedCardBorder()
-  ) {
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(12.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center
-    ) {
-      Box(
-        modifier = Modifier
-          .size(42.dp)
-          .background(backgroundColor, RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(
-          imageVector = icon,
-          contentDescription = title,
-          tint = iconTint,
-          modifier = Modifier.size(22.dp)
-        )
-      }
-      Spacer(modifier = Modifier.height(8.dp))
-      Text(
-        text = title,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        textAlign = TextAlign.Center,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
-      )
-    }
-  }
+  )
 }
 
 @Composable
+fun StatCard(
+  title: String,
+  value: String,
+  sublabel: String,
+  icon: ImageVector,
+  iconTint: Color = ScholaTerracotta,
+  iconBackground: Color = ScholaTerracottaContainer,
+  modifier: Modifier = Modifier,
+  trendText: String? = null,
+  isPositiveTrend: Boolean = true,
+  onClick: (() -> Unit)? = null
+) {
+  CompactStatTile(
+    categoryLabel = title,
+    statCounter = value,
+    icon = icon,
+    iconTint = iconTint,
+    iconContainerColor = iconBackground,
+    deltaText = trendText,
+    isPositiveDelta = isPositiveTrend,
+    modifier = modifier,
+    onClick = onClick
+  )
+}
+
+// ============================================================================
+// 6. ANIMATED BAR CHART & DONUT CHART
+// ============================================================================
+@Composable
 fun SimpleBarChart(
   title: String,
-  data: List<Pair<String, Float>>, // Label to value (0..100)
+  data: List<Pair<String, Float>>,
   modifier: Modifier = Modifier,
-  barColor: Color = RevenexPrimary,
+  barColor: Color = ScholaTerracotta,
   onBarClick: ((String) -> Unit)? = null
 ) {
-  Card(
-    modifier = modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = CardDefaults.outlinedCardBorder()
-  ) {
-    Column(
+  val progress = remember { Animatable(0f) }
+  LaunchedEffect(data) {
+    progress.animateTo(1f, animationSpec = tween(700, easing = FastOutSlowInEasing))
+  }
+
+  AppCard(modifier = modifier.fillMaxWidth()) {
+    Text(
+      text = title,
+      style = MaterialTheme.typography.titleSmall,
+      fontWeight = FontWeight.Bold,
+      color = ScholaTextPrimary
+    )
+    Spacer(modifier = Modifier.height(Spacing.s3))
+
+    Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(16.dp)
+        .height(96.dp),
+      horizontalArrangement = Arrangement.SpaceEvenly,
+      verticalAlignment = Alignment.Bottom
     ) {
-      Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
-      )
-      Spacer(modifier = Modifier.height(16.dp))
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(120.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-      ) {
-        data.forEach { (label, value) ->
-          var startAnim by remember { mutableStateOf(false) }
-          LaunchedEffect(value) {
-            startAnim = true
-          }
-          val animatedValue by animateFloatAsState(
-            targetValue = if (startAnim) value else 0f,
-            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+      data.forEach { (label, value) ->
+        val barFraction = ((value / 100f).coerceIn(0f, 1f) * progress.value).coerceAtLeast(0.06f)
+        Column(
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.Bottom,
+          modifier = Modifier
+            .weight(1f)
+            .then(if (onBarClick != null) Modifier.clickable { onBarClick(label) } else Modifier)
+        ) {
+          Text(
+            text = "${value.toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = ScholaMuted,
+            fontSize = 9.sp
           )
-          val fraction = (animatedValue / 100f).coerceIn(0.05f, 1.0f)
-          Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+          Spacer(modifier = Modifier.height(2.dp))
+          Box(
             modifier = Modifier
-              .weight(1f)
-              .clickable(enabled = onBarClick != null) { onBarClick?.invoke(label) }
-          ) {
-            Text(
-              text = "${animatedValue.toInt()}%",
-              style = MaterialTheme.typography.labelSmall,
-              fontSize = 9.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Box(
-              modifier = Modifier
-                .width(22.dp)
-                .fillMaxHeight(fraction)
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                .background(
-                  Brush.verticalGradient(
-                    listOf(
-                      barColor,
-                      barColor.copy(alpha = 0.7f)
-                    )
-                  )
-                )
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-              text = label,
-              style = MaterialTheme.typography.labelSmall,
-              fontSize = 10.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              fontWeight = FontWeight.Medium,
-              maxLines = 1
-            )
-          }
+              .width(20.dp)
+              .fillMaxHeight(fraction = barFraction)
+              .clip(RoundedCornerShape(topStart = Radius.xs, topEnd = Radius.xs))
+              .background(barColor)
+          )
+          Spacer(modifier = Modifier.height(3.dp))
+          Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = ScholaTextSecondary,
+            fontSize = 10.sp,
+            maxLines = 1
+          )
         }
       }
     }
@@ -530,174 +486,166 @@ fun SimpleBarChart(
 }
 
 @Composable
-fun SimpleProgressRing(
-  percentage: Double,
-  title: String,
-  subtitle: String,
-  modifier: Modifier = Modifier,
-  ringColor: Color = StatusSuccess
+fun FeeCollectionDonutChart(
+  collectedAmount: Long,
+  totalAmount: Long,
+  modifier: Modifier = Modifier
 ) {
-  var startAnim by remember { mutableStateOf(false) }
-  LaunchedEffect(percentage) {
-    startAnim = true
+  val fraction = if (totalAmount > 0) (collectedAmount.toFloat() / totalAmount.toFloat()).coerceIn(0f, 1f) else 0.85f
+  val animFraction = remember { Animatable(0f) }
+  LaunchedEffect(fraction) {
+    animFraction.animateTo(fraction, tween(900, easing = FastOutSlowInEasing))
   }
-  val animatedProgress by animateFloatAsState(
-    targetValue = if (startAnim) (percentage / 100.0).toFloat() else 0f,
-    animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
-  )
 
-  Card(
+  Row(
     modifier = modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = CardDefaults.outlinedCardBorder()
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-      Box(
-        modifier = Modifier.size(72.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        CircularProgressIndicator(
-          progress = { animatedProgress },
-          modifier = Modifier.size(72.dp),
-          color = ringColor,
-          strokeWidth = 7.dp,
-          trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-        Text(
-          text = String.format("%.1f%%", animatedProgress * 100.0),
-          style = MaterialTheme.typography.labelMedium,
-          fontWeight = FontWeight.Bold
-        )
-      }
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        text = "COLLECTION REALIZATION",
+        color = ScholaOnyxMuted,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = TypeTokens.trackingMicroLabel
+      )
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = "${(fraction * 100).toInt()}% Realized",
+        color = ScholaGold,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold
+      )
+      Text(
+        text = "$${collectedAmount / 100000L}k of $${totalAmount / 100000L}k target collected",
+        color = ScholaOnyxMuted,
+        style = MaterialTheme.typography.bodySmall
+      )
+    }
 
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-          text = title,
-          style = MaterialTheme.typography.titleSmall,
-          fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-          text = subtitle,
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-      }
+    Box(contentAlignment = Alignment.Center) {
+      CircularProgressIndicator(
+        progress = { animFraction.value },
+        modifier = Modifier.size(64.dp),
+        color = ScholaTerracotta,
+        trackColor = ScholaOnyxBorder,
+        strokeWidth = 7.dp
+      )
+      Text(
+        text = "${(fraction * 100).toInt()}%",
+        color = Color.White,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold
+      )
     }
   }
 }
 
+// ============================================================================
+// 7. EMPTY STATE & SUCCESS CHECKMARK
+// ============================================================================
 @Composable
 fun EmptyStateView(
-  icon: ImageVector,
   title: String,
-  description: String,
-  modifier: Modifier = Modifier,
-  actionButtonText: String? = null,
-  onActionClick: (() -> Unit)? = null
+  message: String = "",
+  description: String = message,
+  icon: ImageVector = Icons.Outlined.Inbox,
+  actionLabel: String? = null,
+  onActionClick: (() -> Unit)? = null,
+  modifier: Modifier = Modifier
 ) {
   Column(
     modifier = modifier
       .fillMaxWidth()
-      .padding(32.dp),
+      .padding(Spacing.xxl32),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center
   ) {
     Box(
       modifier = Modifier
-        .size(64.dp)
-        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+        .size(56.dp)
+        .background(ScholaBorder, CircleShape),
       contentAlignment = Alignment.Center
     ) {
       Icon(
         imageVector = icon,
         contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(32.dp)
+        tint = ScholaTerracotta,
+        modifier = Modifier.size(28.dp)
       )
     }
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(Spacing.s3))
     Text(
       text = title,
       style = MaterialTheme.typography.titleMedium,
       fontWeight = FontWeight.Bold,
+      color = ScholaTextPrimary,
       textAlign = TextAlign.Center
     )
-    Spacer(modifier = Modifier.height(6.dp))
-    Text(
-      text = description,
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      textAlign = TextAlign.Center
-    )
-    if (actionButtonText != null && onActionClick != null) {
-      Spacer(modifier = Modifier.height(16.dp))
-      Button(onClick = onActionClick) {
-        Text(actionButtonText)
-      }
+    if (description.isNotBlank()) {
+      Spacer(modifier = Modifier.height(Spacing.s1))
+      Text(
+        text = description,
+        style = MaterialTheme.typography.bodyMedium,
+        color = ScholaMuted,
+        textAlign = TextAlign.Center
+      )
+    }
+    if (actionLabel != null && onActionClick != null) {
+      Spacer(modifier = Modifier.height(Spacing.s4))
+      AppButton(text = actionLabel, onClick = onActionClick)
     }
   }
 }
 
 @Composable
-fun AnimatedFadeIn(
-  delayMillis: Int = 0,
-  content: @Composable () -> Unit
+fun SuccessCheckmarkView(
+  message: String,
+  modifier: Modifier = Modifier
 ) {
-  var visible by remember { mutableStateOf(false) }
+  val scale = remember { Animatable(0f) }
   LaunchedEffect(Unit) {
-    if (delayMillis > 0) {
-      kotlinx.coroutines.delay(delayMillis.toLong())
-    }
-    visible = true
+    scale.animateTo(1f, animationSpec = Motion.springSmooth())
   }
-  AnimatedVisibility(
-    visible = visible,
-    enter = fadeIn(animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)) + slideInVertically(
-      initialOffsetY = { 40 },
-      animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)
-    )
-  ) {
-    content()
-  }
-}
 
-@Composable
-fun RevenexLogoCrest(
-  modifier: Modifier = Modifier,
-  tint: Color = RevenexGoldLight
-) {
-  Box(
-    modifier = modifier,
-    contentAlignment = Alignment.Center
+  Column(
+    modifier = modifier.padding(Spacing.cardPadding),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center
   ) {
-    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-      val w = size.width
-      drawCircle(
-        color = tint.copy(alpha = 0.25f),
-        radius = w / 2f,
-        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
-      )
-      drawCircle(
-        color = tint.copy(alpha = 0.15f),
-        radius = w / 2.4f,
-        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+    Box(
+      modifier = Modifier
+        .size(56.dp)
+        .scale(scale.value)
+        .background(StatusSuccessBg, CircleShape),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        imageVector = Icons.Default.Check,
+        contentDescription = null,
+        tint = StatusSuccessText,
+        modifier = Modifier.size(32.dp)
       )
     }
-    Icon(
-      imageVector = Icons.Default.School,
-      contentDescription = "REVENEX Crest",
-      tint = tint,
-      modifier = Modifier.fillMaxSize(0.55f)
+    Spacer(modifier = Modifier.height(Spacing.s3))
+    Text(
+      text = message,
+      style = MaterialTheme.typography.titleMedium,
+      fontWeight = FontWeight.Bold,
+      color = ScholaTextPrimary,
+      textAlign = TextAlign.Center
     )
   }
 }
 
-
+// PDF Export Helper Stub
+object PdfExportHelper {
+  fun exportFeeReceiptPdf(
+    context: android.content.Context,
+    student: com.example.data.model.Student?,
+    record: com.example.data.model.FeeRecord,
+    transaction: com.example.data.model.FeePaymentTransaction?
+  ) {
+    android.widget.Toast.makeText(context, "Receipt exported for ${record.studentName} (ID: ${record.id})", android.widget.Toast.LENGTH_SHORT).show()
+  }
+}

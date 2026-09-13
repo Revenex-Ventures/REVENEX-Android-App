@@ -2,12 +2,12 @@ package com.example.ui.screens.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,697 +42,356 @@ fun PrincipalDashboardScreen(
   val currentUser by repository.currentUser.collectAsState()
   val students by repository.students.collectAsState()
   val teachers by repository.teachers.collectAsState()
-  val feeRecords by repository.feeRecords.collectAsState()
-  val leaveRequests by repository.leaveRequests.collectAsState()
-  val notices by repository.notices.collectAsState()
+  val invoices by repository.invoices.collectAsState()
+  val auditLogs by repository.auditLogs.collectAsState()
   val classAttendanceMap by repository.classAttendance.collectAsState()
+  val notices by repository.notices.collectAsState()
   val examSchedules by repository.examSchedules.collectAsState()
-  val assignments by repository.assignments.collectAsState()
-  val events by repository.events.collectAsState()
 
   val totalStudents = students.size
   val totalFaculty = teachers.size
-  val pendingLeaves = leaveRequests.filter { it.status == LeaveStatus.PENDING }
 
-  val totalFeeDues = feeRecords.sumOf { it.totalFee }.coerceAtLeast(1L)
-  val totalCollected = feeRecords.sumOf { it.paidAmount }
-  val totalPending = feeRecords.sumOf { it.pendingAmount }
+  val totalBilled = invoices.sumOf { it.totalAmount }
+  val totalCollected = invoices.sumOf { it.paidAmount }
+  val totalReceivables = invoices.sumOf { it.pendingAmount }
+  val overdueInvoices = invoices.filter { it.status == FeeStatus.OVERDUE }
 
   val overallAttendance = remember(classAttendanceMap, students) {
     repository.getOverallSchoolAttendanceRate()
   }
-
   val formattedAttendance = String.format(Locale.US, "%.1f", overallAttendance)
 
-  val listState = rememberLazyListState()
-  LaunchedEffect(key1 = Unit) {
-    listState.scrollToItem(0)
-  }
-
   LazyColumn(
-    state = listState,
     modifier = Modifier
       .fillMaxSize()
+      .background(ScholaLinen)
       .testTag("principal_dashboard_list"),
-    contentPadding = PaddingValues(bottom = 90.dp)
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp)
   ) {
-    // Executive Welcome Banner
+    // 1. OPERATIONS HERO CARD (Dark Onyx Surface, 22dp corners, 1px border)
     item {
       AnimatedFadeIn(delayMillis = 0) {
-        Card(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-          shape = RoundedCornerShape(20.dp),
-          colors = CardDefaults.cardColors(containerColor = RevenexNavy)
-        ) {
-          Column(
+        FeatureHeroCard(
+          cycleTitle = "Academic Cycle 2026-2027 • Executive Desk",
+          categoryBadge = "Q3 Operations Active",
+          primaryStatistic = "$${String.format(Locale.US, "%,.1f", (totalCollected / 100000.0))}k",
+          statisticLabel = "Net Tuition Revenue Realized",
+          secondaryKeyMetric = "$formattedAttendance%",
+          secondaryMetricLabel = "Daily Roll Call Rate",
+          actionButtonText = "Review Institutional Ledger",
+          onActionClick = { onNavigateTo(Screen.Fees.route) },
+          badgeBgColor = ScholaGoldContainer,
+          badgeTextColor = ScholaGoldText,
+          heroHighlightColor = ScholaGoldLight,
+          modifier = Modifier.padding(bottom = Spacing.s4)
+        )
+      }
+    }
+
+    // 2. HORIZONTAL WORKFLOW PILLS
+    item {
+      AnimatedFadeIn(delayMillis = 100) {
+        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
+          SectionHeader(title = "Workflow Shortcuts")
+          LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
+          ) {
+            item {
+              WorkflowQuickPill(
+                title = "Command Palette",
+                icon = Icons.Default.Terminal,
+                onClick = { onNavigateTo(Screen.GlobalSearch.route) },
+                isHighlighted = true
+              )
+            }
+            item {
+              WorkflowQuickPill(
+                title = "Take Roll Call",
+                icon = Icons.Default.FactCheck,
+                onClick = { onNavigateTo(Screen.Attendance.route) }
+              )
+            }
+            item {
+              WorkflowQuickPill(
+                title = "Enroll Scholar",
+                icon = Icons.Default.PersonAdd,
+                onClick = onShowAddStudent
+              )
+            }
+            item {
+              WorkflowQuickPill(
+                title = "View Ledger",
+                icon = Icons.Default.AccountBalanceWallet,
+                onClick = { onNavigateTo(Screen.Fees.route) }
+              )
+            }
+            item {
+              WorkflowQuickPill(
+                title = "Broadcast Alert",
+                icon = Icons.Default.Campaign,
+                onClick = onShowCreateNotice
+              )
+            }
+          }
+        }
+      }
+    }
+
+    // 3. 2x2 GRID OF COMPACT STAT TILES
+    item {
+      AnimatedFadeIn(delayMillis = 200) {
+        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
+          SectionHeader(title = "Operational Health Matrix")
+
+          // Row 1: Active Scholars & Daily Attendance
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
+          ) {
+            CompactStatTile(
+              categoryLabel = "Active Scholars",
+              statCounter = "1,420",
+              icon = Icons.Default.Groups,
+              iconTint = ScholaTerracotta,
+              iconContainerColor = ScholaTerracottaContainer,
+              deltaText = "+4.2% YoY",
+              isPositiveDelta = true,
+              modifier = Modifier.weight(1f),
+              onClick = { onNavigateTo(Screen.Students.route) }
+            )
+
+            CompactStatTile(
+              categoryLabel = "Daily Attendance",
+              statCounter = "$formattedAttendance%",
+              icon = Icons.Default.HowToReg,
+              iconTint = Color(0xFF15803D),
+              iconContainerColor = StatusSuccessBg,
+              deltaText = "96.8% Target",
+              isPositiveDelta = true,
+              modifier = Modifier.weight(1f),
+              onClick = { onNavigateTo(Screen.Attendance.route) }
+            )
+          }
+
+          Spacer(modifier = Modifier.height(Spacing.s3))
+
+          // Row 2: Outstanding Receivables & Institutional GPA
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
+          ) {
+            CompactStatTile(
+              categoryLabel = "Receivables Due",
+              statCounter = "$${totalReceivables / 100000L}k",
+              icon = Icons.Default.ReceiptLong,
+              iconTint = StatusDangerText,
+              iconContainerColor = StatusDangerBg,
+              deltaText = "${overdueInvoices.size} Overdue",
+              isPositiveDelta = false,
+              modifier = Modifier.weight(1f),
+              onClick = { onNavigateTo(Screen.Fees.route) }
+            )
+
+            CompactStatTile(
+              categoryLabel = "Institutional GPA",
+              statCounter = "3.84 / 4.0",
+              icon = Icons.Default.Grade,
+              iconTint = ScholaGold,
+              iconContainerColor = ScholaGoldContainer,
+              deltaText = "Top 5% Nat'l",
+              isPositiveDelta = true,
+              modifier = Modifier.weight(1f),
+              onClick = { onNavigateTo(Screen.ReportCard.route) }
+            )
+          }
+        }
+      }
+    }
+
+    // 4. OVERDUE ALERTS CARD
+    if (overdueInvoices.isNotEmpty()) {
+      item {
+        AnimatedFadeIn(delayMillis = 250) {
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .padding(20.dp)
+              .padding(bottom = Spacing.s4)
+              .clip(RoundedCornerShape(Radius.lg))
+              .background(StatusDangerBg)
+              .border(1.dp, StatusDangerText.copy(alpha = 0.3f), RoundedCornerShape(Radius.lg))
+              .padding(Spacing.cardPadding)
           ) {
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
             ) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                  text = "Welcome, ${currentUser.name}",
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
-                Text(
-                  text = "Revenex Public School • Term 1 Operations Hub",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = Color.White.copy(alpha = 0.8f)
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = RevenexGold
-              ) {
-                Text(
-                  text = "ADMIN",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-              }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Live Quick Snapshot in Hero (Dynamically calculated)
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              Column {
-                Text(
-                  text = "TODAY'S ATTENDANCE",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = Color.White.copy(alpha = 0.7f),
-                  fontSize = 9.sp
-                )
-                Text(
-                  text = "$formattedAttendance%",
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = StatusSuccessContainer
-                )
-              }
-              Column {
-                Text(
-                  text = "FEES COLLECTED",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = Color.White.copy(alpha = 0.7f),
-                  fontSize = 9.sp
-                )
-                Text(
-                  text = "₹${(totalCollected / 1000).toInt()}k",
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
-              }
-              Column {
-                Text(
-                  text = "STAFF ON DUTY",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = Color.White.copy(alpha = 0.7f),
-                  fontSize = 9.sp
-                )
-                Text(
-                  text = "$totalFaculty / $totalFaculty",
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Quick Action Bar
-    item {
-      AnimatedFadeIn(delayMillis = 100) {
-        Column {
-          SectionHeader(title = "Administrative Actions")
-          LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            item {
-              QuickActionButton(
-                title = "Admit Student",
-                icon = Icons.Default.PersonAdd,
-                iconTint = RevenexBlue,
-                backgroundColor = RevenexPrimaryContainer,
-                modifier = Modifier.width(110.dp),
-                onClick = onShowAddStudent
-              )
-            }
-            item {
-              QuickActionButton(
-                title = "Add Faculty",
-                icon = Icons.Default.School,
-                iconTint = Color(0xFF6D28D9),
-                backgroundColor = Color(0xFFEDE9FE),
-                modifier = Modifier.width(110.dp),
-                onClick = onShowAddTeacher
-              )
-            }
-            item {
-              QuickActionButton(
-                title = "Mark Attendance",
-                icon = Icons.Default.HowToReg,
-                iconTint = Color(0xFF15803D),
-                backgroundColor = Color(0xFFDCFCE7),
-                modifier = Modifier.width(110.dp),
-                onClick = { onNavigateTo(Screen.Attendance.route) }
-              )
-            }
-            item {
-              QuickActionButton(
-                title = "Publish Notice",
-                icon = Icons.Default.Campaign,
-                iconTint = Color(0xFFB45309),
-                backgroundColor = Color(0xFFFEF3C7),
-                modifier = Modifier.width(110.dp),
-                onClick = onShowCreateNotice
-              )
-            }
-            item {
-              QuickActionButton(
-                title = "AI Assistant",
-                icon = Icons.Default.AutoAwesome,
-                iconTint = Color(0xFF0284C7),
-                backgroundColor = Color(0xFFE0F2FE),
-                modifier = Modifier.width(110.dp),
-                onClick = { onNavigateTo(Screen.AiAssistant.route) }
-              )
-            }
-          }
-          Spacer(modifier = Modifier.height(12.dp))
-        }
-      }
-    }
-
-    // High Level Metric Grid (Live calculated)
-    item {
-      AnimatedFadeIn(delayMillis = 200) {
-        Column {
-          SectionHeader(title = "Key Operating Metrics")
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-          ) {
-            StatCard(
-              title = "Enrolled Students",
-              value = "$totalStudents",
-              sublabel = "Across Classes 6 - 12",
-              icon = Icons.Default.Groups,
-              iconTint = RevenexBlue,
-              iconBackground = RevenexPrimaryContainer,
-              trendText = "+4.2% YoY",
-              isPositiveTrend = true,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Students.route) }
-            )
-            StatCard(
-              title = "Active Faculty",
-              value = "$totalFaculty",
-              sublabel = "100% On Duty Today",
-              icon = Icons.Default.Psychology,
-              iconTint = Color(0xFF6D28D9),
-              iconBackground = Color(0xFFEDE9FE),
-              trendText = "98% Avg Att",
-              isPositiveTrend = true,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Teachers.route) }
-            )
-          }
-          Spacer(modifier = Modifier.height(10.dp))
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-          ) {
-            val collectionPercent = ((totalCollected.toDouble() / totalFeeDues.toDouble()) * 100).toInt()
-            StatCard(
-              title = "Fees Realized",
-              value = "₹${totalCollected / 100000L}k",
-              sublabel = "Target: ₹${totalFeeDues / 100000L}k",
-              icon = Icons.Default.AccountBalanceWallet,
-              iconTint = Color(0xFF15803D),
-              iconBackground = Color(0xFFDCFCE7),
-              trendText = "$collectionPercent% Collected",
-              isPositiveTrend = true,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Fees.route) }
-            )
-            StatCard(
-              title = "Pending Dues",
-              value = "₹${totalPending / 100000L}k",
-              sublabel = "${feeRecords.count { it.status == FeeStatus.PENDING || it.status == FeeStatus.OVERDUE }} Students Pending",
-              icon = Icons.Default.HourglassEmpty,
-              iconTint = StatusErrorText,
-              iconBackground = StatusErrorContainer,
-              trendText = "Action Req.",
-              isPositiveTrend = false,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Fees.route) }
-            )
-          }
-          Spacer(modifier = Modifier.height(16.dp))
-        }
-      }
-    }
-
-    // Visual Analytics: Attendance Trends & Class Comparison
-    item {
-      AnimatedFadeIn(delayMillis = 300) {
-        Column {
-          SectionHeader(
-            title = "Analytics & Trends",
-            actionText = "Full Reports",
-            onActionClick = { onNavigateTo(Screen.Reports.route) }
-          )
-          Column(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-          ) {
-            SimpleBarChart(
-              title = "Weekly Attendance Trend (Mon - Fri)",
-              data = listOf(
-                "Mon" to 95.8f,
-                "Tue" to 97.2f,
-                "Wed" to 96.4f,
-                "Thu" to 94.1f,
-                "Fri" to 96.0f
-              ),
-              barColor = RevenexPrimary
-            )
-
-            SimpleBarChart(
-              title = "Class-wise Attendance Ratio Today",
-              data = listOf(
-                "10-A" to 96.4f,
-                "10-B" to 95.3f,
-                "9-A" to 94.0f,
-                "8-A" to 97.4f,
-                "6-B" to 96.5f
-              ),
-              barColor = Color(0xFF0D9488),
-              onBarClick = { classLabel ->
-                val grade = classLabel.substringBefore("-")
-                val div = classLabel.substringAfter("-")
-                onNavigateTo("attendance?classGrade=$grade&division=$div")
-              }
-            )
-          }
-          Spacer(modifier = Modifier.height(16.dp))
-        }
-      }
-    }
-
-    // Pending Approvals & Leave Requests with Live Approve/Reject Actions
-    item {
-      SectionHeader(
-        title = "Pending Leave Approvals (${pendingLeaves.size})",
-        actionText = "Manage All",
-        onActionClick = { onNavigateTo(Screen.Leaves.route) }
-      )
-      if (pendingLeaves.isEmpty()) {
-        Card(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-          border = CardDefaults.outlinedCardBorder()
-        ) {
-          Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(
-              imageVector = Icons.Default.CheckCircleOutline,
-              contentDescription = null,
-              tint = StatusSuccess
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-              text = "All staff and student leave applications are reviewed.",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-        }
-      } else {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          pendingLeaves.forEach { leave ->
-            Card(
-              modifier = Modifier.fillMaxWidth(),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-              border = CardDefaults.outlinedCardBorder(),
-              shape = RoundedCornerShape(14.dp)
-            ) {
-              Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(
-                    text = leave.applicantName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                  )
-                  StatusBadge(status = leave.status.label, type = "leave")
-                }
-                Text(
-                  text = "${leave.classOrDept} • ${leave.leaveType} (${leave.daysCount} days: ${leave.startDate} to ${leave.endDate})",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.primary,
-                  fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                  text = "\"${leave.reason}\"",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.End,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  OutlinedButton(
-                    onClick = { repository.rejectLeave(leave.id) },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
-                  ) {
-                    Text("Reject", fontSize = 12.sp)
-                  }
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Button(
-                    onClick = { repository.approveLeave(leave.id) },
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess)
-                  ) {
-                    Text("Approve", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-      Spacer(modifier = Modifier.height(16.dp))
-    }
-
-    // Latest Published Circulars & Notices
-    item {
-      SectionHeader(
-        title = "Official School Circulars",
-        actionText = "View All",
-        onActionClick = { onNavigateTo(Screen.Notices.route) }
-      )
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-      ) {
-        notices.take(3).forEach { notice ->
-          Card(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clickable { onNavigateTo(Screen.Notices.route) },
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
-            Column(modifier = Modifier.padding(14.dp)) {
               Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                StatusBadge(status = notice.category.label)
-                Text(
-                  text = notice.publishedDate,
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-              Spacer(modifier = Modifier.height(6.dp))
-              Text(
-                text = notice.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-              )
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                text = notice.content,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
-          }
-        }
-      }
-      Spacer(modifier = Modifier.height(16.dp))
-    }
-
-    // Upcoming Exams
-    item {
-      SectionHeader(
-        title = "Upcoming Examination Schedules",
-        actionText = "View Calendar",
-        onActionClick = { onNavigateTo(Screen.Exams.route) }
-      )
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        val upcomingExamSubjects = examSchedules.flatMap { sched ->
-          sched.subjects.map { subj -> sched to subj }
-        }
-        if (upcomingExamSubjects.isEmpty()) {
-          Text("No exams scheduled.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-          upcomingExamSubjects.take(3).forEach { (sched, exam) ->
-            Card(
-              modifier = Modifier.fillMaxWidth(),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-              border = CardDefaults.outlinedCardBorder(),
-              shape = RoundedCornerShape(12.dp)
-            ) {
-              Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
               ) {
                 Box(
                   modifier = Modifier
                     .size(40.dp)
-                    .background(Color(0xFFEDE9FE), CircleShape),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(Icons.Default.EventNote, contentDescription = null, tint = Color(0xFF6D28D9))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = "${exam.subjectName} (${sched.title})",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                  )
-                  Text(
-                    text = "Class ${sched.classGrade} • Room ${exam.room}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                  Text(
-                    text = exam.date,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = RevenexBlue
-                  )
-                  Text(
-                    text = exam.time,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                }
-              }
-            }
-          }
-        }
-      }
-      Spacer(modifier = Modifier.height(16.dp))
-    }
-
-    // Academic & Homework Alerts
-    item {
-      SectionHeader(
-        title = "Academic & Homework Alerts",
-        actionText = "All Homework",
-        onActionClick = { onNavigateTo(Screen.Homework.route) }
-      )
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        if (assignments.isEmpty()) {
-          Text("No active homework tasks.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-          assignments.take(3).forEach { hw ->
-            Card(
-              modifier = Modifier.fillMaxWidth(),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-              border = CardDefaults.outlinedCardBorder(),
-              shape = RoundedCornerShape(12.dp)
-            ) {
-              Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Box(
-                  modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFFFEF3C7), CircleShape),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(Icons.Default.Assignment, contentDescription = null, tint = Color(0xFFD97706))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = hw.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                  )
-                  Text(
-                    text = "${hw.subject} • Class ${hw.classGrade}-${hw.division}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                  Text(
-                    text = "Due: ${hw.dueDate}",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB45309)
-                  )
-                }
-              }
-            }
-          }
-        }
-      }
-      Spacer(modifier = Modifier.height(16.dp))
-    }
-
-    // School Events & Holidays
-    item {
-      SectionHeader(
-        title = "School Events & Academic Calendar",
-        actionText = "Full Calendar",
-        onActionClick = { onNavigateTo(Screen.Timetable.route) }
-      )
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        if (events.isEmpty()) {
-          Text("No upcoming events scheduled.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-          events.take(3).forEach { event ->
-            val isHoliday = event.category.equals("Holiday", ignoreCase = true)
-            Card(
-              modifier = Modifier.fillMaxWidth(),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-              border = CardDefaults.outlinedCardBorder(),
-              shape = RoundedCornerShape(12.dp)
-            ) {
-              Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Box(
-                  modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                      if (isHoliday) Color(0xFFFEE2E2) else Color(0xFFE0F2FE),
-                      CircleShape
-                    ),
+                    .background(StatusDangerText, CircleShape),
                   contentAlignment = Alignment.Center
                 ) {
                   Icon(
-                    imageVector = if (isHoliday) Icons.Default.EventBusy else Icons.Default.Festival,
+                    imageVector = Icons.Default.WarningAmber,
                     contentDescription = null,
-                    tint = if (isHoliday) Color(0xFFEF4444) else Color(0xFF0284C7)
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
                   )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                Spacer(modifier = Modifier.width(Spacing.s3))
+                Column {
                   Text(
-                    text = event.title,
+                    text = "${overdueInvoices.size} Accounts Overdue (>10 Days)",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = StatusDangerText
                   )
                   Text(
-                    text = event.description,
+                    text = "$${overdueInvoices.sumOf { it.pendingAmount } / 100000L}k outstanding tuition requiring bursar review.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = StatusDangerText.copy(alpha = 0.85f),
+                    fontSize = 11.sp
                   )
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                  Text(
-                    text = event.date,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isHoliday) Color(0xFFB91C1C) else Color(0xFF0369A1)
-                  )
+              }
+              Surface(
+                shape = RoundedCornerShape(Radius.pill),
+                color = StatusDangerText,
+                modifier = Modifier
+                  .clip(RoundedCornerShape(Radius.pill))
+                  .clickable { onNavigateTo(Screen.Fees.route) }
+              ) {
+                Text(
+                  text = "Review",
+                  color = Color.White,
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 5. ATTENDANCE & ACADEMIC TREND CHARTS
+    item {
+      AnimatedFadeIn(delayMillis = 300) {
+        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
+          SectionHeader(
+            title = "Cohort Attendance Analytics",
+            actionText = "Full Matrix",
+            onActionClick = { onNavigateTo(Screen.Attendance.route) }
+          )
+          SimpleBarChart(
+            title = "Weekly Attendance Trend (Mon - Fri)",
+            data = listOf(
+              "Mon" to 96.8f,
+              "Tue" to 97.4f,
+              "Wed" to 96.2f,
+              "Thu" to 95.8f,
+              "Fri" to 97.1f
+            ),
+            barColor = ScholaTerracotta
+          )
+        }
+      }
+    }
+
+    // 6. RECENT AUDIT STREAM FEED
+    item {
+      AnimatedFadeIn(delayMillis = 350) {
+        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
+          SectionHeader(
+            title = "Real-Time Institutional Audit Stream",
+            actionText = "Audit Hub",
+            onActionClick = { onNavigateTo(Screen.Notices.route) }
+          )
+
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s2)
+          ) {
+            auditLogs.take(4).forEach { log ->
+              AppCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(38.dp)
+                      .clip(CircleShape)
+                      .background(
+                        when (log.actionType) {
+                          "ROLL_CALL" -> StatusSuccessBg
+                          "FEE_PAYMENT" -> ScholaTerracottaContainer
+                          "GRADEBOOK" -> Color(0xFFEDE9FE)
+                          else -> ScholaSlateContainer
+                        }
+                      ),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = when (log.actionType) {
+                        "ROLL_CALL" -> Icons.Default.CheckCircle
+                        "FEE_PAYMENT" -> Icons.Default.AttachMoney
+                        "GRADEBOOK" -> Icons.Default.Grade
+                        else -> Icons.Default.HistoryEdu
+                      },
+                      contentDescription = null,
+                      tint = when (log.actionType) {
+                        "ROLL_CALL" -> StatusSuccessText
+                        "FEE_PAYMENT" -> ScholaTerracotta
+                        "GRADEBOOK" -> Color(0xFF6D28D9)
+                        else -> ScholaSlateNavy
+                      },
+                      modifier = Modifier.size(20.dp)
+                    )
+                  }
+
+                  Spacer(modifier = Modifier.width(Spacing.s3))
+
+                  Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Text(
+                        text = log.actionSummary,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                      )
+                      Text(
+                        text = log.timestamp,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = ScholaMuted,
+                        fontSize = 10.sp
+                      )
+                    }
+                    Text(
+                      text = "${log.actorName} (${log.actorRole}) • ${log.details}",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = ScholaTextSecondary,
+                      fontSize = 11.sp,
+                      maxLines = 2,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
                 }
               }
             }
           }
         }
       }
-      Spacer(modifier = Modifier.height(20.dp))
     }
   }
 }

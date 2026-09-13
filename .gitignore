@@ -21,4 +21,6 @@ debug.keystore
 *.zip
 *.txt
 app-debug.apk
+node_modules/
+.opencode/
 

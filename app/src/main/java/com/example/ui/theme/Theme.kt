@@ -7,68 +7,79 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-  primary = RevenexPrimaryLight,
+private val ScholaLightColorScheme = lightColorScheme(
+  primary = ScholaTerracotta,
   onPrimary = Color.White,
-  primaryContainer = RevenexNavy,
-  onPrimaryContainer = RevenexPrimaryContainer,
-  secondary = RevenexGoldLight,
-  onSecondary = Color.Black,
-  secondaryContainer = Color(0xFF451A03),
-  onSecondaryContainer = RevenexGoldContainer,
-  tertiary = RevenexCyan,
-  onTertiary = Color.White,
-  tertiaryContainer = Color(0xFF082F49),
-  onTertiaryContainer = RevenexCyanContainer,
-  background = DarkBackground,
-  onBackground = DarkTextPrimary,
-  surface = DarkSurface,
-  onSurface = DarkTextPrimary,
-  surfaceVariant = DarkSurfaceVariant,
-  onSurfaceVariant = DarkTextSecondary,
-  outline = DarkBorder,
-  error = StatusError,
+  primaryContainer = ScholaTerracottaContainer,
+  onPrimaryContainer = ScholaOnTerracottaContainer,
+  secondary = ScholaSlateNavy,
+  onSecondary = Color.White,
+  secondaryContainer = ScholaSlateContainer,
+  onSecondaryContainer = ScholaSlateNavyDark,
+  tertiary = ScholaGold,
+  onTertiary = Color.Black,
+  tertiaryContainer = ScholaGoldContainer,
+  onTertiaryContainer = ScholaGoldText,
+  background = ScholaLinen,
+  onBackground = ScholaTextPrimary,
+  surface = ScholaSurface,
+  onSurface = ScholaTextPrimary,
+  surfaceVariant = ScholaSurfaceWarm,
+  onSurfaceVariant = ScholaTextSecondary,
+  outline = ScholaBorder,
+  outlineVariant = ScholaBorder,
+  error = StatusDangerText,
   onError = Color.White,
-  errorContainer = Color(0xFF450A0A),
-  onErrorContainer = StatusErrorContainer
+  errorContainer = StatusDangerBg,
+  onErrorContainer = StatusDangerText
 )
 
-private val LightColorScheme = lightColorScheme(
-  primary = RevenexBlue,
+private val ScholaDarkColorScheme = darkColorScheme(
+  primary = ScholaTerracottaLight,
   onPrimary = Color.White,
-  primaryContainer = RevenexPrimaryContainer,
-  onPrimaryContainer = RevenexOnPrimaryContainer,
-  secondary = RevenexGold,
-  onSecondary = Color.White,
-  secondaryContainer = RevenexGoldContainer,
-  onSecondaryContainer = Color(0xFF78350F),
-  tertiary = RevenexCyan,
+  primaryContainer = ScholaOnyxSurface,
+  onPrimaryContainer = ScholaTerracottaContainer,
+  secondary = ScholaGold,
+  onSecondary = Color.Black,
+  secondaryContainer = ScholaOnyxBorder,
+  onSecondaryContainer = ScholaGoldLight,
+  tertiary = ScholaSlateNavy,
   onTertiary = Color.White,
-  tertiaryContainer = RevenexCyanContainer,
-  onTertiaryContainer = Color(0xFF0369A1),
-  background = LightBackground,
-  onBackground = LightTextPrimary,
-  surface = LightSurface,
-  onSurface = LightTextPrimary,
-  surfaceVariant = LightSurfaceVariant,
-  onSurfaceVariant = LightTextSecondary,
-  outline = LightBorder,
-  error = StatusError,
+  tertiaryContainer = ScholaOnyx,
+  onTertiaryContainer = Color.White,
+  background = ScholaOnyx,
+  onBackground = ScholaOnyxText,
+  surface = ScholaOnyxSurface,
+  onSurface = ScholaOnyxText,
+  surfaceVariant = Color(0xFF262320),
+  onSurfaceVariant = ScholaOnyxMuted,
+  outline = ScholaOnyxBorder,
+  outlineVariant = ScholaOnyxBorder,
+  error = StatusDangerText,
   onError = Color.White,
-  errorContainer = StatusErrorContainer,
-  onErrorContainer = StatusErrorText
+  errorContainer = Color(0xFF450A0A),
+  onErrorContainer = StatusDangerBg
 )
 
 @Composable
-fun RevenexTheme(
+fun ScholaTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
   content: @Composable () -> Unit
 ) {
-  val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+  val colorScheme = if (darkTheme) ScholaDarkColorScheme else ScholaLightColorScheme
 
   MaterialTheme(
     colorScheme = colorScheme,
     typography = Typography,
     content = content
   )
+}
+
+// Backward-compatible alias
+@Composable
+fun RevenexTheme(
+  darkTheme: Boolean = isSystemInDarkTheme(),
+  content: @Composable () -> Unit
+) {
+  ScholaTheme(darkTheme = darkTheme, content = content)
 }

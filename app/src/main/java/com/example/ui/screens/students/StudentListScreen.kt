@@ -1,16 +1,17 @@
 package com.example.ui.screens.students
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,13 +22,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.FeeStatus
 import com.example.data.model.Student
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
-import com.example.ui.components.EmptyStateView
-import com.example.ui.components.StatusBadge
-import com.example.ui.navigation.Screen
+import com.example.ui.components.*
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,129 +35,234 @@ fun StudentListScreen(
   onNavigateToStudentDetail: (String) -> Unit,
   onShowAddStudent: () -> Unit
 ) {
+  val windowSizeClass = rememberWindowSizeClass()
   val students by repository.students.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
-  val teachers by repository.teachers.collectAsState()
+
   var searchQuery by remember { mutableStateOf("") }
-  var selectedClassFilter by remember { mutableStateOf("All") }
+  var selectedCohortFilter by remember { mutableStateOf("All Cohorts") }
+  var selectedStudentForPane by remember { mutableStateOf<Student?>(students.firstOrNull()) }
 
-  val allowedClasses = remember(teachers, currentUser) {
-    if (currentUser.role == UserRole.TEACHER) {
-      val matchedTeacher = teachers.firstOrNull { it.email.equals(currentUser.email, ignoreCase = true) }
-      matchedTeacher?.assignedClasses ?: listOf(currentUser.associatedClass)
-    } else {
-      emptyList()
-    }
-  }
+  // Modal sheet state for mobile
+  var showMobileDetailSheet by remember { mutableStateOf(false) }
+  var activeMobileStudentId by remember { mutableStateOf<String?>(null) }
 
-  val filteredStudents = remember(students, searchQuery, selectedClassFilter, currentUser, allowedClasses) {
+  val cohortFilters = listOf("All Cohorts", "Grade 10-A", "Grade 10-B", "Grade 11-Sci", "Grade 12-Arts")
+
+  val filteredStudents = remember(students, searchQuery, selectedCohortFilter) {
     students.filter { st ->
-      val matchesStatus = st.status == "ACTIVE"
-      
-      val isAllowed = if (currentUser.role == UserRole.TEACHER) {
-        st.fullClass in allowedClasses
-      } else {
-        true
+      val matchesCohort = when (selectedCohortFilter) {
+        "All Cohorts" -> true
+        "Grade 10-A" -> st.classGrade == "10" && st.division == "A"
+        "Grade 10-B" -> st.classGrade == "10" && st.division == "B"
+        "Grade 11-Sci" -> st.classGrade == "11" || st.fullClass.contains("11")
+        "Grade 12-Arts" -> st.classGrade == "12" || st.fullClass.contains("12")
+        else -> true
       }
-
-      val matchesClass = if (selectedClassFilter == "All") true else st.classGrade == selectedClassFilter
-      val matchesSearch = if (searchQuery.isBlank()) true else {
+      val matchesQuery = if (searchQuery.isBlank()) true else {
         st.name.contains(searchQuery, ignoreCase = true) ||
-            st.admissionNumber.contains(searchQuery, ignoreCase = true) ||
-            st.parentName.contains(searchQuery, ignoreCase = true)
+        st.admissionNumber.contains(searchQuery, ignoreCase = true) ||
+        st.parentName.contains(searchQuery, ignoreCase = true)
       }
-      matchesStatus && isAllowed && matchesClass && matchesSearch
+      matchesCohort && matchesQuery
     }
   }
+
+  val isSplitPane = windowSizeClass != WindowSizeClass.COMPACT_MOBILE
 
   Scaffold(
+    containerColor = ScholaLinen,
     floatingActionButton = {
       if (currentUser.role == UserRole.PRINCIPAL) {
         ExtendedFloatingActionButton(
           onClick = onShowAddStudent,
-          icon = { Icon(Icons.Default.PersonAdd, contentDescription = "Admit Student") },
-          text = { Text("Admit Student", fontWeight = FontWeight.Bold) },
-          containerColor = RevenexBlue,
+          icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+          text = { Text("Enroll Scholar", fontWeight = FontWeight.Bold) },
+          containerColor = ScholaTerracotta,
           contentColor = Color.White,
           modifier = Modifier.testTag("fab_admit_student")
         )
       }
     }
   ) { paddingValues ->
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-    ) {
-      // Search Box
-      OutlinedTextField(
-        value = searchQuery,
-        onValueChange = { searchQuery = it },
-        placeholder = { Text("Search by student name, adm no, or parent...") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        trailingIcon = {
-          if (searchQuery.isNotBlank()) {
-            IconButton(onClick = { searchQuery = "" }) {
-              Icon(Icons.Default.Clear, contentDescription = "Clear")
+    if (isSplitPane) {
+      // TABLET / DESKTOP SIDE-BY-SIDE TWO-PANE LAYOUT
+      Row(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(paddingValues)
+      ) {
+        // Left Master List Pane
+        Column(
+          modifier = Modifier
+            .weight(1.1f)
+            .fillMaxHeight()
+            .padding(horizontal = Spacing.s4, vertical = Spacing.s2)
+        ) {
+          ScholaInputField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = "Filter scholars by name, ID, or parent...",
+            leadingIcon = Icons.Default.Search,
+            onClear = { searchQuery = "" }
+          )
+
+          Spacer(modifier = Modifier.height(Spacing.s2))
+
+          LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
+          ) {
+            items(cohortFilters) { cohort ->
+              val isSelected = selectedCohortFilter == cohort
+              Surface(
+                shape = RoundedCornerShape(Radius.pill),
+                color = if (isSelected) ScholaTerracotta else ScholaSurface,
+                modifier = Modifier
+                  .clip(RoundedCornerShape(Radius.pill))
+                  .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+                  .clickable { selectedCohortFilter = cohort }
+              ) {
+                Text(
+                  text = cohort,
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.Bold,
+                  color = if (isSelected) Color.White else ScholaTextPrimary,
+                  modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+                )
+              }
             }
           }
-        },
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 8.dp)
-          .testTag("student_search_input"),
-        shape = RoundedCornerShape(14.dp),
-        singleLine = true
-      )
 
-      // Grade Filter Chips
-      LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        val classFilters = listOf("All") + students.map { it.classGrade }.distinct().sortedByDescending { it.toIntOrNull() ?: 0 }
-        items(classFilters) { filter ->
-          FilterChip(
-            selected = selectedClassFilter == filter,
-            onClick = { selectedClassFilter = filter },
-            label = { Text(if (filter == "All") "All Classes (${students.size})" else "Class $filter") },
-            shape = RoundedCornerShape(20.dp)
-          )
-        }
-      }
+          Spacer(modifier = Modifier.height(Spacing.s3))
 
-      Spacer(modifier = Modifier.height(4.dp))
-
-      // Student Roster
-      if (filteredStudents.isEmpty()) {
-        EmptyStateView(
-          icon = Icons.Default.SearchOff,
-          title = "No Students Found",
-          description = "No matching student records found for the selected filter.",
-          actionButtonText = "Clear Filters",
-          onActionClick = {
-            searchQuery = ""
-            selectedClassFilter = "All"
+          LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s2),
+            contentPadding = PaddingValues(bottom = 90.dp)
+          ) {
+            items(filteredStudents, key = { it.id }) { student ->
+              val isPaneSelected = selectedStudentForPane?.id == student.id
+              ScholarCardItem(
+                student = student,
+                isSelected = isPaneSelected,
+                onClick = { selectedStudentForPane = student }
+              )
+            }
           }
-        )
-      } else {
-        val listState = rememberLazyListState()
-        LaunchedEffect(key1 = Unit) {
-          listState.scrollToItem(0)
         }
-        LazyColumn(
-          state = listState,
-          modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
+
+        // 1px Vertical Divider
+        Box(
+          modifier = Modifier
+            .width(1.dp)
+            .fillMaxHeight()
+            .background(ScholaBorder)
+        )
+
+        // Right Detail 360 Pane
+        Box(
+          modifier = Modifier
+            .weight(1.3f)
+            .fillMaxHeight()
+            .padding(Spacing.s4)
         ) {
-          items(filteredStudents, key = { it.id }) { student ->
-            StudentRosterCard(
-              student = student,
-              onClick = { onNavigateToStudentDetail(student.id) }
+          if (selectedStudentForPane != null) {
+            Student360DetailPane(
+              student = selectedStudentForPane!!,
+              repository = repository,
+              onPayFee = { _, _ -> }
+            )
+          } else {
+            EmptyStateView(
+              title = "Select a Scholar",
+              message = "Select a scholar from the directory list to inspect their Student 360 Profile."
             )
           }
+        }
+      }
+    } else {
+      // MOBILE SINGLE COLUMN LAYOUT WITH MODAL BOTTOM SHEET
+      Column(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(paddingValues)
+          .padding(horizontal = Spacing.s4, vertical = Spacing.s2)
+      ) {
+        ScholaInputField(
+          value = searchQuery,
+          onValueChange = { searchQuery = it },
+          placeholder = "Filter scholars by name, ID, parent...",
+          leadingIcon = Icons.Default.Search,
+          onClear = { searchQuery = "" }
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.s2))
+
+        LazyRow(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
+        ) {
+          items(cohortFilters) { cohort ->
+            val isSelected = selectedCohortFilter == cohort
+            Surface(
+              shape = RoundedCornerShape(Radius.pill),
+              color = if (isSelected) ScholaTerracotta else ScholaSurface,
+              modifier = Modifier
+                .clip(RoundedCornerShape(Radius.pill))
+                .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+                .clickable { selectedCohortFilter = cohort }
+            ) {
+              Text(
+                text = cohort,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) Color.White else ScholaTextPrimary,
+                modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+              )
+            }
+          }
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.s3))
+
+        LazyColumn(
+          modifier = Modifier
+            .fillMaxSize()
+            .testTag("students_list"),
+          verticalArrangement = Arrangement.spacedBy(Spacing.s2),
+          contentPadding = PaddingValues(bottom = 100.dp)
+        ) {
+          items(filteredStudents, key = { it.id }) { student ->
+            ScholarCardItem(
+              student = student,
+              isSelected = false,
+              onClick = {
+                activeMobileStudentId = student.id
+                showMobileDetailSheet = true
+              }
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // Mobile Student 360 Modal Bottom Sheet
+  if (showMobileDetailSheet && activeMobileStudentId != null) {
+    val activeStudent = students.firstOrNull { it.id == activeMobileStudentId }
+    if (activeStudent != null) {
+      ModalBottomSheet(
+        onDismissRequest = { showMobileDetailSheet = false },
+        containerColor = ScholaLinen,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+      ) {
+        Box(modifier = Modifier.padding(Spacing.s4)) {
+          Student360DetailPane(
+            student = activeStudent,
+            repository = repository,
+            onPayFee = { _, _ -> }
+          )
         }
       }
     }
@@ -167,88 +270,78 @@ fun StudentListScreen(
 }
 
 @Composable
-fun StudentRosterCard(
+fun ScholarCardItem(
   student: Student,
+  isSelected: Boolean = false,
   onClick: () -> Unit
 ) {
-  Card(
+  val shape = RoundedCornerShape(Radius.lg)
+  Surface(
+    shape = shape,
+    color = if (isSelected) ScholaTerracottaContainer else ScholaSurface,
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(14.dp))
+      .clip(shape)
+      .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, shape)
       .clickable(onClick = onClick)
-      .testTag("student_card_${student.admissionNumber}"),
-    shape = RoundedCornerShape(14.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = CardDefaults.outlinedCardBorder()
+      .testTag("student_row_${student.id}")
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(14.dp),
+        .padding(Spacing.cardPadding),
+      horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Surface(
-        shape = CircleShape,
-        color = Color(student.avatarColorHex),
-        modifier = Modifier.size(46.dp)
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.weight(1f)
       ) {
-        Box(contentAlignment = Alignment.Center) {
+        Avatar(name = student.name, size = 42.dp)
+        Spacer(modifier = Modifier.width(Spacing.s3))
+        Column {
           Text(
-            text = student.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2),
+            text = student.name,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = ScholaTextPrimary
           )
+          Text(
+            text = "Class ${student.fullClass} • Roll #${student.rollNumber} • ${student.admissionNumber}",
+            style = MaterialTheme.typography.bodySmall,
+            color = ScholaMuted,
+            fontSize = 11.sp
+          )
+          Spacer(modifier = Modifier.height(2.dp))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = "GPA: ${student.gpa}",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              color = ScholaTerracotta
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("•", color = ScholaMuted, fontSize = 10.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "${student.attendancePercent}% Att.",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              color = if (student.attendancePercent >= 90) StatusSuccessText else StatusWarningText
+            )
+          }
         }
       }
 
-      Spacer(modifier = Modifier.width(14.dp))
-
-      Column(modifier = Modifier.weight(1f)) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
+      Column(horizontalAlignment = Alignment.End) {
+        ScholaPillBadge(status = student.feeStatus.label)
+        if (student.feePendingAmount > 0) {
+          Spacer(modifier = Modifier.height(4.dp))
           Text(
-            text = student.name,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-          )
-          StatusBadge(status = student.feeStatus.label, type = "fee")
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-          text = "Class ${student.fullClass} • Roll #${student.rollNumber} • Adm #${student.admissionNumber}",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(
-          horizontalArrangement = Arrangement.spacedBy(12.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "Att: ${student.attendancePercent}%",
+            text = "$${student.feePendingAmount / 100000L}k due",
             style = MaterialTheme.typography.labelSmall,
-            color = if (student.attendancePercent >= 90.0) StatusSuccessText else StatusWarningText,
+            color = StatusDangerText,
             fontWeight = FontWeight.Bold
-          )
-          Text(
-            text = "GPA: ${student.gpa}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-          )
-          Text(
-            text = "Parent: ${student.parentName}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp
           )
         }
       }

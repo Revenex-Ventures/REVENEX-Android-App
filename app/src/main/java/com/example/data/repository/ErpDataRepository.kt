@@ -90,6 +90,87 @@ class ErpDataRepository private constructor() {
   private val _notifications = MutableStateFlow(SampleData.initialNotifications)
   val notifications: StateFlow<List<ErpNotification>> = _notifications.asStateFlow()
 
+  private val _auditLogs = MutableStateFlow(SampleData.initialAuditLogs)
+  val auditLogs: StateFlow<List<AuditLogEntry>> = _auditLogs.asStateFlow()
+
+  private val _invoices = MutableStateFlow(SampleData.initialInvoices)
+  val invoices: StateFlow<List<LedgerInvoice>> = _invoices.asStateFlow()
+
+  private val _gradebookEntries = MutableStateFlow(SampleData.initialGradebookEntries)
+  val gradebookEntries: StateFlow<List<GradebookEntry>> = _gradebookEntries.asStateFlow()
+
+  fun addAuditLog(entry: AuditLogEntry) {
+    _auditLogs.value = listOf(entry) + _auditLogs.value
+  }
+
+  fun processInvoicePayment(invoiceId: String, amountPaid: Long, channel: String = "Stripe ACH") {
+    _invoices.value = _invoices.value.map { inv ->
+      if (inv.id == invoiceId) {
+        val newPaid = (inv.paidAmount + amountPaid).coerceAtMost(inv.totalAmount)
+        val newStatus = if (newPaid >= inv.totalAmount) FeeStatus.PAID else FeeStatus.PARTIAL
+        inv.copy(paidAmount = newPaid, status = newStatus, paymentChannel = channel)
+      } else inv
+    }
+    addAuditLog(
+      AuditLogEntry(
+        id = "aud_${System.currentTimeMillis()}",
+        actorName = _currentUser.value.name,
+        actorRole = _currentUser.value.role.displayName,
+        actionType = "FEE_PAYMENT",
+        actionSummary = "Tuition Payment Processed",
+        timestamp = "Just now",
+        details = "Collected $${amountPaid / 100L} via $channel for Invoice #$invoiceId.",
+        targetScholar = "Invoice #$invoiceId",
+        iconType = "payment"
+      )
+    )
+  }
+
+  fun recordRollCallSession(
+    classGrade: String,
+    division: String,
+    sessionSlot: String,
+    studentList: List<StudentAttendance>
+  ) {
+    val present = studentList.count { it.status == AttendanceStatus.PRESENT }
+    val absent = studentList.count { it.status == AttendanceStatus.ABSENT }
+    val late = studentList.count { it.status == AttendanceStatus.LATE }
+    val excused = studentList.count { it.status == AttendanceStatus.EXCUSED }
+
+    val rec = ClassAttendanceRecord(
+      id = "att_${classGrade}${division}_${System.currentTimeMillis()}",
+      classGrade = classGrade,
+      division = division,
+      sessionSlot = sessionSlot,
+      date = getCurrentFormattedDate(),
+      totalStudents = studentList.size,
+      presentCount = present,
+      absentCount = absent,
+      lateCount = late,
+      excusedCount = excused,
+      markedBy = _currentUser.value.name,
+      studentList = studentList
+    )
+
+    val currentMap = _classAttendance.value.toMutableMap()
+    currentMap["${classGrade}-${division}_${sessionSlot}"] = rec
+    _classAttendance.value = currentMap
+
+    addAuditLog(
+      AuditLogEntry(
+        id = "aud_${System.currentTimeMillis()}",
+        actorName = _currentUser.value.name,
+        actorRole = _currentUser.value.role.displayName,
+        actionType = "ROLL_CALL",
+        actionSummary = "$sessionSlot Verified",
+        timestamp = "Just now",
+        details = "Class $classGrade-$division $sessionSlot submitted. $present Present, $late Late, $absent Absent, $excused Excused.",
+        targetScholar = "Class $classGrade-$division",
+        iconType = "attendance"
+      )
+    )
+  }
+
   private val _classAttendance = MutableStateFlow<Map<String, ClassAttendanceRecord>>(
     mapOf(
       "10-A_today" to ClassAttendanceRecord(
@@ -121,6 +202,13 @@ class ErpDataRepository private constructor() {
 
   fun setSelectedStudentId(id: String) {
     _selectedStudentId.value = id
+  }
+
+  private val _isAppLockEnabled = MutableStateFlow(false)
+  val isAppLockEnabled: StateFlow<Boolean> = _isAppLockEnabled.asStateFlow()
+
+  fun setAppLockEnabled(enabled: Boolean) {
+    _isAppLockEnabled.value = enabled
   }
 
   private var lastUserId: String? = null

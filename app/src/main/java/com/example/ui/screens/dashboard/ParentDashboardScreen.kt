@@ -94,6 +94,7 @@ fun ParentDashboardScreen(
     AttendanceStatus.PRESENT -> "Recorded in Morning Register"
     AttendanceStatus.ABSENT -> "Reported Absent by Class Teacher"
     AttendanceStatus.LATE -> "Marked Late Entry (08:45 AM)"
+    AttendanceStatus.EXCUSED -> "Officially Excused Absence"
     AttendanceStatus.LEAVE -> "Approved Medical Leave"
   }
 

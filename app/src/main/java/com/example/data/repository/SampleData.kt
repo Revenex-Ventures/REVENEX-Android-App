@@ -1291,4 +1291,214 @@ object SampleData {
       )
     )
   )
+
+  val initialAuditLogs = listOf(
+    AuditLogEntry(
+      id = "aud_001",
+      actorName = "Dr. Arthur Pendelton",
+      actorRole = "Principal",
+      actionType = "ROLL_CALL",
+      actionSummary = "Morning Roll Call Verified",
+      timestamp = "10 mins ago",
+      details = "Class 10-A verified with 96.8% presence. 24 scholars marked present, 1 excused.",
+      targetScholar = "Class 10-A",
+      iconType = "attendance"
+    ),
+    AuditLogEntry(
+      id = "aud_002",
+      actorName = "Bursar Department",
+      actorRole = "Accounts",
+      actionType = "FEE_PAYMENT",
+      actionSummary = "Tuition Installment Received",
+      timestamp = "32 mins ago",
+      details = "Received $2,450.00 via Stripe ACH for Scholar #REV-2022-1042 (Aarav Patel).",
+      targetScholar = "Aarav Patel",
+      iconType = "payment"
+    ),
+    AuditLogEntry(
+      id = "aud_003",
+      actorName = "Prof. Sunita Rao",
+      actorRole = "HOD Mathematics",
+      actionType = "GRADEBOOK",
+      actionSummary = "Calculus Assessment Scores Published",
+      timestamp = "1 hour ago",
+      details = "Published Grade 10-A Term 2 Advanced Calculus midterm assessments. Median GPA: 3.82.",
+      targetScholar = "Grade 10-A",
+      iconType = "grade"
+    ),
+    AuditLogEntry(
+      id = "aud_004",
+      actorName = "Registrar Desk",
+      actorRole = "Admissions",
+      actionType = "ADMISSION",
+      actionSummary = "New Scholar Enrolled",
+      timestamp = "2 hours ago",
+      details = "Enrolled Scholar Maya Lin (ID: REV-2026-1421) in Grade 11-Sci Honors Cohort.",
+      targetScholar = "Maya Lin",
+      iconType = "admission"
+    ),
+    AuditLogEntry(
+      id = "aud_005",
+      actorName = "Dean of Academics",
+      actorRole = "Administration",
+      actionType = "BROADCAST",
+      actionSummary = "STEM Practicum Dispatch Sent",
+      timestamp = "3 hours ago",
+      details = "Broadcasted Robotics Lab schedule and safety guidelines to 142 parent credentials.",
+      targetScholar = "All Cohorts",
+      iconType = "broadcast"
+    )
+  )
+
+  val initialInvoices = listOf(
+    LedgerInvoice(
+      id = "inv_842",
+      invoiceNumber = "INV-2026-0842",
+      studentId = "stu_1001",
+      studentName = "Aarav Patel",
+      cohort = "Grade 10-A",
+      title = "Term 2 Tuition & STEM Lab Practicum",
+      totalAmount = 450000L, // $4,500.00
+      paidAmount = 305000L,  // $3,050.00
+      dueDate = "28 Sep 2026",
+      issueDate = "01 Sep 2026",
+      status = FeeStatus.PARTIAL,
+      paymentChannel = "Stripe ACH",
+      description = "Core academic curriculum, Advanced Physics lab materials, and bus transit."
+    ),
+    LedgerInvoice(
+      id = "inv_843",
+      invoiceNumber = "INV-2026-0843",
+      studentId = "stu_1002",
+      studentName = "Ananya Sharma",
+      cohort = "Grade 10-A",
+      title = "Annual Comprehensive Scholar Dues",
+      totalAmount = 520000L,
+      paidAmount = 520000L,
+      dueDate = "15 Sep 2026",
+      issueDate = "01 Sep 2026",
+      status = FeeStatus.PAID,
+      paymentChannel = "Apple Pay",
+      description = "Full annual academic ledger, AP examination vouchers, and campus activities."
+    ),
+    LedgerInvoice(
+      id = "inv_844",
+      invoiceNumber = "INV-2026-0844",
+      studentId = "stu_1003",
+      studentName = "Rohan Gupta",
+      cohort = "Grade 10-B",
+      title = "Term 2 Tuition & Athletics Subsidy",
+      totalAmount = 380000L,
+      paidAmount = 120000L,
+      dueDate = "05 Sep 2026",
+      issueDate = "15 Aug 2026",
+      status = FeeStatus.OVERDUE,
+      paymentChannel = "Wire Transfer",
+      description = "Tuition dues overdue by 12 days. Automated late fee notification dispatched."
+    ),
+    LedgerInvoice(
+      id = "inv_845",
+      invoiceNumber = "INV-2026-0845",
+      studentId = "stu_1004",
+      studentName = "Priya Verma",
+      cohort = "Grade 11-Sci",
+      title = "Senior STEM Honors & Laboratory Kit",
+      totalAmount = 480000L,
+      paidAmount = 0L,
+      dueDate = "30 Sep 2026",
+      issueDate = "05 Sep 2026",
+      status = FeeStatus.PENDING,
+      paymentChannel = "Stripe ACH",
+      description = "Robotics components, chemistry reagent safety fee, and term tuition."
+    ),
+    LedgerInvoice(
+      id = "inv_846",
+      invoiceNumber = "INV-2026-0846",
+      studentId = "stu_1005",
+      studentName = "Vikram Reddy",
+      cohort = "Grade 12-Arts",
+      title = "Senior Practicum & Graduation Dues",
+      totalAmount = 340000L,
+      paidAmount = 340000L,
+      dueDate = "10 Sep 2026",
+      issueDate = "01 Aug 2026",
+      status = FeeStatus.PAID,
+      paymentChannel = "Apple Pay",
+      description = "Senior thesis review, arts studio access, and graduation ceremony credentials."
+    )
+  )
+
+  val initialGradebookEntries = listOf(
+    GradebookEntry(
+      id = "grd_01",
+      studentId = "stu_1001",
+      studentName = "Aarav Patel",
+      cohort = "Grade 10-A",
+      assessmentTitle = "Mid-Term Differential Calculus",
+      subject = "Mathematics",
+      score = 94,
+      maxScore = 100,
+      letterGrade = "A",
+      gpaPoint = 3.9,
+      date = "Yesterday",
+      instructorName = "Prof. Sunita Rao"
+    ),
+    GradebookEntry(
+      id = "grd_02",
+      studentId = "stu_1002",
+      studentName = "Ananya Sharma",
+      cohort = "Grade 10-A",
+      assessmentTitle = "Quantum Physics Practicum",
+      subject = "Physics",
+      score = 98,
+      maxScore = 100,
+      letterGrade = "A+",
+      gpaPoint = 4.0,
+      date = "2 days ago",
+      instructorName = "Dr. Elena Vance"
+    ),
+    GradebookEntry(
+      id = "grd_03",
+      studentId = "stu_1003",
+      studentName = "Rohan Gupta",
+      cohort = "Grade 10-B",
+      assessmentTitle = "Organic Chemistry Synthesis",
+      subject = "Chemistry",
+      score = 86,
+      maxScore = 100,
+      letterGrade = "B+",
+      gpaPoint = 3.4,
+      date = "3 days ago",
+      instructorName = "Dr. Alistair Finch"
+    ),
+    GradebookEntry(
+      id = "grd_04",
+      studentId = "stu_1004",
+      studentName = "Priya Verma",
+      cohort = "Grade 11-Sci",
+      assessmentTitle = "World Literature Critical Essay",
+      subject = "English",
+      score = 92,
+      maxScore = 100,
+      letterGrade = "A",
+      gpaPoint = 3.8,
+      date = "4 days ago",
+      instructorName = "Prof. Jonathan Sterling"
+    ),
+    GradebookEntry(
+      id = "grd_05",
+      studentId = "stu_1005",
+      studentName = "Vikram Reddy",
+      cohort = "Grade 12-Arts",
+      assessmentTitle = "Macroeconomics Policy Analysis",
+      subject = "Economics",
+      score = 88,
+      maxScore = 100,
+      letterGrade = "B+",
+      gpaPoint = 3.5,
+      date = "5 days ago",
+      instructorName = "Dr. Clara Oswald"
+    )
+  )
 }
+

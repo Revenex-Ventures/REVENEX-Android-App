@@ -18,7 +18,7 @@ data class UserProfile(
   val associatedClass: String = "",
   val associatedStudentId: String = "",
   val associatedChildNames: List<String> = emptyList(),
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 data class Student(
@@ -40,11 +40,12 @@ data class Student(
   val feeStatus: FeeStatus,
   val feePendingAmount: Long,
   val rank: Int = 1,
-  val gpa: Double = 9.2,
-  val avatarColorHex: Long = 0xFF2563EB,
-  val schoolId: String = "revenex_school_001",
+  val gpa: Double = 3.85,
+  val avatarColorHex: Long = 0xFFC2410C,
+  val schoolId: String = "schola_school_001",
   val status: String = "ACTIVE",
-  val sessionId: String = "session_2026_2027"
+  val sessionId: String = "session_2026_2027",
+  val cohort: String = "Grade 10-A"
 ) {
   val fullClass: String get() = "$classGrade-$division"
 }
@@ -66,15 +67,16 @@ data class Teacher(
   val attendancePercent: Double,
   val experienceYears: Int,
   val joiningDate: String,
-  val schoolId: String = "revenex_school_001",
+  val schoolId: String = "schola_school_001",
   val status: String = "ACTIVE",
   val sessionId: String = "session_2026_2027"
 )
 
 enum class AttendanceStatus(val label: String) {
   PRESENT("Present"),
-  ABSENT("Absent"),
   LATE("Late"),
+  ABSENT("Absent"),
+  EXCUSED("Excused"),
   LEAVE("On Leave")
 }
 
@@ -90,19 +92,21 @@ data class ClassAttendanceRecord(
   val id: String,
   val classGrade: String,
   val division: String,
+  val sessionSlot: String = "Morning Roll Call",
   val date: String,
   val totalStudents: Int,
   val presentCount: Int,
   val absentCount: Int,
   val lateCount: Int,
-  val leaveCount: Int,
+  val leaveCount: Int = 0,
+  val excusedCount: Int = 0,
   val markedBy: String,
   val studentList: List<StudentAttendance>,
-  val schoolId: String = "revenex_school_001",
+  val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027"
 ) {
   val percentage: Double
-    get() = if (totalStudents > 0) ((presentCount + lateCount).toDouble() / totalStudents) * 100 else 0.0
+    get() = if (totalStudents > 0) ((presentCount + lateCount + excusedCount).toDouble() / totalStudents) * 100 else 0.0
 }
 
 enum class LeaveStatus(val label: String) {
@@ -125,12 +129,12 @@ data class LeaveRequest(
   val appliedDate: String,
   val status: LeaveStatus,
   val approverRemark: String = "",
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 enum class FeeStatus(val label: String) {
   PAID("Paid"),
-  PARTIAL("Partially Paid"),
+  PARTIAL("Partial"),
   PENDING("Pending"),
   OVERDUE("Overdue")
 }
@@ -140,11 +144,30 @@ data class FeePaymentTransaction(
   val receiptNo: String,
   val amount: Long,
   val date: String,
-  val method: String, // UPI, Credit Card, Net Banking, Cash
+  val method: String, // Stripe ACH, Wire Transfer, Apple Pay, Card
   val status: String = "SUCCESS",
-  val feeHead: String = "Tuition & Term Fee",
+  val feeHead: String = "Tuition & Activity Dues",
   val sessionId: String = "session_2026_2027"
 )
+
+data class LedgerInvoice(
+  val id: String,
+  val invoiceNumber: String,
+  val studentId: String,
+  val studentName: String,
+  val cohort: String,
+  val title: String,
+  val totalAmount: Long, // in cents/paise
+  val paidAmount: Long,
+  val dueDate: String,
+  val issueDate: String,
+  val status: FeeStatus,
+  val paymentChannel: String = "Stripe ACH",
+  val description: String = "Academic Tuition & STEM Practicum Lab Fee"
+) {
+  val pendingAmount: Long get() = (totalAmount - paidAmount).coerceAtLeast(0L)
+  val progressFraction: Float get() = if (totalAmount > 0) (paidAmount.toFloat() / totalAmount.toFloat()).coerceIn(0f, 1f) else 0f
+}
 
 data class FeeRecord(
   val id: String,
@@ -163,7 +186,7 @@ data class FeeRecord(
   val dueDate: String,
   val lastPaymentDate: String = "",
   val transactions: List<FeePaymentTransaction> = emptyList(),
-  val schoolId: String = "revenex_school_001",
+  val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027"
 ) {
   val pendingAmount: Long get() = (totalFee - paidAmount).coerceAtLeast(0L)
@@ -178,7 +201,7 @@ data class ExamSchedule(
   val endDate: String,
   val isPublished: Boolean = false,
   val subjects: List<ExamSubject>,
-  val schoolId: String = "revenex_school_001",
+  val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027"
 )
 
@@ -199,6 +222,37 @@ data class SubjectScore(
   val remarks: String,
   val checkedPaperUrl: String = "",
   val answerKeyUrl: String = ""
+) {
+  companion object {
+    fun calculateCbseGrade(obtainedMarks: Int, maxMarks: Int = 100): String {
+      val percent = if (maxMarks > 0) (obtainedMarks * 100.0 / maxMarks) else 0.0
+      return when {
+        percent >= 91.0 -> "A1"
+        percent >= 81.0 -> "A2"
+        percent >= 71.0 -> "B1"
+        percent >= 61.0 -> "B2"
+        percent >= 51.0 -> "C1"
+        percent >= 41.0 -> "C2"
+        percent >= 33.0 -> "D"
+        else -> "E"
+      }
+    }
+  }
+}
+
+data class GradebookEntry(
+  val id: String,
+  val studentId: String,
+  val studentName: String,
+  val cohort: String,
+  val assessmentTitle: String,
+  val subject: String,
+  val score: Int,
+  val maxScore: Int = 100,
+  val letterGrade: String,
+  val gpaPoint: Double,
+  val date: String = "Today",
+  val instructorName: String = "Dr. Elena Vance"
 )
 
 data class ReportCard(
@@ -216,7 +270,7 @@ data class ReportCard(
   val totalStudents: Int,
   val principalRemark: String,
   val issueDate: String,
-  val schoolId: String = "revenex_school_001",
+  val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027",
   val published: Boolean = false
 ) {
@@ -246,12 +300,12 @@ data class HomeworkAssignment(
   val dueDate: String,
   val instructions: String,
   val attachmentName: String = "",
-  val attachmentType: String = "", // MIME type, e.g. application/pdf
+  val attachmentType: String = "",
   val attachmentUrl: String = "",
   val maxPoints: Int = 20,
   val isCompletedByStudent: Boolean = false,
-  val submissionStatus: String = "Pending", // Pending, Submitted, Graded
-  val schoolId: String = "revenex_school_001",
+  val submissionStatus: String = "Pending",
+  val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027"
 )
 
@@ -263,14 +317,14 @@ data class StudyMaterial(
   val chapter: String,
   val teacherName: String,
   val uploadDate: String,
-  val fileType: String, // PDF, Document, Slide, Video
+  val fileType: String,
   val fileSize: String,
   val description: String,
   val downloadCount: Int = 42,
   val attachmentName: String = "",
   val attachmentType: String = "",
   val attachmentUrl: String = "",
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 data class CheckedPaper(
@@ -288,7 +342,7 @@ data class CheckedPaper(
   val fileName: String,
   val fileType: String = "application/pdf",
   val fileUrl: String = "",
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 data class AnswerKey(
@@ -303,7 +357,7 @@ data class AnswerKey(
   val fileUrl: String = "",
   val uploadDate: String,
   val isPublished: Boolean = false,
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 enum class NoticeCategory(val label: String) {
@@ -323,10 +377,10 @@ data class SchoolNotice(
   val publishedDate: String,
   val authorName: String,
   val authorRole: String,
-  val targetAudience: String, // "All School", "Students & Parents", "Faculty", "Class 10"
+  val targetAudience: String,
   val isImportant: Boolean = false,
   val attachmentName: String = "",
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 enum class NotificationCategory(val label: String) {
@@ -349,7 +403,20 @@ data class ErpNotification(
   val isRead: Boolean = false,
   val targetRole: UserRole? = null,
   val actionableId: String = "",
-  val schoolId: String = "revenex_school_001"
+  val scholarTag: String = "",
+  val schoolId: String = "schola_school_001"
+)
+
+data class AuditLogEntry(
+  val id: String,
+  val actorName: String,
+  val actorRole: String,
+  val actionType: String, // ADMISSION, ROLL_CALL, FEE_PAYMENT, GRADEBOOK, BROADCAST
+  val actionSummary: String,
+  val timestamp: String,
+  val details: String,
+  val targetScholar: String = "",
+  val iconType: String = "audit"
 )
 
 data class SchoolEvent(
@@ -359,9 +426,9 @@ data class SchoolEvent(
   val date: String,
   val time: String,
   val location: String,
-  val category: String, // PTM, Cultural, Sports, Science, Holiday
+  val category: String,
   val organizer: String,
-  val schoolId: String = "revenex_school_001"
+  val schoolId: String = "schola_school_001"
 )
 
 data class TimetableSlot(
@@ -375,22 +442,10 @@ data class TimetableSlot(
   val roomNumber: String,
   val classGrade: String,
   val division: String,
-  val schoolId: String = "revenex_school_001",
+  val subjectColorHex: Long = 0xFFC2410C,
+  val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027"
-) {
-  companion object {
-    fun hasConflict(existing: List<TimetableSlot>, newSlot: TimetableSlot): Boolean {
-      return existing.any { slot ->
-        slot.dayOfWeek.equals(newSlot.dayOfWeek, ignoreCase = true) &&
-        slot.periodNumber == newSlot.periodNumber &&
-        (
-          (slot.classGrade.equals(newSlot.classGrade, ignoreCase = true) && slot.division.equals(newSlot.division, ignoreCase = true)) ||
-          slot.teacherName.equals(newSlot.teacherName, ignoreCase = true)
-        )
-      }
-    }
-  }
-}
+)
 
 data class TransportRoute(
   val id: String,
@@ -405,14 +460,8 @@ data class TransportRoute(
   val pickupStartTime: String,
   val dropStartTime: String,
   val monthlyFare: Long,
-  val schoolId: String = "revenex_school_001"
-) {
-  companion object {
-    fun hasAvailableCapacity(route: TransportRoute): Boolean {
-      return route.assignedStudents < route.totalCapacity
-    }
-  }
-}
+  val schoolId: String = "schola_school_001"
+)
 
 data class LibraryBook(
   val id: String,
@@ -424,14 +473,8 @@ data class LibraryBook(
   val availableCopies: Int,
   val shelfLocation: String,
   val issuedCount: Int,
-  val schoolId: String = "revenex_school_001"
-) {
-  companion object {
-    fun isUniqueIsbn(existing: List<LibraryBook>, isbnToCheck: String): Boolean {
-      return existing.none { it.isbn.trim().replace("-", "").equals(isbnToCheck.trim().replace("-", ""), ignoreCase = true) }
-    }
-  }
-}
+  val schoolId: String = "schola_school_001"
+)
 
 data class InventoryAsset(
   val id: String,
@@ -439,14 +482,8 @@ data class InventoryAsset(
   val category: String,
   val location: String,
   val quantity: Int,
-  val condition: String, // Operational, Under Maintenance, Needs Replacement
+  val condition: String,
   val purchaseDate: String,
   val estimatedValue: Long,
-  val schoolId: String = "revenex_school_001"
-) {
-  companion object {
-    fun getAssetsNeedingMaintenance(assets: List<InventoryAsset>): List<InventoryAsset> {
-      return assets.filter { it.condition.equals("Needs Maintenance", ignoreCase = true) || it.condition.equals("Under Maintenance", ignoreCase = true) }
-    }
-  }
-}
+  val schoolId: String = "schola_school_001"
+)

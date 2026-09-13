@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REVENEX School ERP — Network Security Configuration
+
+  Default policy: cleartext (HTTP) is DISABLED.
+  Only HTTPS connections are permitted for production traffic.
+
+  Debug builds may use cleartext for local development / emulator only.
+  The debug-config block is guarded by a build variant so it never ships
+  in a release APK.
+-->
+<network-security-config>
+    <!--
+      Base configuration: deny all cleartext traffic by default.
+      Trusted domains are listed explicitly below.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!--
+      Debug configuration: allow cleartext ONLY for local development.
+      This block is only referenced by a debug-only manifest meta-data;
+      it is never active in release builds.
+    -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+
+    <!--
+      Trusted domains for Firebase and backend services.
+      All connections must use HTTPS.
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">firebase.googleapis.com</domain>
+        <domain includeSubdomains="true">firebasestorage.googleapis.com</domain>
+        <domain includeSubdomains="true">identitytoolkit.googleapis.com</domain>
+        <domain includeSubdomains="true">firebaseio.com</domain>
+        <domain includeSubdomains="true">firebaseraw.googleapis.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+    <!--
+      Trusted domains for the backend API (Razorpay + Cloudflare Workers).
+      HTTPS only. Replace with actual production domains when available.
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.razorpay.com</domain>
+        <domain includeSubdomains="true">worker.revenexerp.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

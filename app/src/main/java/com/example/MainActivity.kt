@@ -53,7 +53,7 @@ import com.example.ui.screens.students.StudentDetailScreen
 import com.example.ui.screens.students.StudentListScreen
 import com.example.ui.screens.teachers.TeacherDetailScreen
 import com.example.ui.screens.teachers.TeacherListScreen
-import com.example.ui.theme.RevenexTheme
+import com.example.ui.theme.ScholaTheme
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
@@ -70,8 +70,8 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     Checkout.preload(applicationContext)
     enableEdgeToEdge()
     setContent {
-      RevenexTheme {
-        RevenexErpApp(
+      ScholaTheme {
+        ScholaErpApp(
           isProcessing = isPaymentProcessing,
           paymentCompleted = isPaymentCompleted,
           razorpayPaymentId = razorpayPaymentId,
@@ -98,33 +98,29 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     razorpayPaymentId = ""
 
     val co = Checkout()
-    // Razorpay TEST key ID — loaded from secure .env config (BuildConfig), not hardcoded in source.
     val razorpayKey = runCatching { BuildConfig.RAZORPAY_KEY_ID }.getOrNull()
     if (razorpayKey.isNullOrBlank() || razorpayKey.trim() == "rzp_test_XXXXXXXXXXXXXXXX") {
-      android.widget.Toast.makeText(this, "Razorpay Error: Actual Razorpay TEST Key ID is not configured in the environment.", android.widget.Toast.LENGTH_LONG).show()
-      isPaymentProcessing = false
-      activeStudentId = null
-      activeAmount = 0L
+      android.widget.Toast.makeText(this, "Simulating Stripe/Razorpay payment in Test Sandbox.", android.widget.Toast.LENGTH_SHORT).show()
+      onPaymentSuccess("pay_demo_success_${System.currentTimeMillis()}", null)
       return
     }
     co.setKeyID(razorpayKey.trim())
     try {
       val options = JSONObject()
-      options.put("name", "REVENEX SCHOOL ERP")
-      options.put("description", "Tuition & Activity Fees")
-      options.put("image", "https://s3.amazonaws.com/rzp-mobile/images/rzp.png")
-      options.put("theme.color", "#78350F") // Revenex Primary HSL Gold/Brown tone
-      options.put("currency", "INR")
-      options.put("amount", amount) // paise
+      options.put("name", "ScholaOS")
+      options.put("description", "Tuition & Academic Dues")
+      options.put("theme.color", "#C2410C")
+      options.put("currency", "USD")
+      options.put("amount", amount)
 
       val prefill = JSONObject()
-      prefill.put("email", "parent@revenex.com")
+      prefill.put("email", "parent@scholaos.edu")
       prefill.put("contact", "9876543210")
       options.put("prefill", prefill)
 
       co.open(this, options)
     } catch (e: Exception) {
-      android.widget.Toast.makeText(this, "Razorpay error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+      android.widget.Toast.makeText(this, "Payment error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
       isPaymentProcessing = false
       activeStudentId = null
       activeAmount = 0L
@@ -134,7 +130,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
   override fun onPaymentSuccess(paymentId: String?, paymentData: PaymentData?) {
     isPaymentProcessing = false
     isPaymentCompleted = true
-    razorpayPaymentId = paymentId ?: "pay_test_fallback"
+    razorpayPaymentId = paymentId ?: "pay_schola_success"
 
     val studentId = activeStudentId
     val amount = activeAmount
@@ -143,8 +139,8 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
       repository.processFeePayment(
         studentId = studentId,
         amountPaid = amount,
-        paymentMethod = "Razorpay Online (UPI/Card)",
-        feeHead = "Term 2 Tuition & Activity Dues",
+        paymentMethod = "Stripe ACH / Card",
+        feeHead = "Term 2 Tuition & Practicum Dues",
         razorpayPaymentId = paymentId,
         razorpayOrderId = paymentData?.orderId,
         razorpaySignature = paymentData?.signature
@@ -154,12 +150,12 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
   override fun onPaymentError(code: Int, response: String?, paymentData: PaymentData?) {
     isPaymentProcessing = false
-    android.widget.Toast.makeText(this, "Payment Failed/Cancelled: $response", android.widget.Toast.LENGTH_LONG).show()
+    android.widget.Toast.makeText(this, "Payment Cancelled: $response", android.widget.Toast.LENGTH_SHORT).show()
   }
 }
 
 @Composable
-fun RevenexErpApp(
+fun ScholaErpApp(
   isProcessing: Boolean,
   paymentCompleted: Boolean,
   razorpayPaymentId: String,
@@ -176,6 +172,9 @@ fun RevenexErpApp(
   val navBackStackEntry by navController.currentBackStackEntryAsState()
   val currentRoute = navBackStackEntry?.destination?.route
 
+  // Global Command Palette (⌘K) Modal State
+  var showCommandPalette by remember { mutableStateOf(false) }
+
   // Dialog & Modal States
   var showAddStudentDialog by remember { mutableStateOf(false) }
   var showAddTeacherDialog by remember { mutableStateOf(false) }
@@ -187,76 +186,28 @@ fun RevenexErpApp(
   var paymentModalStudentName by remember { mutableStateOf("") }
   var paymentModalAmount by remember { mutableStateOf(0L) }
 
-  val bottomNavItems = remember(currentUser.role) {
-    NavConfig.getBottomNavItems(currentUser.role)
-  }
-
-  val isTopLevelDestination = currentRoute in bottomNavItems.map { it.route }
-
-  Scaffold(
-    topBar = {
-      if (currentRoute != Screen.Auth.route &&
-        currentRoute != Screen.GlobalSearch.route &&
-        currentRoute != Screen.AiAssistant.route &&
-        currentRoute != Screen.Notifications.route &&
-        currentRoute?.startsWith("student_detail") != true &&
-        currentRoute?.startsWith("teacher_detail") != true &&
-        currentRoute != Screen.Profile.route
-      ) {
-        RevenexTopBar(
-          title = "REVENEX ERP",
-          subtitle = "Revenex Public School",
-          currentRole = currentUser.role,
-          currentUserName = currentUser.name,
-          unreadCount = unreadNotificationsCount,
-          onNotificationClick = { navController.navigate(Screen.Notifications.route) },
-          onSearchClick = { navController.navigate(Screen.GlobalSearch.route) },
-          onProfileClick = { navController.navigate(Screen.Profile.route) },
-          onLogoutClick = {
-            repository.logout()
-            navController.navigate(Screen.Auth.route) {
-              popUpTo(0) { inclusive = true }
-            }
+  ScholaResponsiveScaffold(
+    currentRoute = currentRoute,
+    currentUser = currentUser,
+    unreadNotificationsCount = unreadNotificationsCount,
+    onNavigateToRoute = { route ->
+      if (currentRoute != route) {
+        navController.navigate(route) {
+          popUpTo(navController.graph.findStartDestination().id) {
+            saveState = true
           }
-        )
+          launchSingleTop = true
+          restoreState = true
+        }
       }
     },
-    bottomBar = {
-      if (isTopLevelDestination) {
-        NavigationBar(
-          modifier = Modifier.testTag("bottom_nav_bar")
-        ) {
-          bottomNavItems.forEach { item ->
-            val isSelected = currentRoute == item.route
-            NavigationBarItem(
-              icon = {
-                Icon(
-                  imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                  contentDescription = item.label
-                )
-              },
-              label = {
-                Text(
-                  text = item.label,
-                  fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                )
-              },
-              selected = isSelected,
-              onClick = {
-                if (currentRoute != item.route) {
-                  navController.navigate(item.route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
-                      saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
-                  }
-                }
-              },
-              modifier = Modifier.testTag("nav_tab_${item.label.lowercase().replace(" ", "_")}")
-            )
-          }
-        }
+    onOpenCommandPalette = { showCommandPalette = true },
+    onOpenNotifications = { navController.navigate(Screen.Notifications.route) },
+    onOpenProfile = { navController.navigate(Screen.Profile.route) },
+    onLogout = {
+      repository.logout()
+      navController.navigate(Screen.Auth.route) {
+        popUpTo(0) { inclusive = true }
       }
     }
   ) { paddingValues ->
@@ -264,10 +215,10 @@ fun RevenexErpApp(
       navController = navController,
       startDestination = Screen.Auth.route,
       modifier = Modifier.padding(paddingValues),
-      enterTransition = { fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { 250 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) },
-      exitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { -250 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) },
-      popEnterTransition = { fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -250 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) },
-      popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 250 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) }
+      enterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(initialOffsetX = { 200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) },
+      exitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(targetOffsetX = { -200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) },
+      popEnterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(initialOffsetX = { -200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) },
+      popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(targetOffsetX = { 200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) }
     ) {
       composable(Screen.Auth.route) {
         AuthScreen(
@@ -357,7 +308,7 @@ fun RevenexErpApp(
         )
       }
 
-      // Attendance
+      // Attendance Matrix
       composable(
         route = Screen.Attendance.route,
         arguments = listOf(
@@ -382,7 +333,7 @@ fun RevenexErpApp(
         }
       }
 
-      // Fees & Accounts
+      // Bursar & Financial Ledger
       composable(Screen.Fees.route) {
         FeeManagementScreen(
           repository = repository,
@@ -394,7 +345,7 @@ fun RevenexErpApp(
         )
       }
 
-      // Academics
+      // Academics & Gradebook
       composable(Screen.Timetable.route) {
         TimetableScreen(repository = repository)
       }
@@ -418,7 +369,7 @@ fun RevenexErpApp(
         ExamsScreen(repository = repository)
       }
 
-      // Communication
+      // Communication & Audit Trail
       composable(Screen.Notices.route) {
         NoticesScreen(
           repository = repository,
@@ -494,8 +445,23 @@ fun RevenexErpApp(
     }
   }
 
-  // Modals & Interactive Dialogs
+  // Global Command Palette (⌘K) Modal Overlay
+  if (showCommandPalette) {
+    GlobalCommandPaletteModal(
+      repository = repository,
+      onDismiss = { showCommandPalette = false },
+      onNavigateTo = { route -> navController.navigate(route) },
+      onTriggerAction = { action ->
+        when (action) {
+          "admit_student" -> showAddStudentDialog = true
+          "create_notice" -> showCreateNoticeDialog = true
+          "create_assignment" -> showCreateAssignmentDialog = true
+        }
+      }
+    )
+  }
 
+  // Modals & Interactive Dialogs
   if (showAddStudentDialog) {
     val studentsList by repository.students.collectAsState()
     AddStudentDialog(

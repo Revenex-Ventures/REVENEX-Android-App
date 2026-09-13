@@ -179,12 +179,13 @@ fun PrincipalAttendanceScreen(
 
                   // Animated Circular Progress Indicator
                   Box(contentAlignment = Alignment.Center) {
-                    SimpleProgressRing(
-                      percentage = schoolStats.pct,
-                      title = "Average Attendance",
-                      subtitle = "Class 6-12 Cumulative",
-                      ringColor = if (schoolStats.pct >= 75.0) StatusSuccess else StatusError,
-                      modifier = Modifier.padding(10.dp)
+                    VitalRing(
+                      value = schoolStats.pct.toFloat(),
+                      label = "Average Presence",
+                      size = VitalRingSize.HERO,
+                      gradientStart = if (schoolStats.pct >= 75.0) StatusSuccessText else StatusDangerText,
+                      trackColor = ScholaOnyxBorder,
+                      textColor = Color.White
                     )
                   }
 
