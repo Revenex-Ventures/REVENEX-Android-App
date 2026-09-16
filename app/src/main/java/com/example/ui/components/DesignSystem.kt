@@ -1,5 +1,12 @@
 package com.example.ui.components
 
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
+import android.os.Build
+import kotlin.math.exp
+import kotlin.math.sin
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -21,11 +28,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -38,9 +48,91 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import java.util.Locale
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ============================================================================
-// 1. FEATURE HERO CARD (Dark Onyx Surface, 22dp corners, 1px border)
+// 0. GLASS MORPHISM UTILITIES
+// ============================================================================
+
+fun Modifier.glassEffect(
+  cornerRadius: Dp = 24.dp,
+  borderAlpha: Float = 0.45f,
+  dark: Boolean = false
+): Modifier = this.then(Modifier)
+  .background(
+    color = if (dark) InkBlack.copy(alpha = 0.88f) else Color.White.copy(alpha = 0.62f),
+    shape = RoundedCornerShape(cornerRadius)
+  )
+  .border(
+    width = 0.8.dp,
+    color = Color.White.copy(alpha = if (dark) 0.18f else borderAlpha),
+    shape = RoundedCornerShape(cornerRadius)
+  )
+  .shadow(
+    elevation = 10.dp,
+    shape = RoundedCornerShape(cornerRadius),
+    clip = false,
+    ambientColor = if (dark) InkBlack.copy(alpha = 0.45f) else ScholaTerracotta.copy(alpha = 0.30f),
+    spotColor = if (dark) InkBlack.copy(alpha = 0.35f) else ScholaTerracotta.copy(alpha = 0.20f)
+  )
+
+@Composable
+fun GlassBackground(
+  modifier: Modifier = Modifier,
+  content: @Composable () -> Unit
+) {
+  Box(modifier = modifier.fillMaxSize()) {
+    // Base canvas
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(ScholaLinen)
+    )
+    // Soft gradient blobs for glass to react to (drawn over the base)
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(
+          Brush.radialGradient(
+            colors = listOf(
+              ScholaTerracotta.copy(alpha = 0.16f),
+              Color.Transparent
+            ),
+            center = Offset(0.25f, 0.10f),
+            radius = 800f
+          )
+        )
+    )
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(
+          Brush.radialGradient(
+            colors = listOf(
+              ScholaGoldLight.copy(alpha = 0.12f),
+              Color.Transparent
+            ),
+            center = Offset(0.80f, 0.65f),
+            radius = 700f
+          )
+        )
+    )
+    content()
+  }
+}
+
+val ScholaBgBrush = Brush.linearGradient(
+  colors = listOf(
+    ScholaTerracotta.copy(alpha = 0.05f),
+    ScholaGoldLight.copy(alpha = 0.04f),
+    Color.White
+  )
+)
+
+// ============================================================================
+// 1. FEATURE HERO CARD (Glass surface, 24dp corners, frosted border)
 // ============================================================================
 @Composable
 fun FeatureHeroCard(
@@ -52,22 +144,17 @@ fun FeatureHeroCard(
   actionButtonText: String,
   onActionClick: () -> Unit,
   modifier: Modifier = Modifier,
-  badgeBgColor: Color = ScholaGoldContainer,
-  badgeTextColor: Color = ScholaGoldText,
-  heroHighlightColor: Color = ScholaGoldLight,
+  badgeBgColor: Color = ScholaSlateContainer,
+  badgeTextColor: Color = ScholaSlateNavy,
+  heroHighlightColor: Color = ScholaTerracotta,
   secondaryMetricLabel: String = "DAILY ATTENDANCE RATE"
 ) {
   val shape = RoundedCornerShape(Radius.hero)
+  val glassShape = RoundedCornerShape(Radius.hero)
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .clip(shape)
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(ScholaOnyxSurface, ScholaOnyx)
-        )
-      )
-      .border(1.dp, ScholaOnyxBorder, shape)
+      .glassEffect(cornerRadius = Radius.hero, dark = true)
       .padding(Spacing.cardPaddingLarge)
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -79,7 +166,7 @@ fun FeatureHeroCard(
       ) {
         Text(
           text = cycleTitle.uppercase(Locale.getDefault()),
-          color = ScholaOnyxMuted,
+          color = Color.White.copy(alpha = 0.70f),
           style = MaterialTheme.typography.labelSmall,
           letterSpacing = TypeTokens.trackingMicroLabel,
           maxLines = 1,
@@ -113,14 +200,14 @@ fun FeatureHeroCard(
         Column(modifier = Modifier.weight(1f)) {
           Text(
             text = statisticLabel.uppercase(Locale.getDefault()),
-            color = ScholaOnyxMuted,
+            color = Color.White.copy(alpha = 0.70f),
             style = MaterialTheme.typography.labelSmall,
             letterSpacing = TypeTokens.trackingMicroLabel
           )
           Spacer(modifier = Modifier.height(2.dp))
           Text(
             text = primaryStatistic,
-            color = ScholaOnyxText,
+            color = Color.White,
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold
           )
@@ -129,14 +216,14 @@ fun FeatureHeroCard(
         Column(horizontalAlignment = Alignment.End) {
           Text(
             text = secondaryMetricLabel.uppercase(Locale.getDefault()),
-            color = ScholaOnyxMuted,
+            color = Color.White.copy(alpha = 0.70f),
             style = MaterialTheme.typography.labelSmall,
             letterSpacing = TypeTokens.trackingMicroLabel
           )
           Spacer(modifier = Modifier.height(2.dp))
           Text(
             text = secondaryKeyMetric,
-            color = heroHighlightColor,
+            color = ScholaTerracottaLight,
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold
           )
@@ -145,10 +232,10 @@ fun FeatureHeroCard(
 
       Spacer(modifier = Modifier.height(Spacing.s4))
 
-      // Pill Action Button with Trailing Arrow
+      // Pill Action Button with Trailing Arrow (charcoal, lime arrow)
       Surface(
         shape = RoundedCornerShape(Radius.pill),
-        color = ScholaTerracotta,
+        color = ScholaSlateNavyDark,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.pill))
@@ -166,13 +253,13 @@ fun FeatureHeroCard(
             text = actionButtonText,
             color = Color.White,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.SemiBold
           )
           Spacer(modifier = Modifier.width(Spacing.s2))
           Icon(
             imageVector = Icons.Default.ArrowForward,
             contentDescription = null,
-            tint = Color.White,
+            tint = ScholaTerracottaLight,
             modifier = Modifier.size(16.dp)
           )
         }
@@ -182,15 +269,15 @@ fun FeatureHeroCard(
 }
 
 // ============================================================================
-// 2. COMPACT STAT TILES (White surface card, 20dp corners, 1px border)
+// 2. COMPACT STAT TILES (White surface, 20dp corners, hairline border)
 // ============================================================================
 @Composable
 fun CompactStatTile(
   categoryLabel: String,
   statCounter: String,
   icon: ImageVector,
-  iconTint: Color = ScholaTerracotta,
-  iconContainerColor: Color = ScholaTerracottaContainer,
+  iconTint: Color = ScholaSlateNavy,
+  iconContainerColor: Color = ScholaOnyx,
   deltaText: String? = null,
   isPositiveDelta: Boolean = true,
   modifier: Modifier = Modifier,
@@ -205,13 +292,11 @@ fun CompactStatTile(
 
   Box(
     modifier = baseModifier
-      .clip(shape)
-      .background(ScholaSurface)
-      .border(1.dp, ScholaBorder, shape)
+      .glassEffect(cornerRadius = Radius.tile)
       .padding(Spacing.cardPadding)
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-      // Top row: 38dp circular icon container + delta percentage chip
+      // Top row: monochrome icon well + delta chip
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -251,7 +336,7 @@ fun CompactStatTile(
                 text = deltaText,
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isPositiveDelta) StatusSuccessText else StatusDangerText,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Medium,
                 fontSize = 10.sp
               )
             }
@@ -285,8 +370,10 @@ fun CompactStatTile(
 }
 
 // ============================================================================
-// 3. FLOATING DOCK (Mobile: 64dp height, 10dp elevation, dark onyx pill)
+// 3. BOTTOM NAVIGATION BAR (Ink black, solid, jump-up icon animation)
 // ============================================================================
+val InkBlack = Color(0xFF0D0D0F)
+
 @Composable
 fun ScholaFloatingDock(
   items: List<ScholaDockItem>,
@@ -294,76 +381,161 @@ fun ScholaFloatingDock(
   onItemSelected: (String) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  val dockShape = RoundedCornerShape(Radius.pill)
+  val barShape = RoundedCornerShape(
+    topStart = Radius.md,
+    topEnd = Radius.md,
+    bottomStart = 0.dp,
+    bottomEnd = 0.dp
+  )
 
-  Box(
+  val slideY = remember { Animatable(90f) }
+  LaunchedEffect(Unit) {
+    slideY.animateTo(
+      targetValue = 0f,
+      animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+    )
+  }
+
+  val scope = rememberCoroutineScope()
+  val selectedIndex = items.indexOfFirst { currentRoute == it.route }
+    .coerceAtLeast(0)
+  var pendingIndex by remember { mutableIntStateOf(selectedIndex) }
+  var navJob by remember { mutableStateOf<Job?>(null) }
+  val slideIndex = remember { Animatable(selectedIndex.toFloat()) }
+  val iconPop = remember { Animatable(0f) }
+  val clickTone = remember { DockClick() }
+  val haptics = LocalHapticFeedback.current
+  DisposableEffect(Unit) {
+    onDispose { clickTone.release() }
+  }
+
+  LaunchedEffect(currentRoute) {
+    pendingIndex = selectedIndex
+    slideIndex.snapTo(selectedIndex.toFloat())
+  }
+
+  fun select(item: ScholaDockItem, index: Int) {
+    if (index == pendingIndex) return
+    navJob?.cancel()
+    pendingIndex = index
+    try {
+      clickTone.play()
+      haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    } catch (_: Exception) {
+    }
+    navJob = scope.launch {
+      iconPop.snapTo(20f)
+      launch {
+        iconPop.animateTo(
+          targetValue = 0f,
+          animationSpec = spring(dampingRatio = 0.38f, stiffness = 700f)
+        )
+      }
+      slideIndex.animateTo(
+        targetValue = index.toFloat(),
+        animationSpec = spring(
+          dampingRatio = 0.46f,
+          stiffness = 760f
+        )
+      )
+      onItemSelected(item.route)
+    }
+  }
+
+  BoxWithConstraints(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = Spacing.s4, vertical = Spacing.s2)
-      .navigationBarsPadding(),
-    contentAlignment = Alignment.Center
+      .height(72.dp)
+      .graphicsLayer { translationY = slideY.value.dp.toPx() }
+      .testTag("bottom_nav_bar")
   ) {
-    Surface(
+    val itemWidth = maxWidth / items.size
+    val circleX = (itemWidth * slideIndex.value) + (itemWidth - 50.dp) / 2
+
+    Box(
       modifier = Modifier
-        .height(64.dp)
-        .shadow(Elev.floatingDock, dockShape, clip = false)
-        .clip(dockShape)
-        .border(1.dp, ScholaOnyxBorder, dockShape),
-      color = ScholaOnyx,
-      shape = dockShape
-    ) {
-      Row(
+        .fillMaxWidth()
+        .fillMaxHeight()
+        .shadow(Elev.e3, barShape, clip = false)
+        .background(InkBlack, barShape)
+    )
+
+    Box(
         modifier = Modifier
-          .fillMaxHeight()
-          .padding(horizontal = Spacing.s2),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly
+          .size(50.dp)
+          .graphicsLayer {
+            translationX = circleX.toPx()
+            translationY = (-24).dp.toPx()
+          }
       ) {
-        items.forEach { item ->
-          val isSelected = currentRoute == item.route
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .clip(CircleShape)
+          .background(ScholaLinen)
+          .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+      )
+      Box(
+        modifier = Modifier
+          .size(46.dp)
+          .align(Alignment.Center)
+          .clip(CircleShape)
+          .background(InkBlack)
+          .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+        contentAlignment = Alignment.Center
+      ) {
+        val ridingItem = items[pendingIndex]
+        Icon(
+          imageVector = ridingItem.selectedIcon,
+          contentDescription = ridingItem.label,
+          tint = ScholaTerracotta,
+          modifier = Modifier
+            .size(24.dp)
+            .graphicsLayer { translationY = iconPop.value.dp.toPx() }
+        )
+      }
+    }
 
-          val animatedBgColor by animateColorAsState(
-            targetValue = if (isSelected) ScholaTerracotta else Color.Transparent,
-            animationSpec = tween(Motion.normal),
-            label = "dockActiveBg"
-          )
-          val animatedContentColor by animateColorAsState(
-            targetValue = if (isSelected) Color.White else ScholaOnyxMuted,
-            animationSpec = tween(Motion.normal),
-            label = "dockActiveContent"
-          )
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .fillMaxHeight()
+        .padding(horizontal = Spacing.s2),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+      items.forEachIndexed { index, item ->
+        val isSelected = index == pendingIndex
 
+        Column(
+          modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable { select(item, index) }
+            .testTag("dock_tab_${item.route}"),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.Center
+        ) {
           Box(
-            modifier = Modifier
-              .weight(1f)
-              .fillMaxHeight(0.82f)
-              .clip(RoundedCornerShape(Radius.pill))
-              .background(animatedBgColor)
-              .clickable { onItemSelected(item.route) }
-              .padding(horizontal = 8.dp, vertical = 4.dp)
-              .testTag("dock_tab_${item.route}"),
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center
           ) {
-            Column(
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.Center
-            ) {
-              Icon(
-                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                contentDescription = item.label,
-                tint = animatedContentColor,
-                modifier = Modifier.size(20.dp)
-              )
-              Text(
-                text = item.label,
-                color = animatedContentColor,
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1
-              )
-            }
+            Icon(
+              imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+              contentDescription = item.label,
+              tint = if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.5f),
+              modifier = Modifier.size(24.dp)
+            )
           }
+          Text(
+            text = item.label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
+            fontSize = if (isSelected) 10.sp else 9.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.offset(y = (-16).dp)
+          )
         }
       }
     }
@@ -376,6 +548,59 @@ data class ScholaDockItem(
   val selectedIcon: ImageVector,
   val unselectedIcon: ImageVector
 )
+
+private class DockClick {
+  private val sampleRate = 44100
+  private val track: AudioTrack
+
+  init {
+    val duration = 0.008f
+    val total = (sampleRate * duration).toInt()
+    val pcm = ShortArray(total)
+    for (i in 0 until total) {
+      val t = i.toFloat() / sampleRate
+      val decay = exp(-t * 500f)
+      val body = sin(2.0 * Math.PI.toFloat() * 1200.0f * t)
+      pcm[i] = ((body * decay) * 0.20f * Short.MAX_VALUE).toInt().toShort()
+    }
+    track = AudioTrack.Builder()
+      .setAudioAttributes(
+        AudioAttributes.Builder()
+          .setUsage(AudioAttributes.USAGE_MEDIA)
+          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+          .build()
+      )
+      .setAudioFormat(
+        AudioFormat.Builder()
+          .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+          .setSampleRate(sampleRate)
+          .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+          .build()
+      )
+      .setBufferSizeInBytes(pcm.size * 2)
+      .setTransferMode(AudioTrack.MODE_STATIC)
+      .build()
+    track.write(pcm, 0, pcm.size)
+    track.reloadStaticData()
+  }
+
+  fun play() {
+    try {
+      track.stop()
+      track.reloadStaticData()
+      track.play()
+    } catch (_: Exception) {
+    }
+  }
+
+  fun release() {
+    try {
+      track.stop()
+      track.release()
+    } catch (_: Exception) {
+    }
+  }
+}
 
 // ============================================================================
 // 4. FORM & INPUT FIELDS (14-16dp corners, 1px border, leading icon, clear btn)
@@ -482,9 +707,9 @@ fun VitalRing(
   label: String = "ATTENDANCE",
   size: VitalRingSize = VitalRingSize.MEDIUM,
   gradientStart: Color = ScholaTerracotta,
-  gradientEnd: Color = ScholaGold,
-  trackColor: Color = ScholaBorder,
-  textColor: Color = Color.White,
+  gradientEnd: Color = ScholaTerracottaLight,
+  trackColor: Color = ScholaOnyxBorder,
+  textColor: Color = ScholaTextPrimary,
   modifier: Modifier = Modifier
 ) {
   val progress = remember { Animatable(0f) }
@@ -617,8 +842,8 @@ fun CountUpCurrency(
 fun RevenexLogoCrest(
   modifier: Modifier = Modifier,
   size: Dp = 64.dp,
-  tint: Color = ScholaGold,
-  backgroundColor: Color = ScholaSlateNavy
+  tint: Color = ScholaTerracottaLight,
+  backgroundColor: Color = ScholaSlateNavyDark
 ) {
   Box(
     modifier = modifier
@@ -656,12 +881,12 @@ fun AppButton(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
   enabled: Boolean = true,
-  containerColor: Color = ScholaTerracotta,
+  containerColor: Color = ScholaSlateNavyDark,
   contentColor: Color = Color.White,
   minHeight: Dp = 48.dp,
   leadingIcon: ImageVector? = null,
   fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
-  fontWeight: FontWeight = FontWeight.Bold
+  fontWeight: FontWeight = FontWeight.Medium
 ) {
   val haptics = LocalHapticFeedback.current
   var pressed by remember { mutableStateOf(false) }
@@ -675,7 +900,7 @@ fun AppButton(
   Box(
     modifier = modifier
       .scale(scale)
-      .clip(RoundedCornerShape(Radius.lg))
+      .clip(RoundedCornerShape(Radius.pill))
       .background(if (enabled) containerColor else ScholaSlateContainer)
       .pointerInput(enabled) {
         detectTapGestures(
@@ -699,7 +924,7 @@ fun AppButton(
       verticalAlignment = Alignment.CenterVertically
     ) {
       if (leadingIcon != null) {
-        Icon(leadingIcon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
+        Icon(leadingIcon, contentDescription = null, tint = if (enabled) contentColor else ScholaMuted, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(Spacing.s2))
       }
       Text(
@@ -718,20 +943,15 @@ fun AppCard(
   onClick: (() -> Unit)? = null,
   containerColor: Color = ScholaSurface,
   elevation: Dp = Elev.e0,
-  shape: RoundedCornerShape = RoundedCornerShape(Radius.lg),
+  shape: RoundedCornerShape = RoundedCornerShape(Radius.xl),
+  dark: Boolean = false,
   content: @Composable ColumnScope.() -> Unit
 ) {
-  val base = Modifier
-    .clip(shape)
-    .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
   Box(
     modifier = modifier
-      .then(base)
-      .shadow(elevation, shape, clip = false)
-      .clip(shape)
-      .background(containerColor)
-      .border(1.dp, ScholaBorder, shape)
-      .padding(Spacing.cardPadding)
+      .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
+      .glassEffect(cornerRadius = Radius.xl, dark = dark)
+      .padding(Spacing.cardPaddingLarge)
   ) {
     Column(modifier = Modifier.fillMaxWidth(), content = content)
   }
@@ -767,7 +987,7 @@ fun Avatar(
   name: String,
   modifier: Modifier = Modifier,
   size: Dp = 44.dp,
-  background: Color = ScholaTerracotta,
+  background: Color = ScholaSlateNavyDark,
   textColor: Color = Color.White
 ) {
   val initials = name.trim().split(" ").filter { it.isNotBlank() }
