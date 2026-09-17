@@ -40,7 +40,7 @@ fun TeacherDetailScreen(
   val teacherClasses = timetable.filter { it.teacherName.contains(teacher.name.split(" ").lastOrNull() ?: "") }
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     topBar = {
       TopAppBar(
         title = { Text("Faculty Profile", fontWeight = FontWeight.Bold) },
@@ -137,7 +137,7 @@ fun TeacherDetailScreen(
             ) {
               Column {
                 Text(slot.subject, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text("${slot.dayOfWeek} • Period ${slot.periodNumber} (${slot.startTime} - ${slot.endTime})", style = MaterialTheme.typography.bodySmall, color = ScholaTerracotta)
+                Text("${slot.dayOfWeek} • Period ${slot.periodNumber} (${slot.startTime} - ${slot.endTime})", style = MaterialTheme.typography.bodySmall, color = ScholaOnTerracottaContainer)
                 Text("Class ${slot.classGrade}-${slot.division} • Room ${slot.roomNumber}", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
               }
               ScholaPillBadge(status = "Class ${slot.classGrade}-${slot.division}")

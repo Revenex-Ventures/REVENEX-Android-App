@@ -82,73 +82,65 @@ fun TeacherDashboardScreen(
     // Teacher Profile & Class Teacher Banner
     item {
       AnimatedFadeIn(delayMillis = 0) {
-        Card(
+        val teacherAttendance = (matchedTeacher?.attendancePercent ?: 98.4).toFloat()
+        AnimatedAttendanceHero(
+          attendanceValue = teacherAttendance,
+          label = "Term Attendance",
+          avatarLabel = currentUser.name,
           modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-          shape = RoundedCornerShape(20.dp),
-          colors = CardDefaults.cardColors(containerColor = Color(0xFF4C1D95))
-        ) {
-          Column(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(20.dp)
-          ) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                  text = currentUser.name,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
-                val designation = matchedTeacher?.designation ?: currentUser.designation
-                val department = matchedTeacher?.department ?: "Academic Department"
-                Text(
-                  text = "$designation • $department • Class $mentorClass Mentor",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = Color.White.copy(alpha = 0.8f)
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF7C3AED)
-              ) {
-                Text(
-                  text = "FACULTY",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-              }
+          nameContent = {
+            Column {
+              Text(
+                text = currentUser.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+              )
+              val designation = matchedTeacher?.designation ?: currentUser.designation
+              val department = matchedTeacher?.department ?: "Academic Department"
+              Text(
+                text = "$designation • $department • Class $mentorClass Mentor",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.70f)
+              )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+          },
+          trailingContent = {
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = Color.White.copy(alpha = 0.15f)
+            ) {
+              Text(
+                text = "FACULTY",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              )
+            }
+          },
+          statsContent = {
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween
             ) {
               Column {
-                Text("MY CLASS", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                Text("MY CLASS", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.70f))
                 Text("$mentorClass (${classStudents.size} Std)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
               }
               Column {
-                Text("WEEKLY PERIODS", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                Text("WEEKLY PERIODS", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.70f))
                 Text("${matchedTeacher?.weeklyPeriods ?: 22} Periods", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
               }
               Column {
-                Text("ATTENDANCE", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                Text("${matchedTeacher?.attendancePercent ?: 98.4}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessContainer)
+                Text("ATTENDANCE", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.70f))
+                Text("$teacherAttendance%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ScholaTerracottaLight)
               }
             }
           }
-        }
+        )
       }
     }
 
@@ -166,8 +158,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Mark Attendance",
                 icon = Icons.Default.FactCheck,
-                iconTint = Color(0xFF15803D),
-                backgroundColor = Color(0xFFDCFCE7),
+                iconTint = ScholaSlateNavy,
+                backgroundColor = ScholaSlateContainer,
                 modifier = Modifier.width(115.dp),
                 onClick = { onNavigateTo(Screen.Attendance.route) }
               )
@@ -176,8 +168,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Add Homework",
                 icon = Icons.Default.Assignment,
-                iconTint = RevenexBlue,
-                backgroundColor = RevenexPrimaryContainer,
+                iconTint = ScholaTerracotta,
+                backgroundColor = ScholaTerracottaContainer,
                 modifier = Modifier.width(115.dp),
                 onClick = onShowCreateAssignment
               )
@@ -186,8 +178,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Upload Notes",
                 icon = Icons.Default.CloudUpload,
-                iconTint = Color(0xFF6D28D9),
-                backgroundColor = Color(0xFFEDE9FE),
+                iconTint = ScholaSlateNavy,
+                backgroundColor = ScholaSlateContainer,
                 modifier = Modifier.width(115.dp),
                 onClick = { onNavigateTo(Screen.StudyMaterial.route) }
               )
@@ -196,8 +188,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Staff Leave",
                 icon = Icons.Default.EventBusy,
-                iconTint = Color(0xFFB45309),
-                backgroundColor = Color(0xFFFEF3C7),
+                iconTint = ScholaSlateNavy,
+                backgroundColor = ScholaSlateContainer,
                 modifier = Modifier.width(115.dp),
                 onClick = onShowApplyLeave
               )
@@ -222,14 +214,9 @@ fun TeacherDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
       ) {
         todaySlots.forEach { slot ->
-          Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
+          AppCard(modifier = Modifier.fillMaxWidth()) {
             Row(
-              modifier = Modifier.padding(14.dp),
+              modifier = Modifier.fillMaxWidth(),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Surface(
@@ -296,16 +283,13 @@ fun TeacherDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
       ) {
         classStudents.take(4).forEach { st ->
-          Card(
+          AppCard(
             modifier = Modifier
               .fillMaxWidth()
-              .clickable { onNavigateTo(Screen.StudentDetail.createRoute(st.id)) },
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
+              .clickable { onNavigateTo(Screen.StudentDetail.createRoute(st.id)) }
           ) {
             Row(
-              modifier = Modifier.padding(12.dp),
+              modifier = Modifier.fillMaxWidth(),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Surface(

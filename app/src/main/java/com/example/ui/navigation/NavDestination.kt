@@ -8,6 +8,7 @@ import com.example.data.model.UserRole
 
 sealed class Screen(val route: String) {
   object Auth : Screen("auth")
+  object Loading : Screen("loading")
   object Dashboard : Screen("dashboard")
   object Profile : Screen("profile")
   object Students : Screen("students")
@@ -18,6 +19,7 @@ sealed class Screen(val route: String) {
   object TeacherDetail : Screen("teacher_detail/{teacherId}") {
     fun createRoute(teacherId: String) = "teacher_detail/$teacherId"
   }
+  object TeacherProfile : Screen("teacher_profile")
   object Attendance : Screen("attendance?classGrade={classGrade}&division={division}") {
     fun createRoute(classGrade: String, division: String) = "attendance?classGrade=$classGrade&division=$division"
   }
@@ -62,14 +64,15 @@ object NavConfig {
         BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.FactCheck, Icons.Outlined.FactCheck),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu)
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
+        BottomNavItem(Screen.TeacherProfile.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
       )
       UserRole.STUDENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.ReportCard.route, "Report Card", Icons.Filled.Grade, Icons.Outlined.Grade),
-        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook)
+        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
+        BottomNavItem(Screen.ReportCard.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
       )
       // Parent/Parent-Portal is folded into the Student Portal: a parent accessing via a
       // guardian link lands in the Student portal. There is no 4th portal.
@@ -77,8 +80,8 @@ object NavConfig {
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.ReportCard.route, "Report Card", Icons.Filled.Grade, Icons.Outlined.Grade),
-        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook)
+        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
+        BottomNavItem(Screen.ReportCard.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
       )
     }
   }

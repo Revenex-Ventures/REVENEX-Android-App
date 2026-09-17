@@ -42,6 +42,7 @@ data class Student(
   val rank: Int = 1,
   val gpa: Double = 3.85,
   val avatarColorHex: Long = 0xFFC2410C,
+  val avatarUrl: String = "",
   val schoolId: String = "schola_school_001",
   val status: String = "ACTIVE",
   val sessionId: String = "session_2026_2027",
@@ -67,6 +68,7 @@ data class Teacher(
   val attendancePercent: Double,
   val experienceYears: Int,
   val joiningDate: String,
+  val avatarUrl: String = "",
   val schoolId: String = "schola_school_001",
   val status: String = "ACTIVE",
   val sessionId: String = "session_2026_2027"

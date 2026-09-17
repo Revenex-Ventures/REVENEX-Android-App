@@ -111,7 +111,7 @@ fun GlobalSearchScreen(
             subtitle = "Circular • ${it.category.label} • ${it.publishedDate}",
             category = "BROADCAST",
             icon = Icons.Default.Campaign,
-            iconTint = Color(0xFFB45309),
+            iconTint = ScholaSlateNavy,
             targetRoute = Screen.Notices.route
           )
         )
@@ -122,11 +122,11 @@ fun GlobalSearchScreen(
   }
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     topBar = {
       Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = ScholaLinen,
+        color = GlassBgTransparent,
         tonalElevation = Elev.e0
       ) {
         Row(

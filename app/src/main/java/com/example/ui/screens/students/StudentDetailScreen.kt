@@ -40,7 +40,7 @@ fun StudentDetailScreen(
   val student = students.firstOrNull { it.id == studentId } ?: students.first()
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     topBar = {
       TopAppBar(
         title = {
@@ -155,7 +155,7 @@ fun Student360DetailPane(
               size = VitalRingSize.MEDIUM,
               gradientStart = ScholaTerracotta,
               trackColor = ScholaOnyxBorder,
-              textColor = Color.White
+              textColor = ScholaOnyxText
             )
 
             Box(
@@ -338,7 +338,7 @@ fun Student360DetailPane(
                   Text("${grd.subject} • ${grd.instructorName}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                  Text("${grd.score} / ${grd.maxScore}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ScholaTerracotta)
+                  Text("${grd.score} / ${grd.maxScore}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ScholaOnTerracottaContainer)
                   ScholaPillBadge(status = grd.letterGrade)
                 }
               }

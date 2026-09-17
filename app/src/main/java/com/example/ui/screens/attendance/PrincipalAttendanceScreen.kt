@@ -155,7 +155,7 @@ fun PrincipalAttendanceScreen(
               Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = RevenexNavy)
+                colors = CardDefaults.cardColors(containerColor = ScholaOnyxSurface)
               ) {
                 Column(
                   modifier = Modifier
@@ -167,12 +167,12 @@ fun PrincipalAttendanceScreen(
                     text = "Overall School Attendance Rate",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = ScholaOnyxText
                   )
                   Text(
                     text = "Synced: $currentDate",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = ScholaOnyxMuted
                   )
 
                   Spacer(modifier = Modifier.height(20.dp))
@@ -185,7 +185,7 @@ fun PrincipalAttendanceScreen(
                       size = VitalRingSize.HERO,
                       gradientStart = if (schoolStats.pct >= 75.0) StatusSuccessText else StatusDangerText,
                       trackColor = ScholaOnyxBorder,
-                      textColor = Color.White
+                      textColor = ScholaOnyxText
                     )
                   }
 
@@ -197,18 +197,18 @@ fun PrincipalAttendanceScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                   ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text("Present", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                      Text("${schoolStats.present}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessContainer)
+                      Text("Present", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted)
+                      Text("${schoolStats.present}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessText)
                     }
-                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = Color.White.copy(alpha = 0.2f))
+                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = ScholaOnyxBorder)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text("Absent", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                      Text("${schoolStats.absent}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusErrorContainer)
+                      Text("Absent", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted)
+                      Text("${schoolStats.absent}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusErrorText)
                     }
-                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = Color.White.copy(alpha = 0.2f))
+                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = ScholaOnyxBorder)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text("Late", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                      Text("${schoolStats.late}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = RevenexGoldLight)
+                      Text("Late", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted)
+                      Text("${schoolStats.late}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = RevenexGold)
                     }
                   }
                 }

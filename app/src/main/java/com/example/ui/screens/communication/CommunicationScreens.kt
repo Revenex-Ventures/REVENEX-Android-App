@@ -53,7 +53,7 @@ fun NoticesScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen)
+      .background(GlassBgTransparent)
       .testTag("notices_screen"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
@@ -211,7 +211,7 @@ fun NoticesScreen(
                   tint = when (log.actionType) {
                     "ROLL_CALL" -> StatusSuccessText
                     "FEE_PAYMENT" -> ScholaTerracotta
-                    "GRADEBOOK" -> Color(0xFF6D28D9)
+                    "GRADEBOOK" -> ScholaTerracottaDark
                     else -> ScholaSlateNavy
                   },
                   modifier = Modifier.size(20.dp)
@@ -233,7 +233,7 @@ fun NoticesScreen(
                 Text(
                   text = "${log.actorName} (${log.actorRole}) • Target: ${log.targetScholar}",
                   style = MaterialTheme.typography.labelSmall,
-                  color = ScholaTerracotta,
+                  color = ScholaOnTerracottaContainer,
                   fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -286,7 +286,7 @@ fun NotificationsScreen(
   val notifications by repository.notifications.collectAsState()
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     topBar = {
       TopAppBar(
         title = { Text("Institutional Notifications", fontWeight = FontWeight.Bold) },

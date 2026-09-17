@@ -67,8 +67,10 @@ fun AddStudentDialog(
     Card(
       modifier = Modifier
         .fillMaxWidth(0.92f)
-        .padding(vertical = 16.dp),
-      shape = RoundedCornerShape(20.dp)
+        .padding(vertical = 16.dp)
+        .glassEffect(cornerRadius = 24.dp),
+      shape = RoundedCornerShape(24.dp),
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
     ) {
       Column(
         modifier = Modifier
@@ -398,8 +400,10 @@ fun AddTeacherDialog(
     Card(
       modifier = Modifier
         .fillMaxWidth(0.92f)
-        .padding(vertical = 16.dp),
-      shape = RoundedCornerShape(20.dp)
+        .padding(vertical = 16.dp)
+        .glassEffect(cornerRadius = 24.dp),
+      shape = RoundedCornerShape(24.dp),
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
     ) {
       Column(
         modifier = Modifier
@@ -671,8 +675,10 @@ fun CreateNoticeDialog(
     Card(
       modifier = Modifier
         .fillMaxWidth(0.92f)
-        .padding(vertical = 16.dp),
-      shape = RoundedCornerShape(20.dp)
+        .padding(vertical = 16.dp)
+        .glassEffect(cornerRadius = 24.dp),
+      shape = RoundedCornerShape(24.dp),
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
     ) {
       Column(
         modifier = Modifier
@@ -855,8 +861,10 @@ fun CreateAssignmentDialog(
     Card(
       modifier = Modifier
         .fillMaxWidth(0.92f)
-        .padding(vertical = 16.dp),
-      shape = RoundedCornerShape(20.dp)
+        .padding(vertical = 16.dp)
+        .glassEffect(cornerRadius = 24.dp),
+      shape = RoundedCornerShape(24.dp),
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
     ) {
       Column(
         modifier = Modifier
@@ -1085,8 +1093,10 @@ fun ApplyLeaveDialog(
     Card(
       modifier = Modifier
         .fillMaxWidth(0.92f)
-        .padding(vertical = 16.dp),
-      shape = RoundedCornerShape(20.dp)
+        .padding(vertical = 16.dp)
+        .glassEffect(cornerRadius = 24.dp),
+      shape = RoundedCornerShape(24.dp),
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
     ) {
       Column(
         modifier = Modifier
@@ -1227,8 +1237,10 @@ fun FeePaymentDialog(
     Card(
       modifier = Modifier
         .fillMaxWidth(0.92f)
-        .padding(vertical = 16.dp),
-      shape = RoundedCornerShape(20.dp)
+        .padding(vertical = 16.dp)
+        .glassEffect(cornerRadius = 24.dp),
+      shape = RoundedCornerShape(24.dp),
+      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
     ) {
       Column(
         modifier = Modifier

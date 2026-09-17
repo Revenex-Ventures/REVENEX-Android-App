@@ -49,8 +49,10 @@ fun ScholaTopAppBar(
   modifier: Modifier = Modifier
 ) {
   Surface(
-    modifier = modifier.fillMaxWidth(),
-    color = ScholaLinen,
+    modifier = modifier
+      .fillMaxWidth()
+      .glassEffect(cornerRadius = 0.dp, borderAlpha = 0f, dark = true),
+    color = GlassBgTransparent,
     tonalElevation = Elev.e0
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -66,18 +68,18 @@ fun ScholaTopAppBar(
           Spacer(modifier = Modifier.width(Spacing.s2))
         }
 
-        // Institutional Crest Emblem Icon
+        // Institutional Crest Emblem (charcoal well, neon-lime mark)
         Box(
           modifier = Modifier
             .size(36.dp)
             .clip(RoundedCornerShape(Radius.sm))
-            .background(ScholaSlateNavy),
+            .background(ScholaSlateNavyDark),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = Icons.Default.AccountBalance,
             contentDescription = "ScholaOS Crest",
-            tint = ScholaGold,
+            tint = ScholaTerracottaLight,
             modifier = Modifier.size(20.dp)
           )
         }
@@ -91,17 +93,17 @@ fun ScholaTopAppBar(
               text = title,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = ScholaTextPrimary
+              color = Color.White
             )
             Spacer(modifier = Modifier.width(6.dp))
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = ScholaTerracottaContainer
+              color = ScholaTerracotta
             ) {
               Text(
                 text = "v2.6",
                 style = MaterialTheme.typography.labelSmall,
-                color = ScholaOnTerracottaContainer,
+                color = Color.White,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
@@ -112,7 +114,7 @@ fun ScholaTopAppBar(
             Text(
               text = subtitle,
               style = MaterialTheme.typography.bodySmall,
-              color = ScholaMuted,
+              color = Color.White.copy(alpha = 0.70f),
               fontSize = 11.sp,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
@@ -123,10 +125,10 @@ fun ScholaTopAppBar(
         // Quick Search Trigger Pill (⌘K)
         Surface(
           shape = RoundedCornerShape(Radius.pill),
-          color = ScholaSurface,
+          color = Color.White.copy(alpha = 0.12f),
           modifier = Modifier
             .clip(RoundedCornerShape(Radius.pill))
-            .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.pill))
+            .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(Radius.pill))
             .clickable(onClick = onSearchClick)
             .testTag("command_palette_trigger_pill")
         ) {
@@ -137,7 +139,7 @@ fun ScholaTopAppBar(
             Icon(
               imageVector = Icons.Default.Search,
               contentDescription = "Search",
-              tint = ScholaMuted,
+              tint = Color.White.copy(alpha = 0.70f),
               modifier = Modifier.size(15.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -145,7 +147,7 @@ fun ScholaTopAppBar(
               text = "⌘K",
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
-              color = ScholaTerracotta,
+              color = Color.White,
               fontSize = 11.sp
             )
           }
@@ -158,8 +160,8 @@ fun ScholaTopAppBar(
           modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
-            .background(ScholaSurface)
-            .border(1.dp, ScholaBorder, CircleShape)
+            .background(Color.White.copy(alpha = 0.12f))
+            .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
             .clickable(onClick = onNotificationClick)
             .testTag("topbar_notifications_button"),
           contentAlignment = Alignment.Center
@@ -167,7 +169,7 @@ fun ScholaTopAppBar(
           Icon(
             imageVector = Icons.Outlined.Notifications,
             contentDescription = "Notifications",
-            tint = ScholaTextPrimary,
+            tint = Color.White,
             modifier = Modifier.size(18.dp)
           )
           if (unreadCount > 0) {
@@ -286,33 +288,29 @@ fun WorkflowQuickPill(
   modifier: Modifier = Modifier,
   isHighlighted: Boolean = false
 ) {
-  val shape = RoundedCornerShape(Radius.pill)
-  Surface(
-    shape = shape,
-    color = if (isHighlighted) ScholaTerracotta else ScholaSurface,
+  Box(
     modifier = modifier
-      .clip(shape)
-      .border(1.dp, if (isHighlighted) ScholaTerracotta else ScholaBorder, shape)
+.glassEffect(cornerRadius = Radius.pill)
       .clickable(onClick = onClick)
       .testTag("workflow_pill_${title.lowercase().replace(" ", "_")}")
+      .padding(horizontal = Spacing.s4, vertical = 10.dp)
   ) {
     Row(
-      modifier = Modifier.padding(horizontal = Spacing.s4, vertical = 10.dp),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Center
     ) {
       Icon(
         imageVector = icon,
         contentDescription = null,
-        tint = if (isHighlighted) Color.White else ScholaTerracotta,
+        tint = if (isHighlighted) ScholaTerracotta else ScholaSlateNavy,
         modifier = Modifier.size(16.dp)
       )
       Spacer(modifier = Modifier.width(Spacing.s2))
       Text(
         text = title,
         style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = if (isHighlighted) Color.White else ScholaTextPrimary
+        fontWeight = FontWeight.Medium,
+        color = if (isHighlighted) ScholaTerracotta else ScholaTextPrimary
       )
     }
   }
@@ -349,7 +347,7 @@ fun SectionHeader(
         Text(
           text = actionText,
           style = MaterialTheme.typography.labelMedium,
-          color = ScholaTerracotta,
+          color = ScholaOnTerracottaContainer,
           fontWeight = FontWeight.Bold
         )
       }
@@ -512,7 +510,7 @@ fun FeeCollectionDonutChart(
       Spacer(modifier = Modifier.height(2.dp))
       Text(
         text = "${(fraction * 100).toInt()}% Realized",
-        color = ScholaGold,
+        color = ScholaTextPrimary,
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold
       )
@@ -529,11 +527,11 @@ fun FeeCollectionDonutChart(
         modifier = Modifier.size(64.dp),
         color = ScholaTerracotta,
         trackColor = ScholaOnyxBorder,
-        strokeWidth = 7.dp
+        strokeWidth = 6.dp
       )
       Text(
         text = "${(fraction * 100).toInt()}%",
-        color = Color.White,
+        color = ScholaTextPrimary,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Bold
       )

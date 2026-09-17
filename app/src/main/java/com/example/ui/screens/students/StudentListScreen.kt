@@ -71,7 +71,7 @@ fun StudentListScreen(
   val isSplitPane = windowSizeClass != WindowSizeClass.COMPACT_MOBILE
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     floatingActionButton = {
       if (currentUser.role == UserRole.PRINCIPAL) {
         ExtendedFloatingActionButton(
@@ -79,7 +79,7 @@ fun StudentListScreen(
           icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
           text = { Text("Enroll Scholar", fontWeight = FontWeight.Bold) },
           containerColor = ScholaTerracotta,
-          contentColor = Color.White,
+          contentColor = ScholaSlateNavyDark,
           modifier = Modifier.testTag("fab_admit_student")
         )
       }
@@ -254,7 +254,7 @@ fun StudentListScreen(
     if (activeStudent != null) {
       ModalBottomSheet(
         onDismissRequest = { showMobileDetailSheet = false },
-        containerColor = ScholaLinen,
+        containerColor = GlassBgTransparent,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
       ) {
         Box(modifier = Modifier.padding(Spacing.s4)) {
@@ -318,7 +318,7 @@ fun ScholarCardItem(
               text = "GPA: ${student.gpa}",
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
-              color = ScholaTerracotta
+              color = ScholaOnTerracottaContainer
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text("•", color = ScholaMuted, fontSize = 10.sp)

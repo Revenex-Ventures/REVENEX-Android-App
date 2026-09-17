@@ -96,8 +96,8 @@ fun ReportsAnalyticsScreen(
           value = "${((totalCollected / totalDemanded) * 100).toInt()}%",
           sublabel = "₹${(totalCollected / 1000).toInt()}k Collected",
           icon = Icons.Default.AccountBalanceWallet,
-          iconTint = Color(0xFF15803D),
-          iconBackground = Color(0xFFDCFCE7),
+          iconTint = ScholaSlateNavy,
+          iconBackground = ScholaSlateContainer,
           trendText = "+8.4% YoY",
           isPositiveTrend = true,
           modifier = Modifier.weight(1f)

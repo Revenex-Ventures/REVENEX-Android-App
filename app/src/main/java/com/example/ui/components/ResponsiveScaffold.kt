@@ -77,13 +77,13 @@ fun ScholaResponsiveScaffold(
     }
   }
 
-  val isTopLevelRoute = currentRoute in navItems.map { it.route }
+  val isTopLevelRoute = currentRoute in navItems.map { it.route } || currentRoute == Screen.Loading.route
 
   when (windowSizeClass) {
     WindowSizeClass.COMPACT_MOBILE -> {
       // 1. MOBILE LAYOUT (< 600dp)
       Scaffold(
-        containerColor = ScholaLinen,
+        containerColor = GlassBgTransparent,
         topBar = {
           if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
             ScholaTopAppBar(
@@ -109,7 +109,9 @@ fun ScholaResponsiveScaffold(
           }
         }
       ) { paddingValues ->
-        content(paddingValues)
+        GlassBackground {
+          content(paddingValues)
+        }
       }
     }
 
@@ -117,7 +119,7 @@ fun ScholaResponsiveScaffold(
       // 2. TABLET LAYOUT (600dp .. 1024dp)
       Surface(
         modifier = Modifier.fillMaxSize(),
-        color = ScholaLinen
+        color = GlassBgTransparent
       ) {
         Row(modifier = Modifier.fillMaxSize()) {
           // Left Collapsed Navigation Rail (80dp)
@@ -133,7 +135,7 @@ fun ScholaResponsiveScaffold(
 
           // Right Content Area
           Scaffold(
-            containerColor = ScholaLinen,
+            containerColor = GlassBgTransparent,
             topBar = {
               if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
                 ScholaTopAppBar(
@@ -150,7 +152,9 @@ fun ScholaResponsiveScaffold(
               }
             }
           ) { paddingValues ->
-            content(paddingValues)
+            GlassBackground {
+              content(paddingValues)
+            }
           }
         }
       }
@@ -160,7 +164,7 @@ fun ScholaResponsiveScaffold(
       // 3. DESKTOP LAYOUT (> 1024dp)
       Surface(
         modifier = Modifier.fillMaxSize(),
-        color = ScholaLinen
+        color = GlassBgTransparent
       ) {
         Row(modifier = Modifier.fillMaxSize()) {
           // Left Fixed Navigation Drawer (260dp)
@@ -180,7 +184,7 @@ fun ScholaResponsiveScaffold(
 
           // Main Expanded Content Canvas
           Scaffold(
-            containerColor = ScholaLinen,
+            containerColor = GlassBgTransparent,
             topBar = {
               if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
                 ScholaTopAppBar(
@@ -197,7 +201,9 @@ fun ScholaResponsiveScaffold(
               }
             }
           ) { paddingValues ->
-            content(paddingValues)
+            GlassBackground {
+              content(paddingValues)
+            }
           }
         }
       }
@@ -232,20 +238,20 @@ private fun TabletNavigationRail(
     ) {
       // Top Crest Emblem
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-          modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(Radius.md))
-            .background(ScholaTerracotta),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Default.AccountBalance,
-            contentDescription = "ScholaOS",
-            tint = Color.White,
-            modifier = Modifier.size(24.dp)
-          )
-        }
+Box(
+            modifier = Modifier
+              .size(44.dp)
+              .clip(RoundedCornerShape(Radius.md))
+              .background(ScholaTerracotta),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.AccountBalance,
+              contentDescription = "ScholaOS",
+              tint = ScholaSlateNavyDark,
+              modifier = Modifier.size(24.dp)
+            )
+          }
 
         Spacer(modifier = Modifier.height(Spacing.s4))
 
@@ -274,7 +280,7 @@ private fun TabletNavigationRail(
             modifier = Modifier
               .size(52.dp)
               .clip(RoundedCornerShape(Radius.md))
-              .background(if (isSelected) ScholaTerracotta else Color.Transparent)
+              .background(if (isSelected) ScholaTerracottaDark else Color.Transparent)
               .clickable { onItemSelected(item.route) }
               .padding(4.dp),
             contentAlignment = Alignment.Center
@@ -308,7 +314,7 @@ private fun TabletNavigationRail(
       ) {
         Text(
           text = currentUser.name.take(2).uppercase(Locale.getDefault()),
-          color = Color.White,
+          color = ScholaTextPrimary,
           fontWeight = FontWeight.Bold,
           fontSize = 12.sp
         )
@@ -352,20 +358,20 @@ private fun DesktopNavigationDrawer(
           verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier.padding(bottom = Spacing.s4)
         ) {
-          Box(
-            modifier = Modifier
-              .size(42.dp)
-              .clip(RoundedCornerShape(Radius.md))
-              .background(ScholaTerracotta),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.AccountBalance,
-              contentDescription = "ScholaOS Crest",
-              tint = Color.White,
-              modifier = Modifier.size(24.dp)
-            )
-          }
+Box(
+              modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(Radius.md))
+                .background(ScholaTerracotta),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.AccountBalance,
+                contentDescription = "ScholaOS Crest",
+                tint = ScholaSlateNavyDark,
+                modifier = Modifier.size(24.dp)
+              )
+            }
           Spacer(modifier = Modifier.width(Spacing.s3))
           Column {
             Text(
@@ -405,9 +411,9 @@ private fun DesktopNavigationDrawer(
             }
             Surface(
               shape = RoundedCornerShape(Radius.sm),
-              color = ScholaTerracotta
+              color = ScholaSlateNavyDark
             ) {
-              Text("⌘K", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+              Text("⌘K", color = ScholaTerracottaLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
             }
           }
         }
@@ -484,7 +490,7 @@ private fun DesktopNavigationDrawer(
             ) {
               Text(
                 text = currentUser.name.take(2).uppercase(Locale.getDefault()),
-                color = Color.White,
+                color = ScholaTextPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp
               )

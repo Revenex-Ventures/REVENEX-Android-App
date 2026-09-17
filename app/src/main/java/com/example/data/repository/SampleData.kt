@@ -1031,7 +1031,21 @@ object SampleData {
     TimetableSlot("tt_9", "Tuesday", 3, "10:15 AM", "11:00 AM", "Chemistry", "Dr. Shalini Rao", "Chem Lab", "10", "A"),
     TimetableSlot("tt_10", "Tuesday", 4, "11:00 AM", "11:45 AM", "English Language", "Mrs. Meenakshi Sundaram", "Room 204", "10", "A"),
     TimetableSlot("tt_11", "Tuesday", 5, "12:15 PM", "01:00 PM", "History & Civics", "Mr. Vikramaditya Singh", "Room 204", "10", "A"),
-    TimetableSlot("tt_12", "Tuesday", 6, "01:00 PM", "01:45 PM", "Library / Self Study", "Librarian Mrs. Joshi", "Central Library", "10", "A")
+    TimetableSlot("tt_12", "Tuesday", 6, "01:00 PM", "01:45 PM", "Library / Self Study", "Librarian Mrs. Joshi", "Central Library", "10", "A"),
+
+    TimetableSlot("tt_13", "Wednesday", 1, "08:30 AM", "09:15 AM", "English Literature", "Mrs. Meenakshi Sundaram", "Room 204", "10", "A"),
+    TimetableSlot("tt_14", "Wednesday", 2, "09:15 AM", "10:00 AM", "Mathematics", "Prof. Sunita Rao", "Room 204", "10", "A"),
+    TimetableSlot("tt_15", "Wednesday", 3, "10:15 AM", "11:00 AM", "Biology", "Dr. Shalini Rao", "Bio Lab", "10", "A"),
+    TimetableSlot("tt_16", "Wednesday", 4, "11:00 AM", "11:45 AM", "Social Studies", "Mr. Vikramaditya Singh", "Room 204", "10", "A"),
+    TimetableSlot("tt_17", "Wednesday", 5, "12:15 PM", "01:00 PM", "Computer Science", "Mrs. Priya Kulkarni", "Computer Lab 1", "10", "A"),
+    TimetableSlot("tt_18", "Wednesday", 6, "01:00 PM", "01:45 PM", "Art & Craft", "Mr. Amit Deshmukh", "Art Room", "10", "A"),
+
+    TimetableSlot("tt_19", "Thursday", 1, "08:30 AM", "09:15 AM", "Chemistry", "Dr. Shalini Rao", "Chem Lab", "10", "A"),
+    TimetableSlot("tt_20", "Thursday", 2, "09:15 AM", "10:00 AM", "Physics", "Dr. Rajesh Mukhopadhyay", "Physics Lab", "10", "A"),
+    TimetableSlot("tt_21", "Thursday", 3, "10:15 AM", "11:00 AM", "English Language", "Mrs. Meenakshi Sundaram", "Room 204", "10", "A"),
+    TimetableSlot("tt_22", "Thursday", 4, "11:00 AM", "11:45 AM", "Mathematics", "Prof. Sunita Rao", "Room 204", "10", "A"),
+    TimetableSlot("tt_23", "Thursday", 5, "12:15 PM", "01:00 PM", "History & Civics", "Mr. Vikramaditya Singh", "Room 204", "10", "A"),
+    TimetableSlot("tt_24", "Thursday", 6, "01:00 PM", "01:45 PM", "Physical Education", "Mr. Amit Deshmukh", "Main Sports Ground", "10", "A")
   )
 
   val initialEvents = listOf(

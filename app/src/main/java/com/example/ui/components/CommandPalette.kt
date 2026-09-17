@@ -53,19 +53,19 @@ fun GlobalCommandPaletteModal(
     listOf(
       PaletteAction("Executive Dashboard", "WORKSPACE", Icons.Default.Dashboard, ScholaTerracotta, Screen.Dashboard.route),
       PaletteAction("Scholars Directory (Student 360)", "WORKSPACE", Icons.Default.People, ScholaTerracotta, Screen.Students.route),
-      PaletteAction("Attendance Matrix (Roll Call)", "WORKSPACE", Icons.Default.HowToReg, Color(0xFF15803D), Screen.Attendance.route),
-      PaletteAction("Bursar & Financial Ledger", "WORKSPACE", Icons.Default.AccountBalanceWallet, ScholaGold, Screen.Fees.route),
-      PaletteAction("Academic Timetable & Slots", "WORKSPACE", Icons.Default.CalendarMonth, ScholaSlateNavy, Screen.Timetable.route),
-      PaletteAction("Student Gradebook & GPA", "WORKSPACE", Icons.Default.Grade, Color(0xFF6D28D9), Screen.ReportCard.route),
-      PaletteAction("Official Circulars & Broadcasts", "WORKSPACE", Icons.Default.Campaign, Color(0xFFB45309), Screen.Notices.route),
-      PaletteAction("Operations & Leave Hub", "WORKSPACE", Icons.Default.Apps, ScholaSlateNavy, Screen.OperationsHub.route),
+      PaletteAction("Attendance Matrix (Roll Call)", "WORKSPACE", Icons.Default.HowToReg, ScholaTerracottaLight, Screen.Attendance.route),
+      PaletteAction("Bursar & Financial Ledger", "WORKSPACE", Icons.Default.AccountBalanceWallet, ScholaTerracottaLight, Screen.Fees.route),
+      PaletteAction("Academic Timetable & Slots", "WORKSPACE", Icons.Default.CalendarMonth, ScholaTerracottaLight, Screen.Timetable.route),
+      PaletteAction("Student Profile & Reports", "WORKSPACE", Icons.Default.Person, ScholaTerracotta, Screen.ReportCard.route),
+      PaletteAction("Official Circulars & Broadcasts", "WORKSPACE", Icons.Default.Campaign, ScholaTerracottaLight, Screen.Notices.route),
+      PaletteAction("Operations & Leave Hub", "WORKSPACE", Icons.Default.Apps, ScholaTerracottaLight, Screen.OperationsHub.route),
 
       // Quick Actions
-      PaletteAction("Take Morning Roll Call", "ACTION", Icons.Default.FactCheck, Color(0xFF15803D), Screen.Attendance.route),
+      PaletteAction("Take Morning Roll Call", "ACTION", Icons.Default.FactCheck, ScholaTerracotta, Screen.Attendance.route),
       PaletteAction("Enroll New Scholar", "ACTION", Icons.Default.PersonAdd, ScholaTerracotta, onAction = { onTriggerAction("admit_student") }),
-      PaletteAction("Collect Tuition Payment", "ACTION", Icons.Default.Payment, ScholaGold, Screen.Fees.route),
-      PaletteAction("Publish Institutional Notice", "ACTION", Icons.Default.EditNote, Color(0xFFB45309), onAction = { onTriggerAction("create_notice") }),
-      PaletteAction("Assign STEM Homework", "ACTION", Icons.Default.Assignment, Color(0xFF0284C7), onAction = { onTriggerAction("create_assignment") })
+      PaletteAction("Collect Tuition Payment", "ACTION", Icons.Default.Payment, ScholaTerracottaLight, Screen.Fees.route),
+      PaletteAction("Publish Institutional Notice", "ACTION", Icons.Default.EditNote, ScholaTerracottaLight, onAction = { onTriggerAction("create_notice") }),
+      PaletteAction("Assign STEM Homework", "ACTION", Icons.Default.Assignment, ScholaTerracotta, onAction = { onTriggerAction("create_assignment") })
     )
   }
 

@@ -70,15 +70,7 @@ fun AuthScreen(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(
-            RevenexNavyDark,
-            RevenexNavy,
-            RevenexBlue.copy(alpha = 0.85f)
-          )
-        )
-      )
+      .background(ScholaSlateNavyDark)
   ) {
     Column(
       modifier = Modifier
@@ -597,12 +589,12 @@ private fun ProductionModeLoginContent(
               .height(50.dp)
               .testTag("btn_student_signin"),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF78350F))
+            colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta)
           ) {
             if (isLoggingIn) {
               CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                color = Color.White,
+                color = ScholaSlateNavyDark,
                 strokeWidth = 2.dp
               )
               Spacer(modifier = Modifier.width(8.dp))

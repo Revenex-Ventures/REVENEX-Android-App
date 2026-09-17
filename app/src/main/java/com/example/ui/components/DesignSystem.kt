@@ -1,9 +1,11 @@
 package com.example.ui.components
 
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.net.Uri
 import android.os.Build
 import kotlin.math.exp
 import kotlin.math.sin
@@ -13,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,15 +29,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -48,9 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // ============================================================================
 // 0. GLASS MORPHISM UTILITIES
@@ -74,8 +85,8 @@ fun Modifier.glassEffect(
     elevation = 10.dp,
     shape = RoundedCornerShape(cornerRadius),
     clip = false,
-    ambientColor = if (dark) InkBlack.copy(alpha = 0.45f) else ScholaTerracotta.copy(alpha = 0.30f),
-    spotColor = if (dark) InkBlack.copy(alpha = 0.35f) else ScholaTerracotta.copy(alpha = 0.20f)
+    ambientColor = InkBlack.copy(alpha = 0.10f),
+    spotColor = InkBlack.copy(alpha = 0.08f)
   )
 
 @Composable
@@ -84,40 +95,11 @@ fun GlassBackground(
   content: @Composable () -> Unit
 ) {
   Box(modifier = modifier.fillMaxSize()) {
-    // Base canvas
+    // Clean flat canvas — no gradient blobs, no glass artifacts
     Box(
       modifier = Modifier
         .fillMaxSize()
         .background(ScholaLinen)
-    )
-    // Soft gradient blobs for glass to react to (drawn over the base)
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .background(
-          Brush.radialGradient(
-            colors = listOf(
-              ScholaTerracotta.copy(alpha = 0.16f),
-              Color.Transparent
-            ),
-            center = Offset(0.25f, 0.10f),
-            radius = 800f
-          )
-        )
-    )
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .background(
-          Brush.radialGradient(
-            colors = listOf(
-              ScholaGoldLight.copy(alpha = 0.12f),
-              Color.Transparent
-            ),
-            center = Offset(0.80f, 0.65f),
-            radius = 700f
-          )
-        )
     )
     content()
   }
@@ -523,7 +505,7 @@ fun ScholaFloatingDock(
             Icon(
               imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
               contentDescription = item.label,
-              tint = if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.5f),
+              tint = if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.7f),
               modifier = Modifier.size(24.dp)
             )
           }
@@ -531,7 +513,7 @@ fun ScholaFloatingDock(
             text = item.label,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
             fontSize = if (isSelected) 10.sp else 9.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.offset(y = (-16).dp)
@@ -696,9 +678,60 @@ fun ScholaPillBadge(
 // ============================================================================
 enum class VitalRingSize(val dpSize: Dp, val strokeDp: Dp) {
   SMALL(48.dp, 4.dp),
+  INLINE(72.dp, 6.dp),
   MEDIUM(64.dp, 6.dp),
   LARGE(88.dp, 8.dp),
   HERO(120.dp, 10.dp)
+}
+
+// Attendance ring with the person's profile picture inside it and the %
+// as a small pendant badge hanging on the bottom arc of the ring.
+@Composable
+fun AttendanceBead(
+  value: Float, // 0..100
+  avatarLabel: String,
+  modifier: Modifier = Modifier,
+  avatarUrl: String = "",
+  tint: Color = ScholaTerracotta
+) {
+  val size = VitalRingSize.INLINE.dpSize
+  val strokeDp = VitalRingSize.INLINE.strokeDp
+  val fraction = (value / 100f).coerceIn(0f, 1f)
+
+  Box(modifier = modifier.size(size)) {
+    CircularProgressIndicator(
+      progress = { fraction },
+      modifier = Modifier.fillMaxSize(),
+      color = tint,
+      trackColor = Color.White.copy(alpha = 0.18f),
+      strokeWidth = strokeDp
+    )
+    Avatar(
+      name = avatarLabel,
+      modifier = Modifier
+        .align(Alignment.Center)
+        .size(40.dp),
+      background = Color.White,
+      textColor = ScholaSlateNavyDark,
+      imagePath = avatarUrl.ifBlank { null }
+    )
+    Box(
+      modifier = Modifier
+        .align(Alignment.BottomCenter)
+        .padding(bottom = 3.dp)
+        .clip(RoundedCornerShape(9.dp))
+        .background(ScholaSlateNavyDark)
+        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(9.dp))
+        .padding(horizontal = 7.dp, vertical = 2.dp)
+    ) {
+      Text(
+        text = "${value.toInt()}%",
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.ExtraBold,
+        color = Color.White
+      )
+    }
+  }
 }
 
 @Composable
@@ -710,10 +743,16 @@ fun VitalRing(
   gradientEnd: Color = ScholaTerracottaLight,
   trackColor: Color = ScholaOnyxBorder,
   textColor: Color = ScholaTextPrimary,
+  labelAlpha: Float = 1f,
+  animate: Boolean = true,
   modifier: Modifier = Modifier
 ) {
   val progress = remember { Animatable(0f) }
-  LaunchedEffect(value) {
+  LaunchedEffect(value, animate) {
+    if (!animate) {
+      progress.snapTo((value / 100f).coerceIn(0f, 1f))
+      return@LaunchedEffect
+    }
     progress.snapTo(0f)
     progress.animateTo(
       targetValue = (value / 100f).coerceIn(0f, 1f),
@@ -739,7 +778,7 @@ fun VitalRing(
       if (label.isNotBlank() && size != VitalRingSize.SMALL) {
         Text(
           text = label.uppercase(Locale.getDefault()),
-          color = textColor.copy(alpha = 0.7f),
+          color = textColor.copy(alpha = 0.7f * labelAlpha),
           style = MaterialTheme.typography.labelSmall,
           fontSize = 8.sp,
           letterSpacing = 0.4.sp
@@ -769,6 +808,81 @@ fun SimpleProgressRing(
     trackColor = trackColor,
     strokeWidth = strokeWidth
   )
+}
+
+// ============================================================================
+// 6a. ANIMATED ATTENDANCE HERO (shared by role dashboards)
+//     Structured identity card: inline attendance ring + identity header +
+//     a footer stat row, with a soft scale/fade entrance.
+// ============================================================================
+@Composable
+fun AnimatedAttendanceHero(
+  attendanceValue: Float,
+  label: String,
+  modifier: Modifier = Modifier,
+  containerColor: Color = ScholaSlateNavyDark,
+  avatarLabel: String = "",
+  avatarUrl: String = "",
+  nameContent: @Composable RowScope.() -> Unit,
+  trailingContent: @Composable () -> Unit,
+  statsContent: @Composable () -> Unit
+) {
+  val safeAttendance = attendanceValue.coerceIn(0f, 100f)
+
+  var entered by remember { mutableStateOf(false) }
+  LaunchedEffect(Unit) {
+    delay(60)
+    entered = true
+  }
+  val heroScale by animateFloatAsState(
+    targetValue = if (entered) 1f else 0.94f,
+    animationSpec = tween(440, easing = FastOutSlowInEasing),
+    label = "heroScale"
+  )
+  val heroAlpha by animateFloatAsState(
+    targetValue = if (entered) 1f else 0f,
+    animationSpec = tween(440, easing = FastOutSlowInEasing),
+    label = "heroAlpha"
+  )
+
+  AppCard(
+    modifier = modifier.graphicsLayer {
+      scaleX = heroScale
+      scaleY = heroScale
+      alpha = heroAlpha
+    },
+    containerColor = containerColor,
+    elevation = Elev.e2,
+    dark = true,
+    solidColor = containerColor,
+    sheen = true
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Row(
+        modifier = Modifier.weight(1f),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        AttendanceBead(
+          value = safeAttendance,
+          avatarLabel = avatarLabel,
+          avatarUrl = avatarUrl
+        )
+        Spacer(modifier = Modifier.width(Spacing.s3))
+
+        nameContent()
+      }
+
+      trailingContent()
+    }
+
+    Spacer(modifier = Modifier.height(Spacing.s5))
+
+    statsContent()
+  }
 }
 
 // ============================================================================
@@ -945,12 +1059,53 @@ fun AppCard(
   elevation: Dp = Elev.e0,
   shape: RoundedCornerShape = RoundedCornerShape(Radius.xl),
   dark: Boolean = false,
+  solidColor: Color? = null,
+  sheen: Boolean = false,
   content: @Composable ColumnScope.() -> Unit
 ) {
+  val sheenSweep = if (sheen && solidColor != null)
+    rememberInfiniteTransition(label = "cardSheen").animateFloat(
+      0f, 1f,
+      infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart),
+      label = "sheen"
+    )
+  else null
+
+  val card = if (solidColor != null) {
+    Modifier
+      .background(color = solidColor, shape = shape)
+      .border(0.8.dp, Color.White.copy(alpha = 0.14f), shape)
+      .shadow(14.dp, shape, clip = false)
+  } else {
+    Modifier.glassEffect(cornerRadius = Radius.xl, dark = dark)
+  }
+
   Box(
     modifier = modifier
       .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
-      .glassEffect(cornerRadius = Radius.xl, dark = dark)
+      .then(card)
+      .then(
+        if (sheenSweep != null) {
+          Modifier
+            .clip(shape)
+            .drawWithContent {
+              drawContent()
+              val t = sheenSweep.value
+              val bandWidth = size.width * 0.45f
+              val fromX = (t - 1f) * (size.width + bandWidth)
+              drawRect(
+                brush = Brush.linearGradient(
+                  colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.05f), Color.Transparent),
+                  start = Offset(fromX, 0f),
+                  end = Offset(fromX + bandWidth, size.height)
+                ),
+                size = size
+              )
+            }
+        } else {
+          Modifier
+        }
+      )
       .padding(Spacing.cardPaddingLarge)
   ) {
     Column(modifier = Modifier.fillMaxWidth(), content = content)
@@ -988,23 +1143,51 @@ fun Avatar(
   modifier: Modifier = Modifier,
   size: Dp = 44.dp,
   background: Color = ScholaSlateNavyDark,
-  textColor: Color = Color.White
+  textColor: Color = Color.White,
+  imagePath: String? = null
 ) {
+  val resolver = LocalContext.current.contentResolver
+  val photo by produceState<ImageBitmap?>(null, imagePath) {
+    value = withContext(Dispatchers.IO) {
+      val p = imagePath
+      if (p.isNullOrBlank() || p.startsWith("http")) return@withContext null
+      try {
+        val decoded = if (p.startsWith("content://") || p.startsWith("file://")) {
+          resolver.openInputStream(Uri.parse(p))?.use { BitmapFactory.decodeStream(it) }
+        } else {
+          BitmapFactory.decodeFile(p)
+        }
+        decoded?.asImageBitmap()
+      } catch (e: Exception) {
+        null
+      }
+    }
+  }
   val initials = name.trim().split(" ").filter { it.isNotBlank() }
     .mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(Locale.getDefault())
   Box(
     modifier = modifier
       .size(size)
       .clip(CircleShape)
-      .background(background),
+      .background(if (photo != null) Color.Transparent else background),
     contentAlignment = Alignment.Center
   ) {
-    Text(
-      text = initials.ifBlank { "?" },
-      color = textColor,
-      fontSize = (size.value * 0.36f).sp,
-      fontWeight = FontWeight.Bold
-    )
+    val bitmap = photo
+    if (bitmap != null) {
+      Image(
+        bitmap = bitmap,
+        contentDescription = "Profile picture",
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop
+      )
+    } else {
+      Text(
+        text = initials.ifBlank { "?" },
+        color = textColor,
+        fontSize = (size.value * 0.36f).sp,
+        fontWeight = FontWeight.Bold
+      )
+    }
   }
 }
 

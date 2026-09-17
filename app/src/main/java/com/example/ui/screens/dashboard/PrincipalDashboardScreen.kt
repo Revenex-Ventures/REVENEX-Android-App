@@ -64,7 +64,7 @@ fun PrincipalDashboardScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen)
+      .background(GlassBgTransparent)
       .testTag("principal_dashboard_list"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp)
   ) {
@@ -80,9 +80,9 @@ fun PrincipalDashboardScreen(
           secondaryMetricLabel = "Daily Roll Call Rate",
           actionButtonText = "Review Institutional Ledger",
           onActionClick = { onNavigateTo(Screen.Fees.route) },
-          badgeBgColor = ScholaGoldContainer,
-          badgeTextColor = ScholaGoldText,
-          heroHighlightColor = ScholaGoldLight,
+          badgeBgColor = ScholaTerracottaContainer,
+          badgeTextColor = ScholaOnTerracottaContainer,
+          heroHighlightColor = ScholaTerracotta,
           modifier = Modifier.padding(bottom = Spacing.s4)
         )
       }
@@ -350,7 +350,7 @@ fun PrincipalDashboardScreen(
                       tint = when (log.actionType) {
                         "ROLL_CALL" -> StatusSuccessText
                         "FEE_PAYMENT" -> ScholaTerracotta
-                        "GRADEBOOK" -> Color(0xFF6D28D9)
+                        "GRADEBOOK" -> ScholaTerracottaDark
                         else -> ScholaSlateNavy
                       },
                       modifier = Modifier.size(20.dp)

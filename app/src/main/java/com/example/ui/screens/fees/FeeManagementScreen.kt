@@ -62,7 +62,7 @@ fun FeeManagementScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen)
+      .background(GlassBgTransparent)
       .testTag("fee_management_screen"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)

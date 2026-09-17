@@ -114,7 +114,7 @@ fun ParentDashboardScreen(
             .fillMaxWidth()
             .padding(16.dp),
           shape = RoundedCornerShape(20.dp),
-          colors = CardDefaults.cardColors(containerColor = Color(0xFF78350F))
+          colors = CardDefaults.cardColors(containerColor = ScholaSlateNavyDark)
         ) {
           Column(
             modifier = Modifier
@@ -130,7 +130,7 @@ fun ParentDashboardScreen(
                 Text(
                   text = "Parent Portal",
                   style = MaterialTheme.typography.labelSmall,
-                  color = Color.White.copy(alpha = 0.75f)
+                  color = Color.White.copy(alpha = 0.70f)
                 )
                 Text(
                   text = currentUser.name,
@@ -141,7 +141,7 @@ fun ParentDashboardScreen(
               }
               Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = Color(0xFFF59E0B)
+                color = Color.White.copy(alpha = 0.15f)
               ) {
                 Text(
                   text = "GUARDIAN",
@@ -158,7 +158,7 @@ fun ParentDashboardScreen(
             Text(
               text = "Select Ward / Child:",
               style = MaterialTheme.typography.labelMedium,
-              color = Color.White.copy(alpha = 0.85f)
+              color = Color.White.copy(alpha = 0.80f)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -171,7 +171,7 @@ fun ParentDashboardScreen(
                 val isSelected = child.id == activeChild.id
                 Surface(
                   shape = RoundedCornerShape(12.dp),
-                  color = if (isSelected) Color.White else Color.White.copy(alpha = 0.15f),
+                  color = if (isSelected) ScholaTerracotta else Color.White.copy(alpha = 0.12f),
                   modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
@@ -186,7 +186,7 @@ fun ParentDashboardScreen(
                       modifier = Modifier
                         .size(32.dp)
                         .background(
-                          if (isSelected) Color(0xFF78350F) else Color.White.copy(alpha = 0.3f),
+                          if (isSelected) ScholaTerracotta else Color.White.copy(alpha = 0.15f),
                           CircleShape
                         ),
                       contentAlignment = Alignment.Center
@@ -194,7 +194,7 @@ fun ParentDashboardScreen(
                       Text(
                         text = child.name.take(1),
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = if (isSelected) Color.White else ScholaOnyxText
                       )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -203,13 +203,13 @@ fun ParentDashboardScreen(
                         text = child.name,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color(0xFF78350F) else Color.White
+                        color = if (isSelected) ScholaOnTerracottaContainer else ScholaOnyxText
                       )
                       Text(
                         text = "Class ${child.fullClass}",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
-                        color = if (isSelected) Color(0xFF78350F).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.7f)
+                        color = if (isSelected) ScholaOnTerracottaContainer.copy(alpha = 0.8f) else ScholaOnyxMuted
                       )
                     }
                   }
@@ -253,7 +253,7 @@ fun ParentDashboardScreen(
             }
             Button(
               onClick = { onShowPaymentDialog(activeChild.name, childPendingFee) },
-              colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB45309)),
+              colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta),
               contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
               modifier = Modifier.testTag("pay_fees_quick_button")
             ) {
@@ -277,8 +277,8 @@ fun ParentDashboardScreen(
           QuickActionButton(
             title = "Fee Ledger",
             icon = Icons.Default.AccountBalanceWallet,
-            iconTint = Color(0xFF15803D),
-            backgroundColor = Color(0xFFDCFCE7),
+            iconTint = ScholaSlateNavy,
+            backgroundColor = ScholaSlateContainer,
             modifier = Modifier.width(115.dp),
             onClick = { onNavigateTo(Screen.Fees.route) }
           )
@@ -287,8 +287,8 @@ fun ParentDashboardScreen(
           QuickActionButton(
             title = "Apply Leave",
             icon = Icons.Default.EventBusy,
-            iconTint = Color(0xFFB45309),
-            backgroundColor = Color(0xFFFEF3C7),
+            iconTint = ScholaSlateNavy,
+            backgroundColor = ScholaSlateContainer,
             modifier = Modifier.width(115.dp),
             onClick = onShowApplyLeave
           )
@@ -297,8 +297,8 @@ fun ParentDashboardScreen(
           QuickActionButton(
             title = "Report Card",
             icon = Icons.Default.Grade,
-            iconTint = Color(0xFF6D28D9),
-            backgroundColor = Color(0xFFEDE9FE),
+            iconTint = ScholaSlateNavy,
+            backgroundColor = ScholaSlateContainer,
             modifier = Modifier.width(115.dp),
             onClick = { onNavigateTo(Screen.ReportCard.route) }
           )
@@ -307,8 +307,8 @@ fun ParentDashboardScreen(
           QuickActionButton(
             title = "Bus Tracking",
             icon = Icons.Default.DirectionsBus,
-            iconTint = RevenexBlue,
-            backgroundColor = RevenexPrimaryContainer,
+            iconTint = ScholaTerracotta,
+            backgroundColor = ScholaTerracottaContainer,
             modifier = Modifier.width(115.dp),
             onClick = { onNavigateTo(Screen.Transport.route) }
           )
@@ -363,13 +363,8 @@ fun ParentDashboardScreen(
           verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           childLeaves.forEach { leave ->
-            Card(
-              modifier = Modifier.fillMaxWidth(),
-              shape = RoundedCornerShape(12.dp),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-              border = CardDefaults.outlinedCardBorder()
-            ) {
-              Column(modifier = Modifier.padding(12.dp)) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+              Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween,
@@ -407,18 +402,13 @@ fun ParentDashboardScreen(
     // Class Teacher Quick Connect
     item {
       SectionHeader(title = "Class Teacher Contact")
-      Card(
+      AppCard(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
+          .padding(horizontal = 16.dp)
       ) {
         Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+          modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically
         ) {
           Surface(
@@ -468,15 +458,12 @@ fun ParentDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
       ) {
         notices.take(2).forEach { notice ->
-          Card(
+          AppCard(
             modifier = Modifier
               .fillMaxWidth()
-              .clickable { onNavigateTo(Screen.Notices.route) },
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
+              .clickable { onNavigateTo(Screen.Notices.route) }
           ) {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
               Text(
                 text = notice.title,
                 style = MaterialTheme.typography.titleSmall,

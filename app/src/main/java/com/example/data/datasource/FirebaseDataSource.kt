@@ -1087,7 +1087,8 @@ class FirebaseDataSource(
     "feePendingAmount" to st.feePendingAmount,
     "rank" to st.rank,
     "gpa" to st.gpa,
-    "avatarColorHex" to st.avatarColorHex
+    "avatarColorHex" to st.avatarColorHex,
+    "avatarUrl" to st.avatarUrl
   )
 
   private fun mapDocToStudent(doc: DocumentSnapshot): Student? {
@@ -1112,7 +1113,8 @@ class FirebaseDataSource(
         feePendingAmount = doc.getLong("feePendingAmount") ?: 0L,
         rank = (doc.getLong("rank") ?: 1L).toInt(),
         gpa = doc.getDouble("gpa") ?: 9.0,
-        avatarColorHex = doc.getLong("avatarColorHex") ?: 0xFF2563EB
+        avatarColorHex = doc.getLong("avatarColorHex") ?: 0xFF2563EB,
+        avatarUrl = doc.getString("avatarUrl") ?: ""
       )
     } catch (e: Exception) {
       null
@@ -1135,7 +1137,8 @@ class FirebaseDataSource(
     "weeklyPeriods" to tch.weeklyPeriods,
     "attendancePercent" to tch.attendancePercent,
     "experienceYears" to tch.experienceYears,
-    "joiningDate" to tch.joiningDate
+    "joiningDate" to tch.joiningDate,
+    "avatarUrl" to tch.avatarUrl
   )
 
   @Suppress("UNCHECKED_CAST")
@@ -1157,7 +1160,8 @@ class FirebaseDataSource(
         weeklyPeriods = (doc.getLong("weeklyPeriods") ?: 24L).toInt(),
         attendancePercent = doc.getDouble("attendancePercent") ?: 98.0,
         experienceYears = (doc.getLong("experienceYears") ?: 5L).toInt(),
-        joiningDate = doc.getString("joiningDate") ?: "10 Jun 2020"
+        joiningDate = doc.getString("joiningDate") ?: "10 Jun 2020",
+        avatarUrl = doc.getString("avatarUrl") ?: ""
       )
     } catch (e: Exception) {
       null

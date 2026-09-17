@@ -1,5 +1,7 @@
 package com.example.data.datasource
 
+import com.example.data.local.StudentProfileStore
+import com.example.data.local.TeacherProfileStore
 import com.example.data.model.*
 import com.example.data.repository.SampleData
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +20,8 @@ import java.util.UUID
 class LocalDemoDataSource : ErpDataSource {
 
   private val _currentUser = MutableStateFlow(SampleData.defaultProfiles[0])
-  private val _students = MutableStateFlow(SampleData.initialStudents)
-  private val _teachers = MutableStateFlow(SampleData.initialTeachers)
+  private val _students = MutableStateFlow(StudentProfileStore.applyOverrides(SampleData.initialStudents))
+  private val _teachers = MutableStateFlow(TeacherProfileStore.applyOverrides(SampleData.initialTeachers))
   private val _feeRecords = MutableStateFlow(SampleData.initialFeeRecords)
   private val _assignments = MutableStateFlow(SampleData.initialAssignments)
   private val _studyMaterials = MutableStateFlow(SampleData.initialStudyMaterials)
@@ -145,12 +147,14 @@ class LocalDemoDataSource : ErpDataSource {
   }
 
   override suspend fun updateStudent(student: Student) {
+    StudentProfileStore.save(student)
     _students.update { list ->
       list.map { if (it.id == student.id) student else it }
     }
   }
 
   override suspend fun deleteStudent(studentId: String) {
+    StudentProfileStore.remove(studentId)
     _students.update { list -> list.filterNot { it.id == studentId } }
     _feeRecords.update { list -> list.filterNot { it.studentId == studentId } }
   }
@@ -159,6 +163,7 @@ class LocalDemoDataSource : ErpDataSource {
   override fun getTeachersFlow(): Flow<List<Teacher>> = _teachers.asStateFlow()
 
   override suspend fun addTeacher(teacher: Teacher) {
+    TeacherProfileStore.save(teacher)
     _teachers.update { listOf(teacher) + it }
     addNotification(
       title = "Faculty Profile Added",
@@ -169,6 +174,7 @@ class LocalDemoDataSource : ErpDataSource {
   }
 
   override suspend fun updateTeacher(teacher: Teacher) {
+    TeacherProfileStore.save(teacher)
     _teachers.update { list ->
       list.map { if (it.id == teacher.id) teacher else it }
     }

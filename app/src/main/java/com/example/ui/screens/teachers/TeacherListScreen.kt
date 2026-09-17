@@ -56,7 +56,7 @@ fun TeacherListScreen(
   }
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     floatingActionButton = {
       if (currentUser.role == UserRole.PRINCIPAL) {
         ExtendedFloatingActionButton(
@@ -152,7 +152,7 @@ fun TeacherListScreen(
                   Text(
                     text = "Subjects: ${teacher.subjects.joinToString(", ")}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = ScholaTerracotta,
+                    color = ScholaOnTerracottaContainer,
                     fontSize = 10.sp
                   )
                 }

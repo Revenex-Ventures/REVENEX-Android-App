@@ -82,7 +82,7 @@ fun AttendanceScreen(
   } else 100.0
 
   Scaffold(
-    containerColor = ScholaLinen,
+    containerColor = GlassBgTransparent,
     bottomBar = {
       Surface(
         color = ScholaSurface,
@@ -286,7 +286,7 @@ fun AttendanceScreen(
           ) {
             Icon(Icons.Default.DoneAll, contentDescription = null, tint = ScholaTerracotta, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Mark All", color = ScholaTerracotta, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text("Mark All", color = ScholaOnTerracottaContainer, fontWeight = FontWeight.Bold, fontSize = 12.sp)
           }
         }
       }

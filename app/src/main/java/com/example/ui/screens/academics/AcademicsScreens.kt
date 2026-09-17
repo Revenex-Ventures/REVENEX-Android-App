@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -26,10 +25,11 @@ import com.example.data.model.*
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
 import com.example.ui.theme.*
+import kotlinx.coroutines.delay
 
 // ============================================================================
 // ACADEMIC SCHEDULE & GRADEBOOK WORKSPACE
-// Segmented sub-tabs: "Timetable & Slots" ↔ "Gradebook & GPA"
+// Segmented sub-tabs: "Timetable & Slots" â†” "Gradebook & GPA"
 // ============================================================================
 @Composable
 fun TimetableScreen(
@@ -44,13 +44,24 @@ fun TimetableScreen(
   val days = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 
   val filteredSlots = remember(timetable, selectedDay) {
-    timetable.filter { it.dayOfWeek.equals(selectedDay, ignoreCase = true) }
+    timetable
+      .filter { it.dayOfWeek.equals(selectedDay, ignoreCase = true) }
+      .sortedBy { it.periodNumber }
+  }
+
+  val todayName = remember { currentDayOfWeekName() }
+  var nowMinutes by remember { mutableIntStateOf(currentMinutesOfDay()) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(20_000)
+      nowMinutes = currentMinutesOfDay()
+    }
   }
 
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen)
+      .background(GlassBgTransparent)
       .testTag("timetable_screen"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
@@ -79,7 +90,7 @@ fun TimetableScreen(
             fontWeight = FontWeight.Bold
           )
           Text(
-            text = "Term 2 Evaluative Cycle • Standard 45-Min Lecture Practicums",
+            text = "Term 2 Evaluative Cycle â€¢ Standard 45-Min Lecture Practicums",
             color = ScholaOnyxMuted,
             style = MaterialTheme.typography.bodySmall,
             fontSize = 11.sp
@@ -88,7 +99,7 @@ fun TimetableScreen(
       }
     }
 
-    // 2. SEGMENTED SUB-TAB SWITCHER ("Timetable & Slots" ↔ "Gradebook & GPA")
+    // 2. SEGMENTED SUB-TAB SWITCHER ("Timetable & Slots" â†” "Gradebook & GPA")
     item {
       Surface(
         shape = RoundedCornerShape(Radius.pill),
@@ -130,7 +141,7 @@ fun TimetableScreen(
 
     // 3. SUB-TAB CONTENT
     if (selectedSubTab == 0) {
-      // TAB 1: TIMETABLE & SLOTS
+      // TAB 1: TIMETABLE & SLOTS â€” VERTICAL TIMELINE
       item {
         // Day selector chips (Monday - Friday)
         LazyRow(
@@ -167,53 +178,53 @@ fun TimetableScreen(
           )
         }
       } else {
-        items(filteredSlots, key = { it.id }) { slot ->
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              // Subject Color Banner Pill
-              Box(
+        // Timeline card: clean flat container hosting a continuous live rail, with each period as its own card
+        item {
+          val isToday = selectedDay.equals(todayName, ignoreCase = true)
+
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(Radius.xl))
+              .background(ScholaSurface)
+              .border(0.8.dp, ScholaBorder, RoundedCornerShape(Radius.xl))
+          ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+              // â”€â”€ LIVE HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Row(
                 modifier = Modifier
-                  .width(6.dp)
-                  .height(48.dp)
-                  .clip(RoundedCornerShape(Radius.pill))
-                  .background(Color(slot.subjectColorHex))
-              )
-
-              Spacer(modifier = Modifier.width(Spacing.s3))
-
-              Column(modifier = Modifier.weight(1f)) {
+                  .fillMaxWidth()
+                  .padding(start = 14.dp, end = 16.dp, top = 14.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                if (isToday) {
+                  ScheduleLiveClock(minutes = nowMinutes)
+                } else {
+                  Text(
+                    text = "SCHEDULE",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = TypeTokens.trackingMicroLabel,
+                    color = ScholaTextSecondary
+                  )
+                }
                 Text(
-                  text = slot.subject,
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = ScholaTextPrimary
-                )
-                Text(
-                  text = "Period ${slot.periodNumber} • ${slot.startTime} - ${slot.endTime}",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = ScholaTerracotta,
-                  fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                  text = "Room ${slot.roomNumber} • Instructor: ${slot.teacherName}",
+                  text = "${filteredSlots.size} LECTURES",
                   style = MaterialTheme.typography.labelSmall,
+                  letterSpacing = TypeTokens.trackingMicroLabel,
                   color = ScholaMuted
                 )
               }
 
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = ScholaSlateContainer
-              ) {
-                Text(
-                  text = "${slot.classGrade}-${slot.division}",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = ScholaSlateNavy,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              HorizontalDivider(color = ScholaBorder, thickness = 1.dp)
+
+              filteredSlots.forEachIndexed { index, slot ->
+                ScheduleTimelineRow(
+                  slot = slot,
+                  status = scheduleStatus(isToday, nowMinutes, slot),
+                  showDivider = index < filteredSlots.lastIndex,
+                  modifier = Modifier.fillMaxWidth()
                 )
               }
             }
@@ -241,13 +252,13 @@ fun TimetableScreen(
                 color = ScholaTextPrimary
               )
               Text(
-                text = "Scholar: ${entry.studentName} (${entry.cohort}) • ${entry.subject}",
+                text = "Scholar: ${entry.studentName} (${entry.cohort}) â€¢ ${entry.subject}",
                 style = MaterialTheme.typography.bodySmall,
                 color = ScholaTextSecondary,
                 fontSize = 11.sp
               )
               Text(
-                text = "Instructor: ${entry.instructorName} • Evaluated ${entry.date}",
+                text = "Instructor: ${entry.instructorName} â€¢ Evaluated ${entry.date}",
                 style = MaterialTheme.typography.labelSmall,
                 color = ScholaMuted,
                 fontSize = 10.sp
@@ -260,7 +271,7 @@ fun TimetableScreen(
                   text = "${entry.score} / ${entry.maxScore}",
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
-                  color = ScholaTerracotta
+                  color = ScholaOnTerracottaContainer
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 ScholaPillBadge(status = entry.letterGrade)
@@ -292,7 +303,7 @@ fun HomeworkScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen),
+      .background(GlassBgTransparent),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
@@ -323,7 +334,7 @@ fun HomeworkScreen(
           ) {
             Column(modifier = Modifier.weight(1f)) {
               Text(hw.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-              Text("${hw.subject} • Class ${hw.classGrade}-${hw.division} • Due ${hw.dueDate}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+              Text("${hw.subject} â€¢ Class ${hw.classGrade}-${hw.division} â€¢ Due ${hw.dueDate}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
               Spacer(modifier = Modifier.height(4.dp))
               Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
             }
@@ -343,7 +354,7 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen),
+      .background(GlassBgTransparent),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
@@ -360,7 +371,7 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
         ) {
           Column(modifier = Modifier.weight(1f)) {
             Text(mat.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("${mat.subject} • ${mat.chapter} • By ${mat.teacherName}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+            Text("${mat.subject} â€¢ ${mat.chapter} â€¢ By ${mat.teacherName}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
           }
           Surface(shape = RoundedCornerShape(Radius.pill), color = ScholaSlateContainer) {
             Text(mat.fileType, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
@@ -379,7 +390,7 @@ fun ExamsScreen(repository: ErpDataRepository) {
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen),
+      .background(GlassBgTransparent),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
@@ -400,10 +411,10 @@ fun ExamsScreen(repository: ErpDataRepository) {
           ) {
             Column {
               Text(subj.subjectName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-              Text("Room: ${subj.room} • Max Marks: ${subj.maxMarks}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+              Text("Room: ${subj.room} â€¢ Max Marks: ${subj.maxMarks}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
             }
             Column(horizontalAlignment = Alignment.End) {
-              Text(subj.date, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = ScholaTerracotta)
+              Text(subj.date, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = ScholaOnTerracottaContainer)
               Text(subj.time, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 9.sp)
             }
           }

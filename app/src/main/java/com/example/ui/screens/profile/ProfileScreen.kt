@@ -78,14 +78,14 @@ fun ProfileScreen(
             Box(
               modifier = Modifier
                 .size(64.dp)
-                .background(RevenexPrimary, CircleShape),
+                .background(ScholaOnyx, CircleShape),
               contentAlignment = Alignment.Center
             ) {
               Text(
                 text = currentUser.avatarInitials.ifBlank { "U" },
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = ScholaTextPrimary
               )
             }
             Spacer(modifier = Modifier.width(Spacing.s4))

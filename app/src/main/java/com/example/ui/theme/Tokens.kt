@@ -11,7 +11,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.UserRole
 
 // ============================================================================
-// ScholaOS Neo-Brutalist Design Tokens
+// ScholaOS Charcoal Command Center — Design Tokens
+// 8px spacing rhythm · premium card radii · pill controls · light shadows
 // ============================================================================
 
 // Spacing Scale
@@ -41,26 +42,26 @@ object Spacing {
   val cardPaddingLarge = 20.dp
 }
 
-// Corner Radii Scale
+// Corner Radii Scale (Premium — large rounded modules, pill controls)
 object Radius {
-  val xs = 4.dp
-  val sm = 8.dp
+  val xs = 6.dp
+  val sm = 10.dp
   val md = 12.dp
-  val lg = 16.dp
-  val xl = 20.dp
-  val hero = 22.dp      // Exactly 22dp for Feature Hero Cards
-  val tile = 20.dp      // Exactly 20dp for Compact Stat Tiles
-  val input = 16.dp     // Outlined text fields 14-16dp
-  val pill = 999.dp     // Pill badges & floating dock
+  val lg = 14.dp
+  val xl = 18.dp
+  val hero = 24.dp      // Feature Hero Cards
+  val tile = 20.dp      // Compact Stat Tiles
+  val input = 14.dp     // Outlined text fields
+  val pill = 999.dp     // Pill badges / buttons
 }
 
-// Subtle Neo-Brutalist Elevation (Zero drop-shadows, crisp 1px borders)
+// Subtle Elevation (Restrained — hairline borders do the definition)
 object Elev {
   val e0 = 0.dp
   val e1 = 1.dp
   val e2 = 2.dp
-  val e3 = 4.dp
-  val floatingDock = 10.dp // Floating rounded pill dock
+  val e3 = 3.dp
+  val floatingDock = 8.dp // Reserved (bottom bar shadow)
 }
 
 // Micro Typography & Letter Spacing Tokens
@@ -106,12 +107,12 @@ object Motion {
   )
 }
 
-// Role Accent Configuration
+// Role Accent Configuration (soft academic pastel family)
 object RoleAccent {
   val Admin = ScholaSlateNavy
-  val Teacher = Color(0xFF6D28D9)
-  val Student = ScholaTerracotta
-  val Parent = Color(0xFF0D9488)
+  val Teacher = PastelLavenderText
+  val Student = PastelSageText
+  val Parent = PastelPowderText
 
   fun of(role: UserRole?): Color = when (role) {
     UserRole.PRINCIPAL -> Admin
@@ -123,9 +124,9 @@ object RoleAccent {
 
   fun softContainer(role: UserRole?): Color = when (role) {
     UserRole.PRINCIPAL -> ScholaSlateContainer
-    UserRole.TEACHER -> Color(0xFFEDE9FE)
-    UserRole.STUDENT -> ScholaTerracottaContainer
-    UserRole.PARENT -> Color(0xFFCCFBF1)
+    UserRole.TEACHER -> PastelLavenderContainer
+    UserRole.STUDENT -> PastelSageContainer
+    UserRole.PARENT -> PastelPowderContainer
     null -> ScholaSlateContainer
   }
 }

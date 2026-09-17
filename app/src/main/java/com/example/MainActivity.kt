@@ -8,11 +8,13 @@ import com.razorpay.Checkout
 import com.razorpay.PaymentResultWithDataListener
 import com.razorpay.PaymentData
 import org.json.JSONObject
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +55,9 @@ import com.example.ui.screens.students.StudentDetailScreen
 import com.example.ui.screens.students.StudentListScreen
 import com.example.ui.screens.teachers.TeacherDetailScreen
 import com.example.ui.screens.teachers.TeacherListScreen
-import com.example.ui.theme.ScholaTheme
+import com.example.ui.screens.teachers.TeacherProfileScreen
+import com.example.ui.theme.*
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
@@ -203,7 +207,10 @@ fun ScholaErpApp(
     },
     onOpenCommandPalette = { showCommandPalette = true },
     onOpenNotifications = { navController.navigate(Screen.Notifications.route) },
-    onOpenProfile = { navController.navigate(Screen.Profile.route) },
+    onOpenProfile = {
+      val route = if (currentUser.role == UserRole.TEACHER) Screen.TeacherProfile.route else Screen.Profile.route
+      navController.navigate(route)
+    },
     onLogout = {
       repository.logout()
       navController.navigate(Screen.Auth.route) {
@@ -215,17 +222,59 @@ fun ScholaErpApp(
       navController = navController,
       startDestination = Screen.Auth.route,
       modifier = Modifier.padding(paddingValues),
-      enterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(initialOffsetX = { 200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) },
-      exitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(targetOffsetX = { -200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) },
-      popEnterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(initialOffsetX = { -200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) },
-      popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(targetOffsetX = { 200 }, animationSpec = tween(250, easing = FastOutSlowInEasing)) }
+      enterTransition = {
+        val fromAuth = initialState.destination.route == Screen.Auth.route
+        val isLoadingOrDashboard = targetState.destination.route == Screen.Loading.route ||
+          targetState.destination.route == Screen.Dashboard.route
+        when {
+          fromAuth && isLoadingOrDashboard -> fadeIn(animationSpec = tween(220))
+          initialState.destination.route == Screen.Loading.route &&
+            targetState.destination.route == Screen.Dashboard.route ->
+            fadeIn(animationSpec = tween(180))
+          else -> slideInHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { it / 6 } +
+            fadeIn(animationSpec = tween(150))
+        }
+      },
+      exitTransition = {
+        val fromAuth = initialState.destination.route == Screen.Auth.route
+        val isLoadingOrDashboard = targetState.destination.route == Screen.Loading.route ||
+          targetState.destination.route == Screen.Dashboard.route
+        when {
+          fromAuth && isLoadingOrDashboard -> fadeOut(animationSpec = tween(220))
+          initialState.destination.route == Screen.Loading.route &&
+            targetState.destination.route == Screen.Dashboard.route ->
+            fadeOut(animationSpec = tween(180))
+          else -> slideOutHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { -it / 6 } +
+            fadeOut(animationSpec = tween(150))
+        }
+      },
+      popEnterTransition = {
+        slideInHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { -it / 6 } +
+          fadeIn(animationSpec = tween(150))
+      },
+      popExitTransition = {
+        slideOutHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { it / 6 } +
+          fadeOut(animationSpec = tween(150))
+      }
     ) {
       composable(Screen.Auth.route) {
         AuthScreen(
           repository = repository,
           onLoginSuccess = {
-            navController.navigate(Screen.Dashboard.route) {
+            navController.navigate(Screen.Loading.route) {
               popUpTo(Screen.Auth.route) { inclusive = true }
+            }
+          }
+        )
+      }
+
+      composable(Screen.Loading.route) {
+        LoadingScreen(
+          onReady = {
+            if (navController.currentBackStackEntry?.destination?.route == Screen.Loading.route) {
+              navController.navigate(Screen.Dashboard.route) {
+                popUpTo(Screen.Loading.route) { inclusive = true }
+              }
             }
           }
         )
@@ -363,6 +412,10 @@ fun ScholaErpApp(
 
       composable(Screen.ReportCard.route) {
         ReportCardScreen(repository = repository)
+      }
+
+      composable(Screen.TeacherProfile.route) {
+        TeacherProfileScreen(repository = repository)
       }
 
       composable(Screen.Exams.route) {
@@ -536,5 +589,37 @@ fun ScholaErpApp(
         }
       }
     )
+  }
+}
+
+// Branded loading screen shown after role selection so the dashboard's first
+// composition settles before it appears (masks the initial jank).
+@Composable
+private fun LoadingScreen(onReady: () -> Unit) {
+  LaunchedEffect(Unit) {
+    delay(500)
+    onReady()
+  }
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(ScholaLinen),
+    contentAlignment = Alignment.Center
+  ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      CircularProgressIndicator(
+        modifier = Modifier.size(44.dp),
+        color = ScholaTerracotta,
+        trackColor = ScholaOnyxBorder,
+        strokeWidth = 4.dp
+      )
+      Spacer(modifier = Modifier.height(Spacing.s3))
+      Text(
+        text = "Preparing your dashboard…",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Medium,
+        color = ScholaTextSecondary
+      )
+    }
   }
 }

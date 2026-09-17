@@ -1,5 +1,10 @@
 package com.example.ui.screens.dashboard
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,19 +21,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun StudentDashboardScreen(
@@ -50,10 +65,21 @@ fun StudentDashboardScreen(
   }
 
   val todayClasses = remember(timetable, currentStudent, todayDayOfWeek) {
-    timetable.filter {
-      it.classGrade == currentStudent.classGrade &&
-      it.division == currentStudent.division &&
-      it.dayOfWeek.equals(todayDayOfWeek, ignoreCase = true)
+    timetable
+      .filter {
+        it.classGrade == currentStudent.classGrade &&
+        it.division == currentStudent.division &&
+        it.dayOfWeek.equals(todayDayOfWeek, ignoreCase = true)
+      }
+      .sortedBy { it.periodNumber }
+  }
+
+  val todayName = remember { currentDayOfWeekName() }
+  var nowMinutes by remember { mutableIntStateOf(currentMinutesOfDay()) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(20_000)
+      nowMinutes = currentMinutesOfDay()
     }
   }
 
@@ -70,141 +96,81 @@ fun StudentDashboardScreen(
       .testTag("student_dashboard_list"),
     contentPadding = PaddingValues(bottom = 96.dp)
   ) {
+    // 0. GREETING
+    item {
+      val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
+      val greeting = remember(hour) {
+        when {
+          hour < 12 -> "Good Morning"
+          hour < 17 -> "Good Afternoon"
+          else -> "Good Evening"
+        }
+      }
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = Spacing.screenPadding)
+          .padding(top = Spacing.s4, bottom = Spacing.s1)
+      ) {
+        Text(
+          text = "$greeting, ${currentStudent.name.substringBefore(" ")}",
+          style = MaterialTheme.typography.headlineMedium,
+          fontWeight = FontWeight.Bold,
+          color = ScholaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(Spacing.s1))
+        Text(
+          text = "Small steps every day become big results — keep going.",
+          style = MaterialTheme.typography.bodySmall,
+          color = ScholaMuted
+        )
+      }
+    }
+
     // 1. HERO STUDENT IDENTITY & ATTENDANCE RING
     item {
-      AppCard(
+      AnimatedAttendanceHero(
+        attendanceValue = currentStudent.attendancePercent.toFloat(),
+        label = "Academic Attendance",
+        avatarLabel = currentStudent.name,
+        avatarUrl = currentStudent.avatarUrl,
         modifier = Modifier
           .fillMaxWidth()
           .padding(Spacing.screenPadding),
-        containerColor = RevenexPrimary,
-        elevation = Elev.e2
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column(modifier = Modifier.weight(1f)) {
+        nameContent = {
+          Column {
             Text(
-              text = "Student Portal",
-              style = MaterialTheme.typography.bodySmall,
+              text = "STUDENT PORTAL",
+              style = MaterialTheme.typography.labelSmall,
               color = Color.White.copy(alpha = 0.7f),
-              fontWeight = FontWeight.Medium
+              letterSpacing = 1.2.sp,
+              fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(Spacing.s1))
             Text(
               text = currentStudent.name,
-              style = MaterialTheme.typography.headlineMedium,
+              style = MaterialTheme.typography.headlineSmall,
               fontWeight = FontWeight.Bold,
               color = Color.White
             )
             Text(
-              text = "Class ${currentStudent.fullClass} • Roll #${currentStudent.rollNumber}",
+              text = "Adm. No. ${currentStudent.admissionNumber}",
               style = MaterialTheme.typography.bodySmall,
-              color = Color.White.copy(alpha = 0.85f)
+              color = Color.White.copy(alpha = 0.8f)
             )
           }
-
-          StatusBadge(status = "ACTIVE")
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.s5))
-
-        // Center Attendance Vital Signs Ring
-        Box(
-          modifier = Modifier.fillMaxWidth(),
-          contentAlignment = Alignment.Center
-        ) {
-          VitalRing(
-            value = currentStudent.attendancePercent.toFloat(),
-            label = "Academic Attendance",
-            size = VitalRingSize.HERO,
-            gradientStart = VitalRingBlue,
-            gradientEnd = VitalRingSky,
-            trackColor = Color.White.copy(alpha = 0.15f)
+        },
+        trailingContent = { StatusBadge(status = "ACTIVE") },
+        statsContent = {
+          HeroStatStrip(
+            stats = listOf(
+              HeroStat("CLASS", currentStudent.fullClass, ScholaTerracottaLight),
+              HeroStat("CLASS RANK", "#${currentStudent.rank}", Color.White),
+              HeroStat("GPA", "${currentStudent.gpa} / 10", ScholaTerracottaLight)
+            )
           )
         }
-
-        Spacer(modifier = Modifier.height(Spacing.s5))
-
-        // Key stats row
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-          Column(horizontalAlignment = Alignment.Start) {
-            Text(
-              text = "CLASS RANK",
-              style = MaterialTheme.typography.labelSmall,
-              color = Color.White.copy(alpha = 0.6f)
-            )
-            Text(
-              text = "Rank #${currentStudent.rank}",
-              style = MaterialTheme.typography.titleMedium,
-              color = RevenexMeritGold,
-              fontWeight = FontWeight.Bold
-            )
-          }
-
-          Column(horizontalAlignment = Alignment.End) {
-            Text(
-              text = "CUMULATIVE GPA",
-              style = MaterialTheme.typography.labelSmall,
-              color = Color.White.copy(alpha = 0.6f)
-            )
-            Text(
-              text = "${currentStudent.gpa} / 10.0",
-              style = MaterialTheme.typography.titleMedium,
-              color = Color.White,
-              fontWeight = FontWeight.Bold
-            )
-          }
-        }
-      }
-    }
-
-    // 2. STUDENT QUICK ACTIONS
-    item {
-      SectionHeader(title = "Learning Modules")
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = Spacing.screenPadding),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
-      ) {
-        QuickActionButton(
-          title = "Homework",
-          icon = Icons.Default.MenuBook,
-          iconTint = RevenexPrimary,
-          backgroundColor = RevenexPrimaryContainer,
-          modifier = Modifier.weight(1f),
-          onClick = { onNavigateTo(Screen.Homework.route) }
-        )
-        QuickActionButton(
-          title = "Timetable",
-          icon = Icons.Default.CalendarMonth,
-          iconTint = RoleAccent.Teacher,
-          backgroundColor = RoleAccent.softContainer(UserRole.TEACHER),
-          modifier = Modifier.weight(1f),
-          onClick = { onNavigateTo(Screen.Timetable.route) }
-        )
-        QuickActionButton(
-          title = "Report Card",
-          icon = Icons.Default.Assessment,
-          iconTint = RevenexMeritGold,
-          backgroundColor = RevenexMeritGoldContainer,
-          modifier = Modifier.weight(1f),
-          onClick = { onNavigateTo(Screen.ReportCard.route) }
-        )
-        QuickActionButton(
-          title = "Materials",
-          icon = Icons.Default.Folder,
-          iconTint = RoleAccent.Parent,
-          backgroundColor = RoleAccent.softContainer(UserRole.PARENT),
-          modifier = Modifier.weight(1f),
-          onClick = { onNavigateTo(Screen.StudyMaterial.route) }
-        )
-      }
+      )
     }
 
     // 3. TODAY'S CLASSES
@@ -231,55 +197,40 @@ fun StudentDashboardScreen(
           )
         }
       } else {
-        Column(
+        Box(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.screenPadding),
-          verticalArrangement = Arrangement.spacedBy(Spacing.s2)
+            .padding(horizontal = Spacing.screenPadding)
         ) {
-          todayClasses.forEach { slot ->
-            AppCard(modifier = Modifier.fillMaxWidth()) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  Box(
-                    modifier = Modifier
-                      .size(36.dp)
-                      .background(RevenexPrimaryContainer, RoundedCornerShape(Radius.sm)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Text(
-                      text = "P${slot.periodNumber}",
-                      style = MaterialTheme.typography.labelMedium,
-                      fontWeight = FontWeight.Bold,
-                      color = RevenexPrimary
-                    )
-                  }
-                  Spacer(modifier = Modifier.width(Spacing.s3))
-                  Column {
-                    Text(
-                      text = slot.subject,
-                      style = MaterialTheme.typography.titleMedium,
-                      fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                      text = "${slot.teacherName} • Room ${slot.roomNumber}",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                  }
-                }
-
-                Text(
-                  text = "${slot.startTime} - ${slot.endTime}",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.primary
+          // Continuous rail spanning the whole list (dots sit on top of it)
+          Box(
+            modifier = Modifier
+              .matchParentSize()
+              .drawBehind {
+                val trackX = 79.dp.toPx()
+                drawLine(
+                  color = ScholaBorder,
+                  start = Offset(trackX, 0f),
+                  end = Offset(trackX, size.height),
+                  strokeWidth = 2.dp.toPx(),
+                  cap = StrokeCap.Square
                 )
               }
+          )
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s2)
+          ) {
+            todayClasses.forEach { slot ->
+              ScheduleBlockRow(
+                slot = slot,
+                status = scheduleStatus(
+                  isToday = todayName.equals(todayDayOfWeek, ignoreCase = true),
+                  nowMinutes = nowMinutes,
+                  slot = slot
+                ),
+                modifier = Modifier.fillMaxWidth()
+              )
             }
           }
         }
@@ -344,6 +295,50 @@ fun StudentDashboardScreen(
             }
           }
         }
+      }
+    }
+  }
+}
+
+private data class HeroStat(val label: String, val value: String, val tint: Color)
+
+@Composable
+private fun HeroStatStrip(stats: List<HeroStat>) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(16.dp))
+      .background(Color.White.copy(alpha = 0.08f))
+      .padding(vertical = 12.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    stats.forEachIndexed { index, stat ->
+      Column(
+        modifier = Modifier.weight(1f),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        Text(
+          text = stat.label,
+          style = MaterialTheme.typography.labelSmall,
+          color = Color.White.copy(alpha = 0.6f),
+          letterSpacing = 0.8.sp,
+          fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+          text = stat.value,
+          style = MaterialTheme.typography.titleMedium,
+          color = stat.tint,
+          fontWeight = FontWeight.Bold
+        )
+      }
+      if (index < stats.size - 1) {
+        Box(
+          modifier = Modifier
+            .width(1.dp)
+            .height(34.dp)
+            .background(Color.White.copy(alpha = 0.18f))
+        )
       }
     }
   }

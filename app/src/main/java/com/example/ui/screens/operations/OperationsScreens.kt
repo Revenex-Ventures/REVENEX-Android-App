@@ -61,19 +61,19 @@ fun OperationsHubScreen(
   val noStudents = setOf(UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.PARENT)
 
   val modules = listOf(
-    HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, RevenexBlue, RevenexPrimaryContainer, Screen.Students.route, adminOnly),
-    HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, Color(0xFF6D28D9), Color(0xFFEDE9FE), Screen.Teachers.route, adminOnly),
-    HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, Color(0xFF15803D), Color(0xFFDCFCE7), Screen.Attendance.route, allRoles),
-    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, Color(0xFFB45309), Color(0xFFFEF3C7), Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.PARENT, UserRole.STUDENT)),
-    HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, Color(0xFFDC2626), Color(0xFFFEE2E2), Screen.Leaves.route, noStudents),
-    HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, Color(0xFF0284C7), Color(0xFFE0F2FE), Screen.Transport.route, allRoles),
-    HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, Color(0xFF0D9488), Color(0xFFCCFBF1), Screen.Library.route, allRoles),
-    HubModule("School Assets", "Smart Boards, Labs & IT", Icons.Default.Inventory, Color(0xFF4F46E5), Color(0xFFEEF2FF), Screen.Inventory.route, adminOnly),
-    HubModule("Executive Reports", "KPI Charts & Export Analytics", Icons.Default.Analytics, Color(0xFF9333EA), Color(0xFFF3E8FF), Screen.Reports.route, adminOnly),
-    HubModule("Timetable", "Class Schedule & Periods", Icons.Default.CalendarMonth, Color(0xFF0284C7), Color(0xFFE0F2FE), Screen.Timetable.route, allRoles),
-    HubModule("Notices & Circulars", "School Announcements", Icons.Default.Campaign, Color(0xFFDC2626), Color(0xFFFEE2E2), Screen.Notices.route, allRoles),
-    HubModule("Study Material", "Notes, PDFs & Resources", Icons.Default.MenuBook, Color(0xFF0D9488), Color(0xFFCCFBF1), Screen.StudyMaterial.route, allRoles),
-    HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, RevenexBlue, RevenexPrimaryContainer, Screen.AiAssistant.route, allRoles)
+    HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, ScholaSlateNavy, ScholaSlateContainer, Screen.Students.route, adminOnly),
+    HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, ScholaSlateNavy, ScholaSlateContainer, Screen.Teachers.route, adminOnly),
+    HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, ScholaSlateNavy, ScholaSlateContainer, Screen.Attendance.route, allRoles),
+    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, ScholaSlateNavy, ScholaSlateContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.PARENT, UserRole.STUDENT)),
+    HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, ScholaSlateNavy, ScholaSlateContainer, Screen.Leaves.route, noStudents),
+    HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, ScholaSlateNavy, ScholaSlateContainer, Screen.Transport.route, allRoles),
+    HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, ScholaSlateNavy, ScholaSlateContainer, Screen.Library.route, allRoles),
+    HubModule("School Assets", "Smart Boards, Labs & IT", Icons.Default.Inventory, ScholaSlateNavy, ScholaSlateContainer, Screen.Inventory.route, adminOnly),
+    HubModule("Executive Reports", "KPI Charts & Export Analytics", Icons.Default.Analytics, ScholaSlateNavy, ScholaSlateContainer, Screen.Reports.route, adminOnly),
+    HubModule("Timetable", "Class Schedule & Periods", Icons.Default.CalendarMonth, ScholaSlateNavy, ScholaSlateContainer, Screen.Timetable.route, allRoles),
+    HubModule("Notices & Circulars", "School Announcements", Icons.Default.Campaign, ScholaSlateNavy, ScholaSlateContainer, Screen.Notices.route, allRoles),
+    HubModule("Study Material", "Notes, PDFs & Resources", Icons.Default.MenuBook, ScholaSlateNavy, ScholaSlateContainer, Screen.StudyMaterial.route, allRoles),
+    HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, ScholaTerracotta, ScholaTerracottaContainer, Screen.AiAssistant.route, allRoles)
   ).filter { it.allowedRoles.contains(currentUser.role) }
 
   LazyColumn(
@@ -488,13 +488,13 @@ fun LibraryScreen(
           Box(
             modifier = Modifier
               .size(48.dp)
-              .background(Color(0xFFCCFBF1), RoundedCornerShape(12.dp)),
+              .background(ScholaSlateContainer, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.Book,
               contentDescription = null,
-              tint = Color(0xFF0D9488),
+              tint = ScholaSlateNavy,
               modifier = Modifier.size(24.dp)
             )
           }

@@ -198,10 +198,10 @@ fun AiAssistantScreen(
               onClick = { handleSend(inputText) },
               modifier = Modifier
                 .size(46.dp)
-                .background(RevenexBlue, CircleShape)
+                .background(ScholaSlateNavyDark, CircleShape)
                 .testTag("ai_assistant_send_btn")
             ) {
-              Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(20.dp))
+              Icon(Icons.Default.Send, contentDescription = "Send", tint = ScholaTerracottaLight, modifier = Modifier.size(20.dp))
             }
           }
         }
