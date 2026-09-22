@@ -8,6 +8,7 @@ import android.media.AudioTrack
 import android.net.Uri
 import android.os.Build
 import kotlin.math.exp
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
@@ -29,12 +30,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -42,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -132,42 +139,129 @@ fun FeatureHeroCard(
   secondaryMetricLabel: String = "DAILY ATTENDANCE RATE"
 ) {
   val shape = RoundedCornerShape(Radius.hero)
-  val glassShape = RoundedCornerShape(Radius.hero)
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .glassEffect(cornerRadius = Radius.hero, dark = true)
+      .clip(shape)
+      .background(ScholaSlateNavyDark, shape)
+      .drawBehind {
+        // 1. Charcoal-to-ink rich gradient base
+        drawRect(
+          brush = Brush.linearGradient(
+            colors = listOf(
+              Color(0xFF261D18),
+              ScholaSlateNavy,
+              InkBlack
+            ),
+            start = Offset(0f, 0f),
+            end = Offset(size.width, size.height)
+          )
+        )
+        // 2. Ember warm radial under-glow
+        val gw = size.width
+        val glowCenter = Offset(gw * 0.85f, size.height * 0.20f)
+        val glowRadius = gw * 0.9f
+        drawCircle(
+          brush = Brush.radialGradient(
+            0f to ScholaTerracotta.copy(alpha = 0.12f),
+            0.5f to ScholaTerracotta.copy(alpha = 0.03f),
+            1f to Color.Transparent,
+            center = glowCenter,
+            radius = glowRadius
+          ),
+          radius = glowRadius,
+          center = glowCenter
+        )
+        // 3. Top-edge terracotta crown highlight
+        drawRoundRect(
+          brush = Brush.horizontalGradient(
+            colors = listOf(
+              ScholaTerracotta,
+              ScholaTerracottaLight.copy(alpha = 0.6f),
+              Color.Transparent
+            )
+          ),
+          topLeft = Offset(0f, 0f),
+          size = Size(gw * 0.75f, 2.5f * density),
+          cornerRadius = CornerRadius(1.5f * density, 1.5f * density)
+        )
+        // 4. Subtle telemetry dots in top right
+        val dotRadius = 1.2f * density
+        val dotSpacing = 10f * density
+        val startX = gw - 50f * density
+        val startY = 16f * density
+        for (r in 0 until 3) {
+          for (c in 0 until 3) {
+            drawCircle(
+              color = Color.White.copy(alpha = 0.05f),
+              radius = dotRadius,
+              center = Offset(startX + c * dotSpacing, startY + r * dotSpacing)
+            )
+          }
+        }
+      }
+      .border(
+        width = 1.dp,
+        brush = Brush.verticalGradient(
+          0f to Color.White.copy(alpha = 0.24f),
+          0.5f to Color.White.copy(alpha = 0.08f),
+          1f to Color.White.copy(alpha = 0.14f)
+        ),
+        shape = shape
+      )
+      .shadow(16.dp, shape, clip = false)
       .padding(Spacing.cardPaddingLarge)
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-      // Top header: Cycle title + Category badge
+      // Top header: Cycle title + Category badge with live indicator
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text(
-          text = cycleTitle.uppercase(Locale.getDefault()),
-          color = Color.White.copy(alpha = 0.70f),
-          style = MaterialTheme.typography.labelSmall,
-          letterSpacing = TypeTokens.trackingMicroLabel,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          modifier = Modifier.weight(1f, fill = false)
-        )
+        Row(
+          modifier = Modifier.weight(1f, fill = false),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Box(
+            modifier = Modifier
+              .size(6.dp)
+              .background(ScholaTerracotta, CircleShape)
+          )
+          Spacer(modifier = Modifier.width(Spacing.s2))
+          Text(
+            text = cycleTitle.uppercase(Locale.getDefault()),
+            color = Color.White.copy(alpha = 0.75f),
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = TypeTokens.trackingMicroLabel,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
         Spacer(modifier = Modifier.width(Spacing.s2))
         Surface(
           shape = RoundedCornerShape(Radius.pill),
-          color = badgeBgColor
+          color = badgeBgColor,
+          border = androidx.compose.foundation.BorderStroke(0.8.dp, Color.White.copy(alpha = 0.2f))
         ) {
-          Text(
-            text = categoryBadge.uppercase(Locale.getDefault()),
-            color = badgeTextColor,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.6.sp,
-            modifier = Modifier.padding(horizontal = Spacing.s2, vertical = 3.dp)
-          )
+          Row(
+            modifier = Modifier.padding(horizontal = Spacing.s2, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier
+                .size(6.dp)
+                .background(Color(0xFF10B981), CircleShape)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+              text = categoryBadge.uppercase(Locale.getDefault()),
+              color = badgeTextColor,
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              letterSpacing = 0.6.sp
+            )
+          }
         }
       }
 
@@ -186,41 +280,90 @@ fun FeatureHeroCard(
             style = MaterialTheme.typography.labelSmall,
             letterSpacing = TypeTokens.trackingMicroLabel
           )
-          Spacer(modifier = Modifier.height(2.dp))
-          Text(
-            text = primaryStatistic,
-            color = Color.White,
-            style = MaterialTheme.typography.displayMedium,
-            fontWeight = FontWeight.Bold
-          )
+          Spacer(modifier = Modifier.height(3.dp))
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            Text(
+              text = primaryStatistic,
+              color = Color.White,
+              style = MaterialTheme.typography.displayMedium,
+              fontWeight = FontWeight.Bold
+            )
+            Surface(
+              shape = RoundedCornerShape(Radius.pill),
+              color = Color(0xFF10B981).copy(alpha = 0.15f),
+              border = androidx.compose.foundation.BorderStroke(0.8.dp, Color(0xFF10B981).copy(alpha = 0.35f))
+            ) {
+              Text(
+                text = "ON TRACK",
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF34D399),
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+              )
+            }
+          }
         }
 
-        Column(horizontalAlignment = Alignment.End) {
-          Text(
-            text = secondaryMetricLabel.uppercase(Locale.getDefault()),
-            color = Color.White.copy(alpha = 0.70f),
-            style = MaterialTheme.typography.labelSmall,
-            letterSpacing = TypeTokens.trackingMicroLabel
-          )
-          Spacer(modifier = Modifier.height(2.dp))
-          Text(
-            text = secondaryKeyMetric,
-            color = ScholaTerracottaLight,
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
-          )
+        // Secondary metric capsule
+        Surface(
+          shape = RoundedCornerShape(Radius.md),
+          color = Color.White.copy(alpha = 0.08f),
+          border = androidx.compose.foundation.BorderStroke(0.8.dp, Color.White.copy(alpha = 0.12f))
+        ) {
+          Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.End
+          ) {
+            Text(
+              text = secondaryMetricLabel.uppercase(Locale.getDefault()),
+              color = Color.White.copy(alpha = 0.65f),
+              style = MaterialTheme.typography.labelSmall,
+              fontSize = 9.sp,
+              letterSpacing = 0.8.sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+              text = secondaryKeyMetric,
+              color = ScholaTerracottaLight,
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.Bold
+            )
+          }
         }
       }
 
       Spacer(modifier = Modifier.height(Spacing.s4))
 
-      // Pill Action Button with Trailing Arrow (charcoal, lime arrow)
+      // Pill Action Button with Trailing Arrow (tactile gradient, styled arrow)
       Surface(
         shape = RoundedCornerShape(Radius.pill),
-        color = ScholaSlateNavyDark,
+        color = Color.Transparent,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.pill))
+          .background(
+            Brush.horizontalGradient(
+              listOf(
+                Color(0xFF1F1E24),
+                ScholaSlateNavyDark
+              )
+            )
+          )
+          .border(
+            width = 1.dp,
+            brush = Brush.horizontalGradient(
+              listOf(
+                Color.White.copy(alpha = 0.22f),
+                Color.White.copy(alpha = 0.08f)
+              )
+            ),
+            shape = RoundedCornerShape(Radius.pill)
+          )
           .clickable(onClick = onActionClick)
           .testTag("hero_action_pill")
       ) {
@@ -238,12 +381,19 @@ fun FeatureHeroCard(
             fontWeight = FontWeight.SemiBold
           )
           Spacer(modifier = Modifier.width(Spacing.s2))
-          Icon(
-            imageVector = Icons.Default.ArrowForward,
-            contentDescription = null,
-            tint = ScholaTerracottaLight,
-            modifier = Modifier.size(16.dp)
-          )
+          Box(
+            modifier = Modifier
+              .size(24.dp)
+              .background(ScholaTerracotta.copy(alpha = 0.20f), CircleShape),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.ArrowForward,
+              contentDescription = null,
+              tint = ScholaTerracottaLight,
+              modifier = Modifier.size(14.dp)
+            )
+          }
         }
       }
     }
@@ -354,7 +504,6 @@ fun CompactStatTile(
 // ============================================================================
 // 3. BOTTOM NAVIGATION BAR (Ink black, solid, jump-up icon animation)
 // ============================================================================
-val InkBlack = Color(0xFF0D0D0F)
 
 @Composable
 fun ScholaFloatingDock(
@@ -698,9 +847,25 @@ fun AttendanceBead(
   val strokeDp = VitalRingSize.INLINE.strokeDp
   val fraction = (value / 100f).coerceIn(0f, 1f)
 
+  val ringProgress = remember { Animatable(0f) }
+  val runningPct = remember(value) { Animatable(0f) }
+  LaunchedEffect(value) {
+    ringProgress.snapTo(0f)
+    ringProgress.animateTo(fraction, animationSpec = tween(900, easing = FastOutSlowInEasing))
+  }
+  LaunchedEffect(value) {
+    runningPct.snapTo(0f)
+    runningPct.animateTo(value, animationSpec = tween(900, easing = FastOutSlowInEasing))
+  }
+  val badgeScale by animateFloatAsState(
+    targetValue = if (runningPct.value > 0f) 1f else 0.6f,
+    animationSpec = tween(350, easing = FastOutSlowInEasing),
+    label = "beadBadgeScale"
+  )
+
   Box(modifier = modifier.size(size)) {
     CircularProgressIndicator(
-      progress = { fraction },
+      progress = { ringProgress.value },
       modifier = Modifier.fillMaxSize(),
       color = tint,
       trackColor = Color.White.copy(alpha = 0.18f),
@@ -723,9 +888,10 @@ fun AttendanceBead(
         .background(ScholaSlateNavyDark)
         .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(9.dp))
         .padding(horizontal = 7.dp, vertical = 2.dp)
+        .graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }
     ) {
       Text(
-        text = "${value.toInt()}%",
+        text = "${runningPct.value.roundToInt()}%",
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.ExtraBold,
         color = Color.White
@@ -823,6 +989,8 @@ fun AnimatedAttendanceHero(
   containerColor: Color = ScholaSlateNavyDark,
   avatarLabel: String = "",
   avatarUrl: String = "",
+  introHasPlayed: Boolean = false,
+  onIntroPassed: () -> Unit = {},
   nameContent: @Composable RowScope.() -> Unit,
   trailingContent: @Composable () -> Unit,
   statsContent: @Composable () -> Unit
@@ -834,56 +1002,350 @@ fun AnimatedAttendanceHero(
     delay(60)
     entered = true
   }
-  val heroScale by animateFloatAsState(
-    targetValue = if (entered) 1f else 0.94f,
-    animationSpec = tween(440, easing = FastOutSlowInEasing),
-    label = "heroScale"
-  )
+  // Entrance is a fade ONLY. No scale or translation on the card: the fly
+  // offset is computed in the card's local frame and applied inside it, so the
+  // card's own layer must add zero positional transform to stay exact.
   val heroAlpha by animateFloatAsState(
     targetValue = if (entered) 1f else 0f,
     animationSpec = tween(440, easing = FastOutSlowInEasing),
     label = "heroAlpha"
   )
 
-  AppCard(
-    modifier = modifier.graphicsLayer {
-      scaleX = heroScale
-      scaleY = heroScale
-      alpha = heroAlpha
-    },
-    containerColor = containerColor,
-    elevation = Elev.e2,
-    dark = true,
-    solidColor = containerColor,
-    sheen = true
+  // Choreography: the attendance ring first shows up LARGE dead-centre of the
+  // whole card (with a small caption under it) while its ring fills and the %
+  // counts up. Once the attendance has been shown, the ring glides back into
+  // its slot next to the name and the rest of the card content reveals with it.
+  //
+// The travel and the scale are split across TWO layers. graphicsLayer applies
+  // its own translation in space that its own scale has already shrunk —
+  // coupling them made the ring land off-centre. Here the outer layer only
+  // translates (unscaled => exact offset), the inner layer only scales about
+  // its own centre, so the ring's centre never moves while it shrinks. We
+  // capture both nodes exactly once, while untranslated.
+  // The caller hoists `introHasPlayed`, so the entrance plays on every fresh
+  // visit (cold start OR returning to this tab) but never replays while the
+  // hero item is recycled by the lazy list.
+// The fly offset is measured in ROOT coordinates via boundsInRoot, then
+  // normalised by the scale ratio (local card size / root card size). On a
+  // cold start that ratio is exactly 1.0 — identical pixels to the verified
+  // first-visit centering. Under a nav transition the root measurement is
+  // scaled/translated, but the RATIO cancels that scale, so the offset stays
+  // exact whether the screen is entering fresh or mid-transition.
+  var cardCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+  var cardRect by remember { mutableStateOf<Rect?>(null) }
+  var beadRect by remember { mutableStateOf<Rect?>(null) }
+  val measured = cardCoords != null && cardRect != null && beadRect != null
+
+  val haptics = LocalHapticFeedback.current
+  // Bouncy spring (dampingRatio < 1) gives the settle a natural overshoot: the
+  // ring glides to the slot, dips slightly past it, then eases into place.
+  val fly = remember { Animatable(0f) }
+  // Keyed ONLY on `measured` — reading `introHasPlayed` once at launch. If we
+  // keyed on the flag too, flipping it onIntroPassed would cancel this
+  // coroutine mid-flight and the intro would never play.
+  LaunchedEffect(measured) {
+    if (measured && !introHasPlayed) {
+      onIntroPassed()
+      delay(1150)
+      fly.animateTo(
+        targetValue = 1f,
+        animationSpec = spring(dampingRatio = 0.66f, stiffness = Spring.StiffnessMediumLow)
+      )
+      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    } else if (measured) {
+      fly.snapTo(1f)
+    }
+  }
+  val beadAlpha by animateFloatAsState(
+    targetValue = if (measured) 1f else 0f,
+    animationSpec = tween(200, easing = FastOutSlowInEasing),
+    label = "beadAlpha"
+  )
+
+  val eased = fly.value // spring output — overshoots past 1, then settles
+  val reveal = eased.coerceIn(0f, 1f)
+  val nameReveal = (eased / 0.75f).coerceIn(0f, 1f)
+  val statsReveal = ((eased - 0.12f) / 0.88f).coerceIn(0f, 1f)
+  // "Stage" alpha: strongest while the ring is held centred, dead by settle.
+  val stageAlpha = (1f - reveal) * 0.5f
+  val beadScale = 1.35f + (1f - 1.35f) * eased
+  val contentOffsetY = (1f - reveal) * 10f
+
+  val cc = cardCoords
+  val cr = cardRect
+  val br = beadRect
+  // Convert a root-space delta into local px: divide by the transform factor
+  // the root measurement is already subject to (cardRootW / cardLocalW).
+  val flyOffsetX: Float
+  val flyOffsetY: Float
+  if (measured && cc != null && cr != null && br != null) {
+    val xFactor = cc.size.width / cr.width
+    val yFactor = cc.size.height / cr.height
+    flyOffsetX = (cr.center.x - br.center.x) * xFactor * (1f - eased)
+    flyOffsetY = (cr.center.y - br.center.y) * yFactor * (1f - eased)
+  } else {
+    flyOffsetX = 0f
+    flyOffsetY = 0f
+  }
+  // Caption sits just under the centred ring, which is at the card's centre.
+  val captionOffsetY = ((cc?.size?.width ?: 0) / 2f) + 30f
+
+  // -------------------------------------------------------------------------
+  // Signature "carbon & ember" surface — the hero never reads flat black:
+  //   1. Warm charcoal vertical wash (ember-tinted crown down to ink)
+  //   2. Ember glow blooming in the top-right corner
+  //   3. A "stage" ring that exists only while the attendance ring is held
+  //      centred — it dissolves as the ring settles into its slot
+  //   4. Terracotta hairline along the top edge
+  // -------------------------------------------------------------------------
+  val cardShape = RoundedCornerShape(Radius.hero)
+  Box(
+    modifier = modifier
+      .clip(cardShape)
+      .background(containerColor, cardShape)
+      .drawBehind {
+        // 1. Base — one continuous dark family (slate easing into ink). No warm jump
+        // mid-surface, so the card holds together like a single material and
+        // the warmth below blends INTO it rather than sitting as a separate
+        // box/patch.
+        drawRect(
+          brush = Brush.verticalGradient(
+            0f to ScholaSlateNavy,
+            0.7f to ScholaSlateNavyDark,
+            1f to InkBlack
+          )
+        )
+        val gw = size.width
+        // 2. Ember under-wash — terracotta alpha rising from the bottom edge
+        // and fading upward as a LINEAR overlay, so heat mixes into the whole
+        // card with no visible glow boundary.
+        drawRect(
+          brush = Brush.verticalGradient(
+            0f to Color.Transparent,
+            0.55f to ScholaTerracotta.copy(alpha = 0.03f),
+            0.85f to ScholaTerracotta.copy(alpha = 0.07f),
+            1f to ScholaTerracotta.copy(alpha = 0.085f)
+          )
+        )
+        // 3. Top glass frost — lifts the upper edge so the card sits above the
+        // page instead of printing flat.
+        drawRect(
+          brush = Brush.verticalGradient(
+            0f to Color.White.copy(alpha = 0.05f),
+            0.3f to Color.White.copy(alpha = 0.015f),
+            1f to Color.Transparent
+          ),
+          size = Size(size.width, size.height * 0.5f)
+        )
+        // 4. Stage ring — a platform under the centred attendance ring; fades
+        // with `stageAlpha` (1 while held centred -> 0 once settled).
+        if (stageAlpha > 0.001f) {
+          val stageCenter = Offset(size.width * 0.5f, size.height * 0.5f)
+          drawCircle(
+            color = ScholaTerracotta.copy(alpha = 0.16f * stageAlpha),
+            radius = size.width * 0.20f,
+            center = stageCenter,
+            style = Stroke(width = 1.5f * density)
+          )
+          drawCircle(
+            color = Color.White.copy(alpha = 0.07f * stageAlpha),
+            radius = size.width * 0.27f,
+            center = stageCenter,
+            style = Stroke(width = 1f * density)
+          )
+        }
+        // 8. Terracotta hairline along the top edge — fades in as the ring
+        // settles into its slot (reveal), so no stray line before the animation.
+        val crown = 0.25f + 0.75f * reveal
+        drawRoundRect(
+          brush = Brush.horizontalGradient(
+            colors = listOf(
+              ScholaTerracotta.copy(alpha = 1f * crown),
+              ScholaTerracotta.copy(alpha = 0.35f * crown),
+              Color.Transparent
+            )
+          ),
+          topLeft = Offset(0f, 0f),
+          size = Size(gw, 2.5f * density),
+          cornerRadius = CornerRadius(1.5f * density, 1.5f * density)
+        )
+      }
+      .border(
+        width = 1.dp,
+        brush = Brush.verticalGradient(
+          0f to Color.White.copy(alpha = 0.28f),
+          0.4f to Color.White.copy(alpha = 0.10f),
+          1f to Color.White.copy(alpha = 0.14f)
+        ),
+        shape = cardShape
+      )
+      .shadow(18.dp, cardShape, clip = false)
+      // Captured outside the entrance transform so the captured bounds are the
+      // card's true layout position and size.
+      .onGloballyPositioned {
+        cardCoords = it
+        cardRect = it.boundsInRoot()
+      }
+      .graphicsLayer {
+        alpha = heroAlpha
+      }
+      .padding(horizontal = Spacing.xl20, vertical = Spacing.xl20)
   ) {
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+
+      // ---------- Header: bead + identity + trailing ----------
       Row(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        AttendanceBead(
-          value = safeAttendance,
-          avatarLabel = avatarLabel,
-          avatarUrl = avatarUrl
-        )
-        Spacer(modifier = Modifier.width(Spacing.s3))
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          // Travel wrapper: carries ONLY the fly (translation + fade). The scale
+          // lives on an inner layer, so the two never compound and the ring
+          // lands dead-centre on the card. CRITICAL: the measurement sits
+          // OUTSIDE the fly transform — measuring inside it used to capture the
+          // *already-translated* bounds and permanently poisoned the centring.
+          // The root-space delta is normalised by the card scale ratio above.
+          Box(
+            modifier = Modifier
+              .onGloballyPositioned { beadRect = it.boundsInRoot() }
+              .graphicsLayer {
+                translationX = flyOffsetX
+                translationY = flyOffsetY
+                alpha = beadAlpha
+              }
+          ) {
+            Box(
+              modifier = Modifier
+                .graphicsLayer {
+                  scaleX = beadScale
+                  scaleY = beadScale
+                }
+                .drawBehind {
+                  // Soft ember halo — glows while the ring is held big, then
+                  // settles down as the bead slides back into its slot.
+                  val r = size.width * 0.62f
+                  drawCircle(
+                    brush = Brush.radialGradient(
+                      colors = listOf(
+                        ScholaTerracotta.copy(alpha = 0.26f),
+                        ScholaTerracotta.copy(alpha = 0.05f),
+                        Color.Transparent
+                      ),
+                      center = center,
+                      radius = r
+                    ),
+                    radius = r,
+                    center = center
+                  )
+                }
+            ) {
+              AttendanceBead(
+                value = safeAttendance,
+                avatarLabel = avatarLabel,
+                avatarUrl = avatarUrl
+              )
+            }
+          }
+          Spacer(modifier = Modifier.width(Spacing.s3))
 
-        nameContent()
+          Row(
+            modifier = Modifier.graphicsLayer {
+              alpha = nameReveal
+              translationY = contentOffsetY
+            },
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            nameContent()
+          }
+        }
+
+        Box(
+          modifier = Modifier.graphicsLayer {
+            alpha = nameReveal
+            translationY = contentOffsetY
+          }
+        ) {
+          trailingContent()
+        }
       }
 
-      trailingContent()
+      Spacer(modifier = Modifier.height(Spacing.s4))
+
+      // ---------- Section rail (designer divider) — appears with the stats ----------
+      Row(
+        modifier = Modifier.graphicsLayer {
+          alpha = statsReveal
+          translationY = contentOffsetY
+        },
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Box(
+          modifier = Modifier
+            .width(38.dp)
+            .height(2.5.dp)
+            .clip(RoundedCornerShape(Radius.pill))
+            .background(
+              Brush.horizontalGradient(
+                listOf(ScholaTerracotta, ScholaTerracottaLight)
+              )
+            )
+        )
+        Spacer(modifier = Modifier.width(Spacing.s2))
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .height(1.dp)
+            .background(
+              Brush.horizontalGradient(
+                listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.04f))
+              )
+            )
+        )
+      }
+
+      Spacer(modifier = Modifier.height(Spacing.s4))
+
+      // ---------- Stats (reveal trails the identity row by a beat) ----------
+      Box(
+        modifier = Modifier.graphicsLayer {
+          alpha = statsReveal
+          translationY = contentOffsetY
+        }
+      ) {
+        statsContent()
+      }
     }
 
-    Spacer(modifier = Modifier.height(Spacing.s5))
-
-    statsContent()
+      // Caption shown only while the ring is held centred on the card; it fades
+      // out with a gentle upward drift as the ring settles back into its slot.
+      if (measured) {
+        Box(
+          modifier = Modifier
+            .matchParentSize()
+            .graphicsLayer {
+              alpha = 1f - reveal
+              translationY = captionOffsetY + reveal * 16f
+            },
+          contentAlignment = Alignment.Center
+        ) {
+          Text(
+            text = label.uppercase(Locale.getDefault()),
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            letterSpacing = 1.4.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = Color.White.copy(alpha = 0.75f),
+            maxLines = 1
+          )
+        }
+      }
+    }
   }
-}
 
 // ============================================================================
 // 7. COUNT-UP NUMBER & CURRENCY

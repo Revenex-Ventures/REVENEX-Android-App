@@ -89,6 +89,11 @@ fun StudentDashboardScreen(
 
   val listState = rememberLazyListState()
 
+  // Hoisted so the hero intro plays once per VISIT to this tab (cold start or
+  // switching back) but never replays while the hero item is scrolled out of
+  // view and re-created.
+  var heroIntroPlayed by remember { mutableStateOf(false) }
+
   LazyColumn(
     state = listState,
     modifier = Modifier
@@ -134,39 +139,104 @@ fun StudentDashboardScreen(
         label = "Academic Attendance",
         avatarLabel = currentStudent.name,
         avatarUrl = currentStudent.avatarUrl,
+        introHasPlayed = heroIntroPlayed,
+        onIntroPassed = { heroIntroPlayed = true },
         modifier = Modifier
           .fillMaxWidth()
           .padding(Spacing.screenPadding),
         nameContent = {
           Column {
-            Text(
-              text = "STUDENT PORTAL",
-              style = MaterialTheme.typography.labelSmall,
-              color = Color.White.copy(alpha = 0.7f),
-              letterSpacing = 1.2.sp,
-              fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(Spacing.s1))
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier
+                .clip(RoundedCornerShape(Radius.pill))
+                .background(Color.White.copy(alpha = 0.12f))
+                .padding(horizontal = 7.dp, vertical = 2.dp)
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(5.dp)
+                  .background(Color(0xFF10B981), CircleShape)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = "SCHOLAR DESK",
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
+                color = Color.White.copy(alpha = 0.9f),
+                letterSpacing = 1.1.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
               text = currentStudent.name,
-              style = MaterialTheme.typography.headlineSmall,
+              style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.Bold,
-              color = Color.White
+              color = Color.White,
+              maxLines = 1
             )
-            Text(
-              text = "Adm. No. ${currentStudent.admissionNumber}",
-              style = MaterialTheme.typography.bodySmall,
-              color = Color.White.copy(alpha = 0.8f)
-            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              Text(
+                text = "Adm. #${currentStudent.admissionNumber}",
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.75f)
+              )
+              Text(
+                text = "•",
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.4f)
+              )
+              Text(
+                text = "Roll #${currentStudent.rollNumber}",
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 11.sp,
+                color = ScholaTerracottaLight,
+                fontWeight = FontWeight.SemiBold
+              )
+            }
           }
         },
-        trailingContent = { StatusBadge(status = "ACTIVE") },
+        trailingContent = {
+          Surface(
+            shape = RoundedCornerShape(Radius.pill),
+            color = ScholaTerracotta.copy(alpha = 0.18f),
+            border = androidx.compose.foundation.BorderStroke(0.8.dp, ScholaTerracotta.copy(alpha = 0.4f))
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = Icons.Default.Verified,
+                contentDescription = null,
+                tint = ScholaTerracottaLight,
+                modifier = Modifier.size(12.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = "ACTIVE",
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = Color.White
+              )
+            }
+          }
+        },
         statsContent = {
           HeroStatStrip(
             stats = listOf(
-              HeroStat("CLASS", currentStudent.fullClass, ScholaTerracottaLight),
-              HeroStat("CLASS RANK", "#${currentStudent.rank}", Color.White),
-              HeroStat("GPA", "${currentStudent.gpa} / 10", ScholaTerracottaLight)
+              HeroStat("CLASS", currentStudent.fullClass, ScholaTerracottaLight, Icons.Default.School, "SEC ${currentStudent.division}"),
+              HeroStat("CLASS RANK", "#${currentStudent.rank}", Color(0xFFF59E0B), Icons.Default.EmojiEvents, "TOP 5%"),
+              HeroStat("CUMULATIVE GPA", "${currentStudent.gpa} / 10", Color(0xFF34D399), Icons.Default.TrendingUp, "EXCELLENT")
             )
           )
         }
@@ -300,45 +370,89 @@ fun StudentDashboardScreen(
   }
 }
 
-private data class HeroStat(val label: String, val value: String, val tint: Color)
+private data class HeroStat(
+  val label: String,
+  val value: String,
+  val tint: Color,
+  val icon: androidx.compose.ui.graphics.vector.ImageVector,
+  val badgeText: String? = null
+)
 
 @Composable
 private fun HeroStatStrip(stats: List<HeroStat>) {
   Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
-      .background(Color.White.copy(alpha = 0.08f))
-      .padding(vertical = 12.dp),
-    verticalAlignment = Alignment.CenterVertically
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
   ) {
-    stats.forEachIndexed { index, stat ->
-      Column(
+    stats.forEach { stat ->
+      Surface(
         modifier = Modifier.weight(1f),
-        horizontalAlignment = Alignment.CenterHorizontally
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.08f),
+        border = androidx.compose.foundation.BorderStroke(
+          width = 0.8.dp,
+          brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.06f))
+          )
+        )
       ) {
-        Text(
-          text = stat.label,
-          style = MaterialTheme.typography.labelSmall,
-          color = Color.White.copy(alpha = 0.6f),
-          letterSpacing = 0.8.sp,
-          fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-          text = stat.value,
-          style = MaterialTheme.typography.titleMedium,
-          color = stat.tint,
-          fontWeight = FontWeight.Bold
-        )
-      }
-      if (index < stats.size - 1) {
-        Box(
-          modifier = Modifier
-            .width(1.dp)
-            .height(34.dp)
-            .background(Color.White.copy(alpha = 0.18f))
-        )
+        Column(
+          modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+          horizontalAlignment = Alignment.Start
+        ) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier
+                .size(24.dp)
+                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = stat.icon,
+                contentDescription = null,
+                tint = stat.tint,
+                modifier = Modifier.size(13.dp)
+              )
+            }
+            if (stat.badgeText != null) {
+              Surface(
+                shape = RoundedCornerShape(Radius.pill),
+                color = stat.tint.copy(alpha = 0.16f)
+              ) {
+                Text(
+                  text = stat.badgeText,
+                  style = MaterialTheme.typography.labelSmall,
+                  fontSize = 8.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = stat.tint,
+                  modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                )
+              }
+            }
+          }
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            text = stat.label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 9.sp,
+            color = Color.White.copy(alpha = 0.65f),
+            letterSpacing = 0.8.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+          Spacer(modifier = Modifier.height(2.dp))
+          Text(
+            text = stat.value,
+            style = MaterialTheme.typography.titleSmall,
+            fontSize = 13.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+          )
+        }
       }
     }
   }

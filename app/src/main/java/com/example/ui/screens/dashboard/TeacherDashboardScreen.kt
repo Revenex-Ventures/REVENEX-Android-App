@@ -72,6 +72,11 @@ fun TeacherDashboardScreen(
     listState.scrollToItem(0)
   }
 
+  // Hoisted so the hero intro plays once per VISIT to this tab (cold start or
+  // switching back) but never replays while the hero item is scrolled out of
+  // view and re-created.
+  var heroIntroPlayed by remember { mutableStateOf(false) }
+
   LazyColumn(
     state = listState,
     modifier = Modifier
@@ -87,11 +92,36 @@ fun TeacherDashboardScreen(
           attendanceValue = teacherAttendance,
           label = "Term Attendance",
           avatarLabel = currentUser.name,
+          introHasPlayed = heroIntroPlayed,
+          onIntroPassed = { heroIntroPlayed = true },
           modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
           nameContent = {
             Column {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                  .clip(RoundedCornerShape(Radius.pill))
+                  .background(Color.White.copy(alpha = 0.12f))
+                  .padding(horizontal = 7.dp, vertical = 2.dp)
+              ) {
+                Box(
+                  modifier = Modifier
+                    .size(5.dp)
+                    .background(Color(0xFF10B981), CircleShape)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                  text = "FACULTY PORTAL",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontSize = 9.sp,
+                  color = Color.White.copy(alpha = 0.9f),
+                  letterSpacing = 1.1.sp,
+                  fontWeight = FontWeight.Bold
+                )
+              }
+              Spacer(modifier = Modifier.height(3.dp))
               Text(
                 text = currentUser.name,
                 style = MaterialTheme.typography.titleLarge,
@@ -99,46 +129,51 @@ fun TeacherDashboardScreen(
                 color = Color.White
               )
               val designation = matchedTeacher?.designation ?: currentUser.designation
-              val department = matchedTeacher?.department ?: "Academic Department"
+              Spacer(modifier = Modifier.height(2.dp))
               Text(
-                text = "$designation • $department • Class $mentorClass Mentor",
+                text = "$designation • Class $mentorClass Mentor",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.70f)
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.75f)
               )
             }
           },
           trailingContent = {
             Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = Color.White.copy(alpha = 0.15f)
+              shape = RoundedCornerShape(Radius.pill),
+              color = ScholaTerracotta.copy(alpha = 0.18f),
+              border = androidx.compose.foundation.BorderStroke(0.8.dp, ScholaTerracotta.copy(alpha = 0.4f))
             ) {
-              Text(
-                text = "FACULTY",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-              )
+              Row(
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Icon(
+                  imageVector = Icons.Default.VerifiedUser,
+                  contentDescription = null,
+                  tint = ScholaTerracottaLight,
+                  modifier = Modifier.size(12.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                  text = "MENTOR",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontSize = 9.sp,
+                  fontWeight = FontWeight.Bold,
+                  letterSpacing = 0.8.sp,
+                  color = Color.White
+                )
+              }
             }
           },
           statsContent = {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              Column {
-                Text("MY CLASS", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.70f))
-                Text("$mentorClass (${classStudents.size} Std)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-              }
-              Column {
-                Text("WEEKLY PERIODS", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.70f))
-                Text("${matchedTeacher?.weeklyPeriods ?: 22} Periods", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-              }
-              Column {
-                Text("ATTENDANCE", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.70f))
-                Text("$teacherAttendance%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ScholaTerracottaLight)
-              }
-            }
+            TeacherHeroStatStrip(
+              stats = listOf(
+                TeacherStat("MY CLASS", "$mentorClass (${classStudents.size} Std)", ScholaTerracottaLight, Icons.Default.Groups),
+                TeacherStat("WEEKLY PERIODS", "${matchedTeacher?.weeklyPeriods ?: 22} Periods", Color(0xFF60A5FA), Icons.Default.Schedule),
+                TeacherStat("ATTENDANCE", "$teacherAttendance%", Color(0xFF34D399), Icons.Default.FactCheck)
+              )
+            )
           }
         )
       }
@@ -334,6 +369,73 @@ fun TeacherDashboardScreen(
               }
             }
           }
+        }
+      }
+    }
+  }
+}
+
+
+private data class TeacherStat(
+  val label: String,
+  val value: String,
+  val tint: Color,
+  val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
+@Composable
+private fun TeacherHeroStatStrip(stats: List<TeacherStat>) {
+  Row(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
+  ) {
+    stats.forEach { stat ->
+      Surface(
+        modifier = Modifier.weight(1f),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.08f),
+        border = androidx.compose.foundation.BorderStroke(
+          width = 0.8.dp,
+          brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.06f))
+          )
+        )
+      ) {
+        Column(
+          modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+          horizontalAlignment = Alignment.Start
+        ) {
+          Box(
+            modifier = Modifier
+              .size(24.dp)
+              .background(Color.White.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = stat.icon,
+              contentDescription = null,
+              tint = stat.tint,
+              modifier = Modifier.size(13.dp)
+            )
+          }
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            text = stat.label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 9.sp,
+            color = Color.White.copy(alpha = 0.65f),
+            letterSpacing = 0.8.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+          Spacer(modifier = Modifier.height(2.dp))
+          Text(
+            text = stat.value,
+            style = MaterialTheme.typography.titleSmall,
+            fontSize = 12.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+          )
         }
       }
     }

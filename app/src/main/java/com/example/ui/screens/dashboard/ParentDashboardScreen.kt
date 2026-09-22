@@ -2,6 +2,7 @@ package com.example.ui.screens.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,6 +16,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -109,17 +116,67 @@ fun ParentDashboardScreen(
     // Parent Header & Multi-Child Switcher
     item {
       AnimatedFadeIn(delayMillis = 0) {
-        Card(
+        val parentShape = RoundedCornerShape(Radius.hero)
+        Box(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-          shape = RoundedCornerShape(20.dp),
-          colors = CardDefaults.cardColors(containerColor = ScholaSlateNavyDark)
+            .padding(16.dp)
+            .clip(parentShape)
+            .background(ScholaSlateNavyDark, parentShape)
+            .drawBehind {
+              drawRect(
+                brush = Brush.linearGradient(
+                  colors = listOf(
+                    Color(0xFF261D18),
+                    ScholaSlateNavy,
+                    InkBlack
+                  ),
+                  start = Offset(0f, 0f),
+                  end = Offset(size.width, size.height)
+                )
+              )
+              val gw = size.width
+              val glowCenter = Offset(gw * 0.85f, size.height * 0.20f)
+              val glowRadius = gw * 0.9f
+              drawCircle(
+                brush = Brush.radialGradient(
+                  0f to ScholaTerracotta.copy(alpha = 0.12f),
+                  0.5f to ScholaTerracotta.copy(alpha = 0.03f),
+                  1f to Color.Transparent,
+                  center = glowCenter,
+                  radius = glowRadius
+                ),
+                radius = glowRadius,
+                center = glowCenter
+              )
+              drawRoundRect(
+                brush = Brush.horizontalGradient(
+                  colors = listOf(
+                    ScholaTerracotta,
+                    ScholaTerracottaLight.copy(alpha = 0.6f),
+                    Color.Transparent
+                  )
+                ),
+                topLeft = Offset(0f, 0f),
+                size = Size(gw * 0.75f, 2.5f * density),
+                cornerRadius = CornerRadius(1.5f * density, 1.5f * density)
+              )
+            }
+            .border(
+              width = 1.dp,
+              brush = Brush.verticalGradient(
+                0f to Color.White.copy(alpha = 0.24f),
+                0.5f to Color.White.copy(alpha = 0.08f),
+                1f to Color.White.copy(alpha = 0.14f)
+              ),
+              shape = parentShape
+            )
+            .shadow(16.dp, parentShape, clip = false)
         ) {
           Column(
             modifier = Modifier
               .fillMaxWidth()
-              .padding(18.dp)
+              .padding(Spacing.cardPaddingLarge)
           ) {
             Row(
               modifier = Modifier.fillMaxWidth(),
@@ -127,11 +184,29 @@ fun ParentDashboardScreen(
               verticalAlignment = Alignment.CenterVertically
             ) {
               Column {
-                Text(
-                  text = "Parent Portal",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = Color.White.copy(alpha = 0.70f)
-                )
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(Radius.pill))
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(5.dp)
+                      .background(Color(0xFF10B981), CircleShape)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = "PARENT DESK",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    letterSpacing = 1.1.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                   text = currentUser.name,
                   style = MaterialTheme.typography.titleLarge,
@@ -140,28 +215,45 @@ fun ParentDashboardScreen(
                 )
               }
               Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color.White.copy(alpha = 0.15f)
+                shape = RoundedCornerShape(Radius.pill),
+                color = ScholaTerracotta.copy(alpha = 0.18f),
+                border = androidx.compose.foundation.BorderStroke(0.8.dp, ScholaTerracotta.copy(alpha = 0.4f))
               ) {
-                Text(
-                  text = "GUARDIAN",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                Row(
+                  modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.FamilyRestroom,
+                    contentDescription = null,
+                    tint = ScholaTerracottaLight,
+                    modifier = Modifier.size(13.dp)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = "GUARDIAN",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.8.sp,
+                    color = Color.White
+                  )
+                }
               }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-              text = "Select Ward / Child:",
-              style = MaterialTheme.typography.labelMedium,
-              color = Color.White.copy(alpha = 0.80f)
+              text = "SELECT WARD / SCHOLAR",
+              style = MaterialTheme.typography.labelSmall,
+              fontSize = 9.sp,
+              letterSpacing = 1.0.sp,
+              fontWeight = FontWeight.SemiBold,
+              color = Color.White.copy(alpha = 0.70f)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
               modifier = Modifier.fillMaxWidth(),
@@ -170,11 +262,15 @@ fun ParentDashboardScreen(
               children.forEach { child ->
                 val isSelected = child.id == activeChild.id
                 Surface(
-                  shape = RoundedCornerShape(12.dp),
-                  color = if (isSelected) ScholaTerracotta else Color.White.copy(alpha = 0.12f),
+                  shape = RoundedCornerShape(14.dp),
+                  color = if (isSelected) ScholaTerracotta.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f),
+                  border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = if (isSelected) ScholaTerracotta else Color.White.copy(alpha = 0.14f)
+                  ),
                   modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
                     .clickable { repository.setSelectedStudentId(child.id) }
                     .testTag("child_selector_${child.name.lowercase().replace(" ", "_")}")
                 ) {
@@ -194,7 +290,7 @@ fun ParentDashboardScreen(
                       Text(
                         text = child.name.take(1),
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color.White else ScholaOnyxText
+                        color = Color.White
                       )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -203,17 +299,56 @@ fun ParentDashboardScreen(
                         text = child.name,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) ScholaOnTerracottaContainer else ScholaOnyxText
+                        color = Color.White
                       )
                       Text(
                         text = "Class ${child.fullClass}",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
-                        color = if (isSelected) ScholaOnTerracottaContainer.copy(alpha = 0.8f) else ScholaOnyxMuted
+                        color = if (isSelected) ScholaTerracottaLight else Color.White.copy(alpha = 0.70f)
                       )
                     }
                   }
                 }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Active Child Live Status Pill
+            Surface(
+              shape = RoundedCornerShape(12.dp),
+              color = Color.White.copy(alpha = 0.06f),
+              border = androidx.compose.foundation.BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(6.dp)
+                      .background(if (isPresent) Color(0xFF10B981) else Color(0xFFF59E0B), CircleShape)
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = "Today: $attendanceLabel",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                  )
+                }
+                Text(
+                  text = if (childPendingFee > 0L) "Dues: ₹${childPendingFee / 100}" else "Fees: Cleared",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.Bold,
+                  color = if (childPendingFee > 0L) Color(0xFFFBBF24) else Color(0xFF34D399)
+                )
               }
             }
           }
