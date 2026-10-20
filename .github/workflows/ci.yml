@@ -43,6 +43,8 @@ jobs:
         run: deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts
       - name: Lint Edge Functions
         run: deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments
+      - name: Exercise real Deno entrypoint and server prompt loading
+        run: deno test --allow-read=supabase/functions --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,OPENAI_API_KEY,OPENAI_MODEL,REVENEX_AI_ENABLED --allow-net=127.0.0.1 supabase/tests/assistant-entrypoint.test.mjs
       - name: Schema and row-level security tests
         run: npm test --prefix supabase/tests
       - name: AI and payment handler security tests
@@ -68,6 +70,9 @@ jobs:
           java-version: '21'
           cache: gradle
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - name: Install required Android SDK
         run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
       - name: Configure public Supabase values only
