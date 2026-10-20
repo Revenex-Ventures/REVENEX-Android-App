@@ -81,7 +81,7 @@ jobs:
       - name: Verify server prompt and private configuration stay out of APK
         run: python3 scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
       - name: Upload tested demo APK
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Revenex-demo-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
@@ -89,7 +89,7 @@ jobs:
           retention-days: 14
       - name: Upload verification reports
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-verification-${{ github.sha }}
           path: |
