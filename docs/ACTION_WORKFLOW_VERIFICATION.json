@@ -1,0 +1,39 @@
+{
+  "build": "BUILD SUCCESSFUL in 4m 2s",
+  "android_tests": {
+    "passed": 52,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "database_checks_passed": 92,
+  "edge_handler_tests_passed": 15,
+  "lint": {
+    "errors": 0,
+    "warnings": 67
+  },
+  "apk": "app/build/outputs/apk/debug/Revenex-Supabase-ActionWorkflows-Test.apk",
+  "sha256": "2dcebef8fb0d5bee7f5def667bfa736b6057baa240bf1d29d912d14e7304e22c",
+  "hosted_preflight": {
+    "auth_health": 200,
+    "students_anonymous": 401,
+    "razorpay_orders": 404,
+    "razorpay_function": 404
+  },
+  "user_diagnostic": "Screenshot shows 0 provisioned demo profiles before user ran SQL successfully; post-seed profile count not independently verified.",
+  "limitations": [
+    "Hosted account login and student enrollment not verified with operator credentials",
+    "Migration 6/7 and payment function deployment required; no authenticated CLI deployment access is configured",
+    "Actual Razorpay capture, signed webhook delivery and two-device Realtime not exercised",
+    "Parent/student Auth provisioning and linking remain operator-managed",
+    "No production/live payments, refunds, SMS/email or device push implemented"
+  ],
+  "final_label_build": "assembleDebug passed in 1m18s after replacing only the local preview payment button text with Razorpay Test; full workflow test/lint run preceding this text-only change passed",
+  "visual_checks": [
+    "Android 14 isolated emulator installed and cold-started the workflow build in 6.129s",
+    "Pending fee filter visually inspected",
+    "Clicking preview payment navigated to Supabase Auth instead of a simulated local collection",
+    "Final APK installed, cold-started in 5.790s; two visible Razorpay Test buttons and Pending filter confirmed in screenshot and hierarchy."
+  ],
+  "visual_evidence": "app/build/tmp/workflow-final-fees.png"
+}

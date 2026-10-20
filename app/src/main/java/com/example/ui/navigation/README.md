@@ -23,7 +23,7 @@ Defines the `Screen` sealed class with **21 route destinations**:
 | `FeeManagement` | `fee_management` | Fee ledger + payment |
 | `Academics` | `academics` | Timetable, homework, study materials |
 | `ReportCard` | `report_card/{id}` | Student term report card |
-| `AiAssistant` | `ai_assistant` | Gemini AI assistant |
+| `AiAssistant` | `ai_assistant` | Role-scoped study and ERP guidance |
 | `Communication` | `communication` | Notices and notifications |
 | `Operations` | `operations` | Transport, library, inventory, leave |
 | `Reports` | `reports` | Analytics and reports |

@@ -1,5 +1,8 @@
 package com.example.ui.screens.ai
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,7 +11,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,261 +22,191 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.data.datasource.DataMode
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.theme.*
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class ChatMessage(
   val id: String,
   val sender: String,
   val text: String,
-  val isAi: Boolean,
-  val timestamp: String
+  val isAssistant: Boolean,
+  val timestamp: String,
+  val source: AssistantReplySource? = null
 )
 
 @Composable
-fun AiAssistantScreen(
-  repository: ErpDataRepository,
-  onBack: () -> Unit
-) {
+fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
   val currentUser by repository.currentUser.collectAsState()
   val students by repository.students.collectAsState()
-  val teachers by repository.teachers.collectAsState()
   val feeRecords by repository.feeRecords.collectAsState()
-  val notices by repository.notices.collectAsState()
-
-  var inputText by remember { mutableStateOf("") }
-  var isTyping by remember { mutableStateOf(false) }
-
-  val messages = remember {
+  val dataMode by repository.dataMode.collectAsState()
+  val isDemo = dataMode == DataMode.DEMO
+  val formatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+  var inputText by remember(currentUser.id) { mutableStateOf("") }
+  var isTyping by remember(currentUser.id) { mutableStateOf(false) }
+  val messages = remember(currentUser.id, dataMode) {
     mutableStateListOf(
       ChatMessage(
-        id = "1",
-        sender = "Revenex AI",
-        text = "Hello ${currentUser.name}! I am your Revenex School ERP Intelligent Assistant. You can ask me to analyze attendance trends, check fee dues, summarize class academic performance, or locate staff and bus records.",
-        isAi = true,
-        timestamp = "Just now"
+        id = "welcome_${currentUser.id}", sender = "Revenex Guide",
+        text = "Hello ${currentUser.name}. I can offer general study help, guide you to ERP workflows, and summarize only records linked to your account. I will not make changes or invent school information.",
+        isAssistant = true, timestamp = formatter.format(Date()), source = AssistantReplySource.GENERAL_GUIDANCE
       )
     )
   }
+  val suggestions = when (currentUser.role.name) {
+    "STUDENT", "PARENT" -> listOf("Explain fractions", "Show my attendance", "Check my fee summary", "How do I view notices?")
+    else -> listOf("Explain photosynthesis", "How do I use attendance?", "Where are notices?", "How do I find a student?")
+  }
 
-  val promptChips = listOf(
-    "Summarize Class 10-A attendance",
-    "List students with pending fees",
-    "Who are top rankers in Class 10?",
-    "Upcoming school events & holidays",
-    "Show physics lab & IT inventory"
-  )
-
-  fun handleSend(query: String) {
-    if (query.isBlank()) return
-    val userMsg = ChatMessage(
-      id = System.currentTimeMillis().toString(),
-      sender = currentUser.name,
-      text = query.trim(),
-      isAi = false,
-      timestamp = "Just now"
-    )
-    messages.add(userMsg)
+  fun send(query: String) {
+    val trimmed = query.trim()
+    if (trimmed.isBlank() || isTyping) return
+    messages += ChatMessage("user_${System.nanoTime()}", currentUser.name, trimmed, false, formatter.format(Date()))
     inputText = ""
     isTyping = true
+  }
 
-    // Generate accurate contextual ERP response
-    val aiResponseText = when {
-      query.contains("attendance", ignoreCase = true) -> {
-        "📊 **Attendance Analysis for Today:**\n• Overall School Attendance: **96.4%**\n• Class 10-A: 5 Present, 1 Absent (Vikram Reddy on approved medical leave).\n• Class 8-A has the highest attendance at **97.4%** today.\n• 100% of teaching faculty are present on duty."
+  LaunchedEffect(isTyping, messages.size, currentUser.id, dataMode) {
+    if (!isTyping) return@LaunchedEffect
+    delay(180)
+    val query = messages.lastOrNull { !it.isAssistant }?.text ?: return@LaunchedEffect
+    val reply = if (dataMode==DataMode.SUPABASE_DEMO) {
+      com.example.data.datasource.SupabaseAssistantChat.reply(query,messages.dropLast(1).map { (if(it.isAssistant) "assistant" else "user") to it.text }).let { reply ->
+        AssistantReply(reply.answer,when(reply.source) {
+          "DEMO_ERP" -> AssistantReplySource.SERVER_DEMO
+          "LIVE_ERP" -> AssistantReplySource.SERVER_ERP
+          "GENERAL_KNOWLEDGE" -> AssistantReplySource.SERVER_AI
+          else -> AssistantReplySource.UNAVAILABLE
+        })
       }
-      query.contains("fee", ignoreCase = true) || query.contains("pending", ignoreCase = true) -> {
-        val totalPending = feeRecords.sumOf { it.pendingAmount }
-        val overdueCount = feeRecords.count { it.status == com.example.data.model.FeeStatus.OVERDUE }
-        "💳 **Fee Accounts Summary:**\n• Total Outstanding Dues: **₹${(totalPending / 1000).toInt()},000**\n• Overdue Accounts: $overdueCount student(s).\n• Vikram Reddy (10-A) has ₹28,000 overdue.\n• Aarav Patel (10-A) has ₹14,500 Term 2 dues payable by 15th Sep."
-      }
-      query.contains("rank", ignoreCase = true) || query.contains("top", ignoreCase = true) -> {
-        "🏆 **Top Academic Performers (Class 10-A):**\n1. **Ananya Sharma** - GPA 9.8 (Rank #1)\n2. **Priya Verma** - GPA 9.6 (Rank #2)\n3. **Aarav Patel** - GPA 9.4 (Rank #3)\n4. **Sneha Nair** - GPA 9.5 (Class 10-B Rank #1)"
-      }
-      query.contains("event", ignoreCase = true) || query.contains("holiday", ignoreCase = true) || query.contains("circular", ignoreCase = true) -> {
-        "📅 **Upcoming School Calendar & Circulars:**\n• **1st Sep 2026:** Ganesh Chaturthi (School Holiday)\n• **5th Sep 2026:** Term 1 Parent-Teacher Meeting (PTM) & Teachers' Day\n• **18th Sep 2026:** Annual Science & Robotics Expo 2026\n• **21st Sep 2026:** Pre-Board Examinations commence for Grades 10 & 12."
-      }
-      query.contains("inventory", ignoreCase = true) || query.contains("lab", ignoreCase = true) -> {
-        "🔬 **School Infrastructure & Assets:**\n• 24 BenQ 75\" 4K Interactive Smart Panels (Operational)\n• 60 Lenovo Core-i7 Computer Lab Workstations (Lab 1)\n• 35 Olympus Binocular Lab Microscopes in Bio Wing\n• All assets verified in August 2026 audit."
-      }
-      else -> {
-        "I have processed your query against the Revenex Central Database. There are currently ${students.size} active students, ${teachers.size} faculty members, and 3 GPS bus routes operating normally. Would you like a detailed export or specific student profile?"
-      }
-    }
-
+    } else AssistantReplyEngine.reply(query, AssistantContext(currentUser, students, feeRecords, isDemo))
+    messages += ChatMessage("assistant_${System.nanoTime()}", "Revenex Guide", reply.text, true, formatter.format(Date()), reply.source)
     isTyping = false
-    messages.add(
-      ChatMessage(
-        id = (System.currentTimeMillis() + 1).toString(),
-        sender = "Revenex AI",
-        text = aiResponseText,
-        isAi = true,
-        timestamp = "Just now"
-      )
-    )
   }
 
   Scaffold(
     topBar = {
-      Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp
-      ) {
+      Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e1) {
         Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+          modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(Spacing.s2),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+          Box(Modifier.size(38.dp).clip(CircleShape).background(ScholaSlateContainer), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.AutoAwesome, null, tint = ScholaSlateNavy)
           }
-          Box(
-            modifier = Modifier
-              .size(36.dp)
-              .background(RevenexPrimaryContainer, CircleShape),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = RevenexBlue, modifier = Modifier.size(20.dp))
-          }
-          Spacer(modifier = Modifier.width(10.dp))
-          Column(modifier = Modifier.weight(1f)) {
+          Spacer(Modifier.width(Spacing.s3))
+          Column(Modifier.weight(1f)) {
+            Text("Revenex Assistant", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-              text = "Revenex AI ERP Assistant",
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Instant School Intelligence & Insights",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              if (isDemo) "Guided assistant • demo records" else "Guided assistant • live AI unavailable",
+              style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
           }
         }
       }
     },
     bottomBar = {
-      Surface(
-        tonalElevation = 4.dp,
-        color = MaterialTheme.colorScheme.surface
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-          // Smart Prompt Chips
-          LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(bottom = 6.dp)
-          ) {
-            items(promptChips) { chip ->
-              SuggestionChip(
-                onClick = { handleSend(chip) },
-                label = { Text(chip, fontSize = 11.sp) }
-              )
+      Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e3) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = Spacing.md12, vertical = Spacing.s2)) {
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2), contentPadding = PaddingValues(bottom = Spacing.s2)) {
+            items(suggestions) { suggestion ->
+              AssistChip(onClick = { send(suggestion) }, label = { Text(suggestion, maxLines = 1, overflow = TextOverflow.Ellipsis) })
             }
           }
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
-              value = inputText,
-              onValueChange = { inputText = it },
-              placeholder = { Text("Ask anything about students, fees, attendance...") },
-              modifier = Modifier
-                .weight(1f)
-                .testTag("ai_assistant_input"),
-              shape = RoundedCornerShape(24.dp),
-              singleLine = true
+              value = inputText, onValueChange = { inputText = it }, enabled = !isTyping,
+              placeholder = { Text("Ask for study help or ERP guidance") },
+              modifier = Modifier.weight(1f).testTag("ai_assistant_input"), shape = RoundedCornerShape(Radius.input), singleLine = true
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(Modifier.width(Spacing.s2))
             IconButton(
-              onClick = { handleSend(inputText) },
-              modifier = Modifier
-                .size(46.dp)
-                .background(ScholaSlateNavyDark, CircleShape)
-                .testTag("ai_assistant_send_btn")
-            ) {
-              Icon(Icons.Default.Send, contentDescription = "Send", tint = ScholaTerracottaLight, modifier = Modifier.size(20.dp))
-            }
+              onClick = { send(inputText) }, enabled = inputText.isNotBlank() && !isTyping,
+              modifier = Modifier.size(48.dp).clip(CircleShape).background(RoleAccent.of(currentUser.role)).testTag("ai_assistant_send_btn")
+            ) { Icon(Icons.Default.Send, "Send", tint = Color.White) }
           }
         }
       }
     }
-  ) { paddingValues ->
+  ) { padding ->
     LazyColumn(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .testTag("ai_messages_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp)
+      modifier = Modifier.fillMaxSize().padding(padding).testTag("ai_messages_list"),
+      contentPadding = PaddingValues(Spacing.lg16), verticalArrangement = Arrangement.spacedBy(Spacing.md12)
     ) {
-      items(messages, key = { it.id }) { msg ->
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = if (msg.isAi) Arrangement.Start else Arrangement.End
-        ) {
-          if (msg.isAi) {
-            Box(
-              modifier = Modifier
-                .size(32.dp)
-                .background(RevenexPrimaryContainer, CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = RevenexBlue, modifier = Modifier.size(16.dp))
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-          }
-
-          Surface(
-            shape = RoundedCornerShape(
-              topStart = 16.dp,
-              topEnd = 16.dp,
-              bottomStart = if (msg.isAi) 4.dp else 16.dp,
-              bottomEnd = if (msg.isAi) 16.dp else 4.dp
-            ),
-            color = if (msg.isAi) MaterialTheme.colorScheme.surfaceVariant else RevenexBlue,
-            modifier = Modifier.widthIn(max = 300.dp)
-          ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-              Text(
-                text = msg.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (msg.isAi) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
-                lineHeight = 20.sp
-              )
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                text = msg.timestamp,
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
-                color = if (msg.isAi) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.align(Alignment.End)
-              )
-            }
-          }
-        }
+      item { AssistantModeBanner(isDemo) }
+      items(messages, key = { it.id }) { message ->
+        AnimatedVisibility(visible = true, enter = fadeIn(), exit = fadeOut()) { MessageBubble(message) }
       }
-
-      if (isTyping) {
-        item {
+      item {
+        AnimatedVisibility(visible = isTyping, enter = fadeIn(), exit = fadeOut()) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Revenex AI is querying school records...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(Spacing.s2))
+            Text("Preparing a safe response…", style = MaterialTheme.typography.bodySmall)
           }
         }
       }
     }
   }
+}
+
+@Composable
+private fun AssistantModeBanner(isDemo: Boolean) {
+  val title = if (isDemo) "Demo data mode" else "Live AI unavailable"
+  val detail = if (isDemo) "Any personal summary uses sample data and is not a real school record."
+    else "A secure model provider has not been configured. School facts will not be guessed."
+  Card(colors = CardDefaults.cardColors(containerColor = if (isDemo) StatusInfoBg else StatusNeutralBg)) {
+    Column(Modifier.padding(Spacing.md12)) {
+      Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = if (isDemo) StatusInfoText else StatusNeutralText)
+      Spacer(Modifier.height(Spacing.xs4))
+      Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}
+
+@Composable
+private fun MessageBubble(message: ChatMessage) {
+  Row(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = if (message.isAssistant) Arrangement.Start else Arrangement.End,
+    verticalAlignment = Alignment.Top
+  ) {
+    if (message.isAssistant) {
+      Box(Modifier.size(30.dp).clip(CircleShape).background(ScholaSlateContainer), contentAlignment = Alignment.Center) {
+        Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp), tint = ScholaSlateNavy)
+      }
+      Spacer(Modifier.width(Spacing.s2))
+    }
+    Surface(
+      color = if (message.isAssistant) MaterialTheme.colorScheme.surfaceVariant else ScholaSlateNavy,
+      shape = RoundedCornerShape(Radius.lg), modifier = Modifier.widthIn(max = 340.dp)
+    ) {
+      Column(Modifier.padding(Spacing.md12)) {
+        Text(message.text, style = MaterialTheme.typography.bodyMedium, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else Color.White)
+        Spacer(Modifier.height(Spacing.xs4))
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2), verticalAlignment = Alignment.CenterVertically) {
+          message.source?.let { Text(it.label(), style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) StatusNeutralText else Color.White.copy(alpha = .72f)) }
+          Text(message.timestamp, style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) StatusNeutralText else Color.White.copy(alpha = .72f))
+        }
+      }
+    }
+  }
+}
+
+private fun AssistantReplySource.label(): String = when (this) {
+  AssistantReplySource.GENERAL_GUIDANCE -> "Study guidance"
+  AssistantReplySource.LOADED_RECORDS -> "Loaded records"
+  AssistantReplySource.ERP_GUIDANCE -> "ERP guidance"
+  AssistantReplySource.UNAVAILABLE -> "Unavailable"
+  AssistantReplySource.SERVER_AI -> "AI � general knowledge"
+  AssistantReplySource.SERVER_ERP -> "AI � ERP tools used"
+  AssistantReplySource.SERVER_DEMO -> "AI � Supabase demo"
 }

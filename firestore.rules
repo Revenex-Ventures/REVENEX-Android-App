@@ -51,8 +51,14 @@ service cloud.firestore {
     }
 
     // A staff write that must target this tenant's school and session.
-    function scopedStaffWrite() {
-      return isStaff() && sameSession();
+    function scopedStaffWrite(schoolId) {
+      return isStaff() && token().schoolId == schoolId && sameSession();
+    }
+
+    function scopedStaffDelete(schoolId) {
+      return isStaff() && token().schoolId == schoolId
+        && resource.data.schoolId == schoolId
+        && resource.data.sessionId == token().sessionId;
     }
 
     // A user is linked to a student if it is them, or they are a parent whose
@@ -75,25 +81,24 @@ service cloud.firestore {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
         // Principal/ADMIN may admin users; otherwise a user can only update
         // their own doc and never self-elevate role or schoolId.
-        allow update: if isRole('PRINCIPAL') || isRole('ADMIN')
+        allow update: if isAuthenticated() && token().schoolId == schoolId && (isRole('PRINCIPAL') || isRole('ADMIN')
           || (request.auth.uid == userId
-              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'schoolId']));
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'schoolId', 'sessionId', 'studentIds', 'employeeId'])));
       }
 
       // ----- Students directory -----
       // Students canNOT read teacher data (audit F#2). Staff and linked
       // parents/self may read students. Writes are backend-only.
       match /students/{studentId} {
-        allow read: if isStaff()
-          || relatedTo(studentId)
-          || request.auth.uid == studentId;
+        allow read: if isAuthenticated() && token().schoolId == schoolId
+          && (isStaff() || relatedTo(studentId));
       }
 
       // ----- Teachers / faculty directory -----
       // Only staff can read; students are explicitly denied (audit F#2).
       // Writes are backend-only.
       match /teachers/{teacherId} {
-        allow read: if isStaff();
+        allow read: if isStaff() && token().schoolId == schoolId;
       }
 
       // ----- Backend-only sensitive: fees, payments, attendance, marks,
@@ -120,7 +125,7 @@ service cloud.firestore {
           && (isStaff() || relatedTo(resource.data.studentId));
       }
       match /audit_log/{logId} {
-        allow read: if isRole('PRINCIPAL') || isRole('ADMIN');
+        allow read: if isAuthenticated() && token().schoolId == schoolId && (isRole('PRINCIPAL') || isRole('ADMIN'));
       }
 
       // ----- Notifications: backend-only writes ----------------
@@ -132,25 +137,28 @@ service cloud.firestore {
       // Staff writes must be session-scoped within this school.
       match /notices/{noticeId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete:
-          if scopedStaffWrite()
-          && resource == null || scopedStaffWrite() && resource.data.schoolId == schoolId;
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
       match /assignments/{assignmentId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
       match /study_materials/{materialId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
       match /exams/{examId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
       match /timetable/{slotId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
 
       // ----- Parents can file complaints / send messages (scoped) -----
@@ -158,7 +166,7 @@ service cloud.firestore {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
         allow create: if (isRole('PARENT') || isRole('STUDENT'))
                        && token().schoolId == schoolId;
-        allow update: if isStaff();
+        allow update: if isStaff() && token().schoolId == schoolId;
       }
       match /messages/{messageId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
@@ -173,21 +181,25 @@ service cloud.firestore {
       // ----- Classes (staff write, session scoped) -----
       match /classes/{classId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
 
       // ----- Transport / library / inventory (staff) -----
       match /transport/{routeId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
       match /library/{bookId} {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
       match /inventory/{assetId} {
         allow read: if isStaff() && token().schoolId == schoolId;
-        allow create, update, delete: if scopedStaffWrite();
+        allow create, update: if scopedStaffWrite(schoolId);
+        allow delete: if scopedStaffDelete(schoolId);
       }
 
       // ----- Leaves -----
@@ -195,7 +207,7 @@ service cloud.firestore {
         allow read: if isAuthenticated() && token().schoolId == schoolId;
         allow create: if (isStaff() || isRole('STUDENT'))
                       && token().schoolId == schoolId;
-        allow update, delete: if isStaff();
+        allow update, delete: if isStaff() && token().schoolId == schoolId;
       }
     }
 

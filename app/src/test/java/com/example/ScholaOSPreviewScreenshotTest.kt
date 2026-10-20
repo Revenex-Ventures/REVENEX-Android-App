@@ -35,18 +35,17 @@ class ScholaOSPreviewScreenshotTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  private val artifactDir = "C:/Users/Prasanna/.gemini/antigravity-ide/brain/4f05eed0-c80d-4122-99f1-ba7d0cf4bc42/screenshots"
+  private val artifactDir = "build/reports/screenshots"
 
   private fun saveScreenshot(name: String) {
     val dir = File(artifactDir)
     if (!dir.exists()) dir.mkdirs()
     val path = "$artifactDir/$name.png"
     composeTestRule.onRoot().captureRoboImage(filePath = path)
-    composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/$name.png")
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_01_principal_dashboard_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -76,7 +75,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_02_scholars_directory_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -104,7 +103,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_03_student_360_detail_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -133,7 +132,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_04_attendance_matrix_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -160,7 +159,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_05_fee_management_ledger_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -187,7 +186,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_06_academics_timetable_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -211,7 +210,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_07_audit_trail_notices_mobile() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -238,7 +237,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
   fun preview_08_command_palette_modal() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -264,7 +263,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.PixelTablet, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.PixelTablet, sdk = [34])
   fun preview_09_tablet_executive_dashboard() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {
@@ -294,7 +293,7 @@ class ScholaOSPreviewScreenshotTest {
   }
 
   @Test
-  @Config(qualifiers = RobolectricDeviceQualifiers.PixelTablet, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.PixelTablet, sdk = [34])
   fun preview_10_tablet_scholars_split_pane() {
     val repository = ErpDataRepository.getInstance()
     composeTestRule.setContent {

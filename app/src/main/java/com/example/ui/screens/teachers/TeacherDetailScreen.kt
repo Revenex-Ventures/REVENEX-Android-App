@@ -36,7 +36,14 @@ fun TeacherDetailScreen(
   val timetable by repository.timetable.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
 
-  val teacher = teachers.firstOrNull { it.id == teacherId } ?: teachers.first()
+  val teacher = teachers.firstOrNull { it.id == teacherId }
+  if (teacher == null) {
+    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(Spacing.s4)) {
+      TextButton(onClick = onBack) { Text("Back") }
+      EmptyStateView(title = "Teacher unavailable", message = "This record is not loaded or your account cannot access it.")
+    }
+    return
+  }
   val teacherClasses = timetable.filter { it.teacherName.contains(teacher.name.split(" ").lastOrNull() ?: "") }
 
   Scaffold(
@@ -59,7 +66,7 @@ fun TeacherDetailScreen(
         .padding(paddingValues)
         .padding(horizontal = Spacing.s4, vertical = Spacing.s2),
       verticalArrangement = Arrangement.spacedBy(Spacing.s3),
-      contentPadding = PaddingValues(bottom = 80.dp)
+      contentPadding = PaddingValues(bottom = Spacing.xl24)
     ) {
       // 1. HERO IDENTITY SURFACE (Dark Onyx, 22dp corners)
       item {
@@ -93,7 +100,7 @@ fun TeacherDetailScreen(
                 text = "Emp ID: ${teacher.employeeId} • ${teacher.qualification}",
                 style = MaterialTheme.typography.labelSmall,
                 color = ScholaGold,
-                fontSize = 11.sp
+                fontSize = 12.sp
               )
             }
           }

@@ -56,15 +56,16 @@ fun OperationsHubScreen(
   )
 
   val allRoles = UserRole.values().toSet()
-  val adminOnly = setOf(UserRole.PRINCIPAL)
-  val staffOnly = setOf(UserRole.PRINCIPAL, UserRole.TEACHER)
-  val noStudents = setOf(UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.PARENT)
+  val adminOnly = setOf(UserRole.PRINCIPAL, UserRole.ADMIN)
+  val staffOnly = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
+  val noStudents = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER, UserRole.PARENT)
 
   val modules = listOf(
+    HubModule("My faculty profile", "Personal and professional details", Icons.Default.Person, ScholaSlateNavy, ScholaSlateContainer, Screen.TeacherProfile.route, setOf(UserRole.TEACHER)),
     HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, ScholaSlateNavy, ScholaSlateContainer, Screen.Students.route, adminOnly),
     HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, ScholaSlateNavy, ScholaSlateContainer, Screen.Teachers.route, adminOnly),
     HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, ScholaSlateNavy, ScholaSlateContainer, Screen.Attendance.route, allRoles),
-    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, ScholaSlateNavy, ScholaSlateContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.PARENT, UserRole.STUDENT)),
+    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, ScholaSlateNavy, ScholaSlateContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.PARENT, UserRole.STUDENT)),
     HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, ScholaSlateNavy, ScholaSlateContainer, Screen.Leaves.route, noStudents),
     HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, ScholaSlateNavy, ScholaSlateContainer, Screen.Transport.route, allRoles),
     HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, ScholaSlateNavy, ScholaSlateContainer, Screen.Library.route, allRoles),
@@ -76,17 +77,18 @@ fun OperationsHubScreen(
     HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, ScholaTerracotta, ScholaTerracottaContainer, Screen.AiAssistant.route, allRoles)
   ).filter { it.allowedRoles.contains(currentUser.role) }
 
+  val moduleColumns = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840) 3 else if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 2 else 1
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
       .testTag("operations_hub_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(14.dp)
   ) {
     item {
       Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = RevenexNavy)
       ) {
         Column(
@@ -95,13 +97,13 @@ fun OperationsHubScreen(
             .padding(18.dp)
         ) {
           Text(
-            text = "Revenex ERP Unified Operations",
+            text = "School workspaces",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = Color.White
           )
           Text(
-            text = "Centralized School Management Modules & Workflows",
+            text = "Your role’s tools, grouped in one place",
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.8f)
           )
@@ -111,13 +113,13 @@ fun OperationsHubScreen(
 
     item {
       Text(
-        text = "All Operational Modules",
+        text = "Available modules",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold
       )
     }
 
-    items(modules.chunked(2)) { pair ->
+    items(modules.chunked(moduleColumns)) { pair ->
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -162,13 +164,13 @@ fun OperationsHubScreen(
                 text = mod.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 maxLines = 2
               )
             }
           }
         }
-        if (pair.size == 1) {
+        if (pair.size < moduleColumns) {
           Spacer(modifier = Modifier.weight(1f))
         }
       }
@@ -205,7 +207,7 @@ fun LeaveManagementScreen(
         .fillMaxSize()
         .padding(paddingValues)
         .testTag("leave_management_screen"),
-      contentPadding = PaddingValues(bottom = 100.dp)
+      contentPadding = PaddingValues(bottom = Spacing.xl24)
     ) {
       item {
         TabRow(
@@ -298,7 +300,7 @@ fun LeaveManagementScreen(
                 }
               }
 
-              if (leave.status == LeaveStatus.PENDING && currentUser.role == UserRole.PRINCIPAL) {
+              if (leave.status == LeaveStatus.PENDING && (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN)) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(
                   modifier = Modifier.fillMaxWidth(),
@@ -337,13 +339,13 @@ fun TransportScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("transport_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
     item {
       Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = RevenexNavy)
       ) {
         Column(
@@ -358,13 +360,13 @@ fun TransportScreen(
           ) {
             Column {
               Text(
-                text = "GPS Fleet & Transport",
+                text = "School Transport",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
               )
               Text(
-                text = "3 Active Bus Routes • Live GPS Telemetry Enabled",
+                text = "${routes.size} routes • Scheduled stops and driver contacts",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f)
               )
@@ -379,7 +381,7 @@ fun TransportScreen(
               ) {
                 Box(modifier = Modifier.size(8.dp).background(Color.White, CircleShape))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("LIVE GPS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                Text("ROUTES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
               }
             }
           }
@@ -471,7 +473,7 @@ fun LibraryScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("library_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(10.dp)
   ) {
     items(books, key = { it.id }) { book ->
@@ -517,7 +519,7 @@ fun LibraryScreen(
               style = MaterialTheme.typography.labelSmall,
               color = if (book.availableCopies > 0) StatusSuccessText else StatusErrorText,
               fontWeight = FontWeight.Bold,
-              fontSize = 11.sp
+              fontSize = 12.sp
             )
           }
 
@@ -552,7 +554,7 @@ fun InventoryScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("inventory_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(10.dp)
   ) {
     items(inventory, key = { it.id }) { item ->

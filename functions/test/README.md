@@ -28,8 +28,13 @@ Run with:
 node functions/test/run-rules-tests.js
 ```
 
-Or via the npm test script:
+Run the emulator suites or the isolated HTTP authorization tests:
 
 ```bash
-cd functions && npm test
+cd functions
+npm test
+npm run test:rules
+npm run test:storage-rules
 ```
+
+`npm test` uses Node's test runner for verified-token/role/tenant middleware behavior. The two rules scripts launch local emulators under the `demo-revenex` project and exercise allowed and denied access. They do not deploy rules or access production school data.

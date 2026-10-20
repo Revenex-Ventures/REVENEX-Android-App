@@ -27,6 +27,10 @@ service firebase.storage {
         && request.auth.token.studentIds != null
         && studentUid in request.auth.token.studentIds;
     }
+    function isStudentSelf(studentId) {
+      return roleIs('STUDENT') && (request.auth.uid == studentId
+        || (request.auth.token.studentIds != null && studentId in request.auth.token.studentIds));
+    }
     function sameSchool(schoolId) {
       return isSignedIn() && request.auth.token.schoolId == schoolId;
     }
@@ -43,18 +47,18 @@ service firebase.storage {
     // ---- Student documents (Aadhaar, TC, birth certificate, ID photos) ------
     match /schools/{schoolId}/students/{studentUid}/{allPaths=**} {
       allow read: if sameSchool(schoolId)
-                    && (isStaff() || request.auth.uid == studentUid || isLinked(studentUid));
-      allow write: if sameSchool(schoolId) && isStaff() && isValidDocument();
+                    && (isStaff() || isStudentSelf(studentUid) || isLinked(studentUid));
+      allow create, update: if sameSchool(schoolId) && isStaff() && isValidDocument();
       allow delete: if sameSchool(schoolId) && isSchoolAdmin();
     }
 
     // ---- Everything else under a school (materials, assignments, exports) ----
-    match /schools/{schoolId}/{allPaths=**} {
-      allow read: if sameSchool(schoolId);
-      allow write: if sameSchool(schoolId)
+    match /schools/{schoolId}/{category}/{allPaths=**} {
+      allow read: if category != 'students' && sameSchool(schoolId);
+      allow create, update: if category != 'students' && sameSchool(schoolId)
                     && (isTeacher() || isSchoolAdmin())
                     && isValidDocument();
-      allow delete: if sameSchool(schoolId) && (isTeacher() || isSchoolAdmin());
+      allow delete: if category != 'students' && sameSchool(schoolId) && (isTeacher() || isSchoolAdmin());
     }
 
     // ---- Everything outside /schools/{schoolId} -> DEFAULT DENY --------------

@@ -39,14 +39,14 @@ fun ReportsAnalyticsScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("reports_analytics_screen"),
-    contentPadding = PaddingValues(bottom = 100.dp)
+    contentPadding = PaddingValues(bottom = Spacing.xl24)
   ) {
     item {
       Card(
         modifier = Modifier
           .fillMaxWidth()
           .padding(16.dp),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = RevenexNavy)
       ) {
         Column(
@@ -61,22 +61,23 @@ fun ReportsAnalyticsScreen(
           ) {
             Column {
               Text(
-                text = "Executive ERP Analytics",
+                text = "School reports",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
               )
               Text(
-                text = "Term 1 Institutional Performance Report",
+                text = "Operational totals with illustrative demo charts",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f)
               )
             }
             IconButton(
-              onClick = { /* Export PDF */ },
+              enabled = false,
+              onClick = { /* Existing export is unavailable. */ },
               modifier = Modifier.background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
             ) {
-              Icon(Icons.Default.PictureAsPdf, contentDescription = "Export Report", tint = Color.White)
+              Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF export unavailable", tint = Color.White)
             }
           }
         }
@@ -93,19 +94,19 @@ fun ReportsAnalyticsScreen(
       ) {
         StatCard(
           title = "Fee Realization",
-          value = "${((totalCollected / totalDemanded) * 100).toInt()}%",
-          sublabel = "₹${(totalCollected / 1000).toInt()}k Collected",
+          value = if (totalDemanded > 0L) "${(totalCollected.toDouble() * 100 / totalDemanded).toInt()}%" else "—",
+          sublabel = "₹${totalCollected / 100000L}k Collected",
           icon = Icons.Default.AccountBalanceWallet,
           iconTint = ScholaSlateNavy,
           iconBackground = ScholaSlateContainer,
-          trendText = "+8.4% YoY",
+          trendText = "Current fee records",
           isPositiveTrend = true,
           modifier = Modifier.weight(1f)
         )
         StatCard(
-          title = "Average Attendance",
+          title = "Sample Attendance",
           value = "95.6%",
-          sublabel = "Across 10 Classes",
+          sublabel = "Illustrative demo figure",
           icon = Icons.Default.FactCheck,
           iconTint = RevenexBlue,
           iconBackground = RevenexPrimaryContainer,
@@ -126,7 +127,7 @@ fun ReportsAnalyticsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
         SimpleBarChart(
-          title = "Average Subject Scores (Term 1 Class 10)",
+          title = "Sample Subject Scores (Illustrative)",
           data = listOf(
             "Math" to 92.4f,
             "Physics" to 88.6f,
@@ -139,7 +140,7 @@ fun ReportsAnalyticsScreen(
         )
 
         SimpleBarChart(
-          title = "Grade-wise Fee Realization Ratio",
+          title = "Sample Grade Fee Ratios (Illustrative)",
           data = listOf(
             "G-10" to 84.0f,
             "G-9" to 92.5f,
@@ -165,7 +166,7 @@ fun ReportsAnalyticsScreen(
       ) {
         Column(modifier = Modifier.padding(16.dp)) {
           Text(
-            text = "Revenex ERP Automated Audit Findings",
+            text = "Illustrative Demo Summary — Not Verified Findings",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
           )

@@ -496,7 +496,7 @@ class LocalDemoDataSource : ErpDataSource {
     targetRole: UserRole?
   ) {
     val item = ErpNotification(
-      id = "notif_${System.currentTimeMillis()}",
+      id = "notif_${UUID.randomUUID()}",
       title = title,
       message = message,
       category = category,

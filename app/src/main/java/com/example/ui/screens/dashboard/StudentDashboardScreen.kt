@@ -54,11 +54,38 @@ fun StudentDashboardScreen(
   val assignments by repository.assignments.collectAsState()
   val timetable by repository.timetable.collectAsState()
   val selectedStudentId by repository.selectedStudentId.collectAsState()
+  val cloudDemo = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
 
   val currentStudent = remember(students, selectedStudentId) {
-    students.firstOrNull { it.id == selectedStudentId.ifBlank { "stu_1001" } }
-      ?: students.firstOrNull()
-  } ?: return
+    if (selectedStudentId.isNotBlank()) {
+      students.firstOrNull { it.id == selectedStudentId }
+    } else {
+      students.firstOrNull()
+    }
+  }
+
+  if (currentStudent == null) {
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(Spacing.s4),
+      contentAlignment = Alignment.Center
+    ) {
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Default.School, contentDescription = null, tint = ScholaTextSecondary, modifier = Modifier.size(48.dp))
+        Spacer(modifier = Modifier.height(Spacing.s4))
+        Text("No Student Profile Found", style = MaterialTheme.typography.titleMedium, color = ScholaTextPrimary)
+        Spacer(modifier = Modifier.height(Spacing.s2))
+        Text(
+          "Your account is not linked to an active student record. Enrollment is managed by the school administrator.",
+          style = MaterialTheme.typography.bodySmall,
+          color = ScholaTextSecondary,
+          textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+      }
+    }
+    return
+  }
 
   val todayDayOfWeek = remember {
     SimpleDateFormat("EEEE", Locale.US).format(Date())
@@ -162,7 +189,7 @@ fun StudentDashboardScreen(
               Text(
                 text = "SCHOLAR DESK",
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
+                fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.9f),
                 letterSpacing = 1.1.sp,
                 fontWeight = FontWeight.Bold
@@ -184,19 +211,19 @@ fun StudentDashboardScreen(
               Text(
                 text = "Adm. #${currentStudent.admissionNumber}",
                 style = MaterialTheme.typography.bodySmall,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.75f)
               )
               Text(
                 text = "•",
                 style = MaterialTheme.typography.bodySmall,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.4f)
               )
               Text(
                 text = "Roll #${currentStudent.rollNumber}",
                 style = MaterialTheme.typography.bodySmall,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = ScholaTerracottaLight,
                 fontWeight = FontWeight.SemiBold
               )
@@ -223,7 +250,7 @@ fun StudentDashboardScreen(
               Text(
                 text = "ACTIVE",
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp,
                 color = Color.White
@@ -235,8 +262,8 @@ fun StudentDashboardScreen(
           HeroStatStrip(
             stats = listOf(
               HeroStat("CLASS", currentStudent.fullClass, ScholaTerracottaLight, Icons.Default.School, "SEC ${currentStudent.division}"),
-              HeroStat("CLASS RANK", "#${currentStudent.rank}", Color(0xFFF59E0B), Icons.Default.EmojiEvents, "TOP 5%"),
-              HeroStat("CUMULATIVE GPA", "${currentStudent.gpa} / 10", Color(0xFF34D399), Icons.Default.TrendingUp, "EXCELLENT")
+              HeroStat("CLASS RANK", if(cloudDemo) "Not ranked" else "#${currentStudent.rank}", Color(0xFFF59E0B), Icons.Default.EmojiEvents, if(cloudDemo) "Not calculated" else "TOP 5%"),
+              HeroStat("CUMULATIVE GPA", if(cloudDemo) "Unavailable" else "${currentStudent.gpa} / 10", Color(0xFF34D399), Icons.Default.TrendingUp, if(cloudDemo) "No GPA scheme configured" else "EXCELLENT")
             )
           )
         }
@@ -380,79 +407,12 @@ private data class HeroStat(
 
 @Composable
 private fun HeroStatStrip(stats: List<HeroStat>) {
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp)
-  ) {
+  Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
     stats.forEach { stat ->
-      Surface(
-        modifier = Modifier.weight(1f),
-        shape = RoundedCornerShape(14.dp),
-        color = Color.White.copy(alpha = 0.08f),
-        border = androidx.compose.foundation.BorderStroke(
-          width = 0.8.dp,
-          brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.06f))
-          )
-        )
-      ) {
-        Column(
-          modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-          horizontalAlignment = Alignment.Start
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Box(
-              modifier = Modifier
-                .size(24.dp)
-                .background(Color.White.copy(alpha = 0.12f), CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = stat.icon,
-                contentDescription = null,
-                tint = stat.tint,
-                modifier = Modifier.size(13.dp)
-              )
-            }
-            if (stat.badgeText != null) {
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = stat.tint.copy(alpha = 0.16f)
-              ) {
-                Text(
-                  text = stat.badgeText,
-                  style = MaterialTheme.typography.labelSmall,
-                  fontSize = 8.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = stat.tint,
-                  modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                )
-              }
-            }
-          }
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            text = stat.label,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 9.sp,
-            color = Color.White.copy(alpha = 0.65f),
-            letterSpacing = 0.8.sp,
-            fontWeight = FontWeight.SemiBold
-          )
-          Spacer(modifier = Modifier.height(2.dp))
-          Text(
-            text = stat.value,
-            style = MaterialTheme.typography.titleSmall,
-            fontSize = 13.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-          )
-        }
+      Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() }, color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall)
+        Text(stat.value, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        stat.badgeText?.let { Text(it, color = ScholaTerracottaLight, style = MaterialTheme.typography.labelSmall) }
       }
     }
   }

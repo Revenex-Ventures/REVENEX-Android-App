@@ -37,7 +37,14 @@ fun StudentDetailScreen(
   onPayFee: (studentName: String, amountDue: Long) -> Unit
 ) {
   val students by repository.students.collectAsState()
-  val student = students.firstOrNull { it.id == studentId } ?: students.first()
+  val student = students.firstOrNull { it.id == studentId }
+  if (student == null) {
+    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(Spacing.s4)) {
+      TextButton(onClick = onBack) { Text("Back") }
+      EmptyStateView(title = "Student unavailable", message = "This record is not loaded or your account cannot access it.")
+    }
+    return
+  }
 
   Scaffold(
     containerColor = GlassBgTransparent,
@@ -87,6 +94,7 @@ fun Student360DetailPane(
   modifier: Modifier = Modifier
 ) {
   val invoices by repository.invoices.collectAsState()
+  val cloudDemo = com.example.data.datasource.AppEnvironment.currentMode == com.example.data.datasource.DataMode.SUPABASE_DEMO
   val reportCards by repository.reportCards.collectAsState()
   val gradebookEntries by repository.gradebookEntries.collectAsState()
 
@@ -102,7 +110,7 @@ fun Student360DetailPane(
       .fillMaxSize()
       .testTag("student_360_detail_pane"),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3),
-    contentPadding = PaddingValues(bottom = 80.dp)
+    contentPadding = PaddingValues(bottom = Spacing.xl24)
   ) {
     // 1. HERO IDENTITY SURFACE (Dark Onyx, 22dp corners)
     item {
@@ -134,7 +142,7 @@ fun Student360DetailPane(
                   text = "Class ${student.fullClass} • Roll #${student.rollNumber} • Adm #${student.admissionNumber}",
                   style = MaterialTheme.typography.bodySmall,
                   color = ScholaOnyxMuted,
-                  fontSize = 11.sp
+                  fontSize = 12.sp
                 )
               }
             }
@@ -171,7 +179,7 @@ fun Student360DetailPane(
                 style = MaterialTheme.typography.labelSmall,
                 color = ScholaOnyxMuted,
                 letterSpacing = TypeTokens.trackingMicroLabel,
-                fontSize = 9.sp
+                fontSize = 12.sp
               )
               Text(
                 text = "${student.gpa} / 4.0",
@@ -183,7 +191,7 @@ fun Student360DetailPane(
                 text = "Class Rank: #${student.rank}",
                 style = MaterialTheme.typography.bodySmall,
                 color = ScholaOnyxMuted,
-                fontSize = 10.sp
+                fontSize = 12.sp
               )
             }
           }
@@ -223,7 +231,7 @@ fun Student360DetailPane(
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = if (isSelected) Color.White else ScholaTextSecondary,
-                fontSize = 11.sp
+                fontSize = 12.sp
               )
             }
           }
@@ -288,22 +296,27 @@ fun Student360DetailPane(
               Column {
                 Text("Tuition & Activity Ledger", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(
-                  text = "Invoice: ${studentInvoice?.invoiceNumber ?: "INV-2026-0842"}",
+                  text = "Invoice: ${studentInvoice?.invoiceNumber ?: if (cloudDemo) "Not available" else "INV-2026-0842"}",
                   style = MaterialTheme.typography.bodySmall,
                   color = ScholaMuted
                 )
               }
-              ScholaPillBadge(status = student.feeStatus.label)
+              if (student.feeSummaryAvailable) ScholaPillBadge(status = student.feeStatus.label)
             }
             Spacer(modifier = Modifier.height(Spacing.s3))
-            val total = studentInvoice?.totalAmount ?: 450000L
-            val paid = studentInvoice?.paidAmount ?: 305000L
+            val total = studentInvoice?.totalAmount ?: if (cloudDemo) 0L else 450000L
+            val paid = studentInvoice?.paidAmount ?: if (cloudDemo) 0L else 305000L
             val due = (total - paid).coerceAtLeast(0L)
 
-            InfoRow("Total Demanded", "$${total / 100L}")
-            InfoRow("Paid Realized", "$${paid / 100L}")
-            InfoRow("Outstanding Due", "$${due / 100L}")
+            if (cloudDemo && studentInvoice == null) {
+              Text("No fee record is available to this account.", style = MaterialTheme.typography.bodyMedium)
+            } else {
+              InfoRow("Total Demanded", "$${total / 100L}")
+              InfoRow("Paid Realized", "$${paid / 100L}")
+              InfoRow("Outstanding Due", "$${due / 100L}")
 
+            }
+            if (cloudDemo) Text("Use Fees for Razorpay test checkout.", style = MaterialTheme.typography.bodySmall)
             if (due > 0) {
               Spacer(modifier = Modifier.height(Spacing.s3))
               AppButton(
@@ -358,7 +371,7 @@ private fun InfoRow(label: String, value: String) {
       .padding(vertical = 4.dp),
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
-    Text(label, style = MaterialTheme.typography.bodyMedium, color = ScholaMuted)
-    Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ScholaTextPrimary)
+    Text(label, modifier = Modifier.weight(0.4f).padding(end = Spacing.sm8), style = MaterialTheme.typography.bodyMedium, color = ScholaMuted)
+    Text(value, modifier = Modifier.weight(0.6f), textAlign = androidx.compose.ui.text.style.TextAlign.End, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ScholaTextPrimary)
   }
 }

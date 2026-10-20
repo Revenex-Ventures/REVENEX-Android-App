@@ -7,6 +7,9 @@ import com.example.data.datasource.ErpDataSource
 import com.example.data.datasource.FirebaseDataSource
 import com.example.data.datasource.FirebaseStorageManager
 import com.example.data.datasource.LocalDemoDataSource
+import com.example.data.datasource.SupabaseDataSource
+import com.example.data.datasource.BackendSyncState
+import com.example.data.datasource.SupabaseFileStore
 import com.example.data.model.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -31,10 +34,15 @@ import java.util.UUID
 class ErpDataRepository private constructor() {
 
   private val tag = "ErpDataRepository"
-  private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+  private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob() + CoroutineExceptionHandler { _, error ->
+    _backendState.value = BackendSyncState(message = error.message?.takeIf { it.length < 180 } ?: "School operation failed. Please retry.", failed = true)
+  })
 
   val demoDataSource = LocalDemoDataSource()
-  val firebaseDataSource = FirebaseDataSource()
+  val firebaseDataSource by lazy { FirebaseDataSource() }
+  val supabaseDataSource by lazy { SupabaseDataSource() }
+  private val _backendState = MutableStateFlow(BackendSyncState())
+  val backendState: StateFlow<BackendSyncState> = _backendState.asStateFlow()
 
   // Current Mode
   private val _dataMode = MutableStateFlow(AppEnvironment.currentMode)
@@ -100,10 +108,15 @@ class ErpDataRepository private constructor() {
   val gradebookEntries: StateFlow<List<GradebookEntry>> = _gradebookEntries.asStateFlow()
 
   fun addAuditLog(entry: AuditLogEntry) {
+    if (_dataMode.value == DataMode.SUPABASE_DEMO) return
     _auditLogs.value = listOf(entry) + _auditLogs.value
   }
 
   fun processInvoicePayment(invoiceId: String, amountPaid: Long, channel: String = "Stripe ACH") {
+    if (_dataMode.value != DataMode.DEMO) {
+      _backendState.value=BackendSyncState(message="Payments are disabled. Fee balances are read-only.",failed=true)
+      return
+    }
     _invoices.value = _invoices.value.map { inv ->
       if (inv.id == invoiceId) {
         val newPaid = (inv.paidAmount + amountPaid).coerceAtMost(inv.totalAmount)
@@ -130,8 +143,22 @@ class ErpDataRepository private constructor() {
     classGrade: String,
     division: String,
     sessionSlot: String,
-    studentList: List<StudentAttendance>
+    studentList: List<StudentAttendance>,
+    onResult: ((Boolean) -> Unit)? = null
   ) {
+    if (_dataMode.value == DataMode.SUPABASE_DEMO) {
+      repositoryScope.launch {
+        try {
+          supabaseDataSource.saveRollCall(classGrade,division,getCurrentFormattedDate(),studentList,sessionSlot)
+          onResult?.invoke(true)
+        } catch(e:Exception) {
+          if(e is CancellationException) throw e
+          _backendState.value=BackendSyncState(message="Attendance was not saved. Check access and connection.",failed=true)
+          onResult?.invoke(false)
+        }
+      }
+      return
+    }
     val present = studentList.count { it.status == AttendanceStatus.PRESENT }
     val absent = studentList.count { it.status == AttendanceStatus.ABSENT }
     val late = studentList.count { it.status == AttendanceStatus.LATE }
@@ -169,6 +196,7 @@ class ErpDataRepository private constructor() {
         iconType = "attendance"
       )
     )
+    onResult?.invoke(true)
   }
 
   private val _classAttendance = MutableStateFlow<Map<String, ClassAttendanceRecord>>(
@@ -219,17 +247,25 @@ class ErpDataRepository private constructor() {
       lastUserId = user.id
       _selectedStudentId.value = ""
     }
+    if (user.id.isBlank()) {
+      _selectedStudentId.value = ""
+      return
+    }
     if (user.role == UserRole.PARENT) {
       val wards = _students.value.filter { st ->
         user.associatedChildNames.contains(st.id) ||
-        st.parentPhone.replace("+91", "").trim().replace(" ", "") == user.phone.replace("+91", "").trim().replace(" ", "") ||
+        (user.phone.isNotBlank() && st.parentPhone.replace("+91", "").trim().replace(" ", "") == user.phone.replace("+91", "").trim().replace(" ", "")) ||
         st.id == user.associatedStudentId
       }
       if (wards.isNotEmpty() && (_selectedStudentId.value.isBlank() || wards.none { it.id == _selectedStudentId.value })) {
         _selectedStudentId.value = wards.first().id
       }
     } else if (user.role == UserRole.STUDENT) {
-      _selectedStudentId.value = user.associatedStudentId.ifBlank { "stu_1001" }
+      _selectedStudentId.value = if (_dataMode.value == DataMode.SUPABASE_DEMO) {
+        user.associatedStudentId
+      } else {
+        user.associatedStudentId.ifBlank { "stu_1001" }
+      }
     }
   }
 
@@ -240,7 +276,11 @@ class ErpDataRepository private constructor() {
   }
 
   val activeSource: ErpDataSource
-    get() = if (_dataMode.value == DataMode.PRODUCTION) firebaseDataSource else demoDataSource
+    get() = when (_dataMode.value) {
+      DataMode.DEMO -> demoDataSource
+      DataMode.SUPABASE_DEMO -> supabaseDataSource
+      DataMode.PRODUCTION -> firebaseDataSource
+    }
 
   /**
    * Binds all Repository StateFlows to the active DataSource's flows.
@@ -252,20 +292,59 @@ class ErpDataRepository private constructor() {
     activeSourceJob?.cancel()
     activeSourceJob = repositoryScope.launch {
       val source = activeSource
-      launch { 
-        source.getCurrentUserFlow().collect { 
-          _currentUser.value = it 
-          updateSelectedStudent()
-        } 
+      if (source is SupabaseDataSource) {
+        _students.value=emptyList();_teachers.value=emptyList();_feeRecords.value=emptyList()
+        _assignments.value=emptyList();_studyMaterials.value=emptyList();_notices.value=emptyList()
+        _leaveRequests.value=emptyList();_reportCards.value=emptyList();_examSchedules.value=emptyList()
+        _timetable.value=emptyList();_events.value=emptyList();_transportRoutes.value=emptyList()
+        _libraryBooks.value=emptyList();_inventory.value=emptyList();_notifications.value=emptyList()
+        _classAttendance.value=emptyMap();_auditLogs.value=emptyList();_invoices.value=emptyList();_gradebookEntries.value=emptyList()
+        _selectedStudentId.value=""
+        launch { source.syncState.collect { _backendState.value=it } }
+        launch { source.auditFlow().collect { _auditLogs.value=it } }
+        launch { source.gradebookFlow().collect { _gradebookEntries.value=it } }
+      } else {
+        _backendState.value=BackendSyncState()
+        _auditLogs.value=SampleData.initialAuditLogs;_invoices.value=SampleData.initialInvoices
+        _gradebookEntries.value=SampleData.initialGradebookEntries
       }
-      launch { 
-        source.getStudentsFlow().collect { 
-          _students.value = it 
+      launch {
+        source.getCurrentUserFlow().collect {
+          _currentUser.value = it
           updateSelectedStudent()
-        } 
+        }
+      }
+      launch {
+        source.getStudentsFlow().collect {
+          _students.value = it
+          updateSelectedStudent()
+        }
       }
       launch { source.getTeachersFlow().collect { _teachers.value = it } }
-      launch { source.getFeeRecordsFlow().collect { _feeRecords.value = it } }
+      launch {
+        source.getFeeRecordsFlow().collect { records ->
+          _feeRecords.value = records
+          if (source is SupabaseDataSource) {
+            _invoices.value = records.map { fee ->
+              LedgerInvoice(
+                id = fee.id,
+                invoiceNumber = fee.id,
+                studentId = fee.studentId,
+                studentName = fee.studentName,
+                cohort = if (fee.classGrade.isNotBlank()) "${fee.classGrade}-${fee.division}" else "Standard",
+                title = "Tuition & Academic Dues",
+                totalAmount = fee.totalFee,
+                paidAmount = fee.paidAmount,
+                dueDate = fee.dueDate,
+                issueDate = "Not recorded",
+                status = fee.status,
+                paymentChannel = "Razorpay Test (server verified)",
+                description = "Tuition & Academic Dues"
+              )
+            }
+          }
+        }
+      }
       launch { source.getAssignmentsFlow().collect { _assignments.value = it } }
       launch { source.getStudyMaterialsFlow().collect { _studyMaterials.value = it } }
       launch { source.getNoticesFlow().collect { _notices.value = it } }
@@ -280,7 +359,7 @@ class ErpDataRepository private constructor() {
       launch { source.getNotificationsFlow().collect { _notifications.value = it } }
       launch {
         source.getClassAttendanceFlow().collect { map ->
-          if (map.isNotEmpty()) {
+          if (map.isNotEmpty() || source is SupabaseDataSource) {
             _classAttendance.value = map
           }
         }
@@ -289,6 +368,10 @@ class ErpDataRepository private constructor() {
   }
 
   fun setDataMode(mode: DataMode) {
+    require(mode != DataMode.PRODUCTION) { "Legacy Firebase mode is disabled for this demo build." }
+    if (_dataMode.value == DataMode.SUPABASE_DEMO && mode != DataMode.SUPABASE_DEMO) {
+      repositoryScope.launch { supabaseDataSource.logout() }
+    }
     AppEnvironment.setMode(mode)
     _dataMode.value = mode
     bindDataSource()
@@ -300,9 +383,17 @@ class ErpDataRepository private constructor() {
   // updates its internal user flow, which bindDataSource() propagates here.
   // ========================================================================
 
-  fun switchRole(role: UserRole) {
+  /**
+   * Commits the chosen persona before [onComplete] can advance the UI.
+   * This prevents demo login from opening the previous role's dashboard.
+   */
+  fun switchRole(role: UserRole, onComplete: (() -> Unit)? = null) {
     repositoryScope.launch {
       activeSource.switchRole(role)
+      val switchedUser = activeSource.getCurrentUserFlow().first { it.role == role }
+      _currentUser.value = switchedUser
+      updateSelectedStudent()
+      onComplete?.invoke()
     }
   }
 
@@ -312,11 +403,35 @@ class ErpDataRepository private constructor() {
     }
   }
 
+  fun loginWithSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+    repositoryScope.launch {
+      try {
+        check(_dataMode.value == DataMode.SUPABASE_DEMO)
+        supabaseDataSource.authenticate(email, password)
+        if (_dataMode.value != DataMode.SUPABASE_DEMO) {
+          supabaseDataSource.logout()
+          onResult(false,"Mode changed. Please sign in again.")
+          return@launch
+        }
+        _currentUser.value = supabaseDataSource.getCurrentUserFlow().first()
+        updateSelectedStudent()
+        onResult(true, null)
+      } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        onResult(false, e.message ?: "Supabase sign-in failed.")
+      }
+    }
+  }
+
   fun loginWithFirebase(
     email: String,
     pass: String,
     onResult: (Boolean, String?) -> Unit
   ) {
+    if (_dataMode.value != DataMode.PRODUCTION) {
+      onResult(false, "Firebase sign-in is disabled in demo mode.")
+      return
+    }
     try {
       val auth = FirebaseAuth.getInstance()
       auth.signInWithEmailAndPassword(email, pass)
@@ -335,18 +450,18 @@ class ErpDataRepository private constructor() {
                 val schoolRef = db.collection("schools").document(schoolId)
 
                 when (role) {
-                  UserRole.PRINCIPAL -> {
+                  UserRole.PRINCIPAL, UserRole.ADMIN -> {
                     schoolRef.collection("users").whereEqualTo("email", email).get()
                       .addOnSuccessListener { snapshot ->
                         if (snapshot != null && !snapshot.isEmpty) {
                           val doc = snapshot.documents[0]
-                          val name = doc.getString("name") ?: "Admin"
+                          val name = doc.getString("name") ?: role.displayName
                           val profile = UserProfile(
                             id = doc.id,
                             name = name,
                             email = email,
-                            role = UserRole.PRINCIPAL,
-                            designation = doc.getString("designation") ?: "Principal",
+                            role = role,
+                            designation = doc.getString("designation") ?: role.displayName,
                             phone = doc.getString("phone") ?: "",
                             avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
                             schoolId = schoolId
@@ -357,12 +472,12 @@ class ErpDataRepository private constructor() {
                         } else {
                           val profile = UserProfile(
                             id = user.uid,
-                            name = "Dr. Arvind Sharma",
+                            name = if (role == UserRole.ADMIN) "School Administrator" else "Dr. Arvind Sharma",
                             email = email,
-                            role = UserRole.PRINCIPAL,
-                            designation = "Principal",
+                            role = role,
+                            designation = role.displayName,
                             phone = "+91 98220 12345",
-                            avatarInitials = "AS",
+                            avatarInitials = if (role == UserRole.ADMIN) "SA" else "AS",
                             schoolId = schoolId
                           )
                           switchRole(role)
@@ -495,6 +610,15 @@ class ErpDataRepository private constructor() {
   fun logout() {
     repositoryScope.launch {
       activeSource.logout()
+      _selectedStudentId.value = ""
+      if (_dataMode.value == DataMode.SUPABASE_DEMO) {
+        _students.value = emptyList(); _teachers.value = emptyList(); _feeRecords.value = emptyList()
+        _assignments.value = emptyList(); _studyMaterials.value = emptyList(); _notices.value = emptyList()
+        _leaveRequests.value = emptyList(); _reportCards.value = emptyList(); _examSchedules.value = emptyList()
+        _timetable.value = emptyList(); _events.value = emptyList(); _transportRoutes.value = emptyList()
+        _libraryBooks.value = emptyList(); _inventory.value = emptyList(); _notifications.value = emptyList()
+        _classAttendance.value = emptyMap(); _auditLogs.value = emptyList(); _invoices.value = emptyList(); _gradebookEntries.value = emptyList()
+      }
     }
   }
 
@@ -503,6 +627,11 @@ class ErpDataRepository private constructor() {
   // DataSource handles: state update + Firestore persistence + notifications
   // bindDataSource() collectors propagate changes to Repository StateFlows
   // ========================================================================
+
+  suspend fun enrollStudent(student: Student, feeAmount: Long) {
+    if (_dataMode.value == DataMode.SUPABASE_DEMO) supabaseDataSource.enrollStudent(student,feeAmount)
+    else activeSource.addStudent(student)
+  }
 
   fun addStudent(student: Student) {
     repositoryScope.launch {
@@ -576,7 +705,7 @@ class ErpDataRepository private constructor() {
       rec.studentList.firstOrNull { it.studentId == studentId }
     }
     if (studentAttendanceHistory.isEmpty()) {
-      return defaultBaseline
+      return if (_dataMode.value == DataMode.SUPABASE_DEMO) 0.0 else defaultBaseline
     }
     val attendedCount = studentAttendanceHistory.count {
       it.status == AttendanceStatus.PRESENT || it.status == AttendanceStatus.LATE
@@ -588,10 +717,10 @@ class ErpDataRepository private constructor() {
 
   fun getOverallSchoolAttendanceRate(): Double {
     val records = _classAttendance.value.values
-    if (records.isEmpty()) return 96.4
+    if (records.isEmpty()) return if (_dataMode.value == DataMode.SUPABASE_DEMO) 0.0 else 96.4
     val totalStudents = records.sumOf { it.totalStudents }
     val totalPresent = records.sumOf { it.presentCount + it.lateCount }
-    return if (totalStudents > 0) (totalPresent.toDouble() / totalStudents.toDouble()) * 100.0 else 96.4
+    return if (totalStudents > 0) (totalPresent.toDouble() / totalStudents.toDouble()) * 100.0 else if (_dataMode.value == DataMode.SUPABASE_DEMO) 0.0 else 96.4
   }
 
   fun getTodayStaffAttendanceRate(): Double {
@@ -656,6 +785,7 @@ class ErpDataRepository private constructor() {
     razorpayOrderId: String? = null,
     razorpaySignature: String? = null
   ): FeePaymentTransaction {
+    check(_dataMode.value == DataMode.DEMO) { "Payments are disabled in the Supabase demo." }
     val correctAmount = _feeRecords.value.firstOrNull { it.studentId == studentId }?.pendingAmount ?: amountPaid
     val finalTxnId = razorpayPaymentId ?: "TXN-REV-${(100000..999999).random()}"
 
@@ -755,7 +885,10 @@ class ErpDataRepository private constructor() {
     displayName: String?,
     mimeType: String
   ): FirebaseStorageManager.UploadResult {
-    if (activeSource.isProductionMode() && FirebaseStorageManager.isConfigured()) {
+    if (_dataMode.value == DataMode.SUPABASE_DEMO) {
+      return SupabaseFileStore.upload(context, sourceUri, displayName, mimeType, _currentUser.value, supabaseDataSource.sessionId())
+    }
+    if (_dataMode.value == DataMode.PRODUCTION && FirebaseStorageManager.isConfigured()) {
       return FirebaseStorageManager.uploadFile(
         context = context,
         schoolId = "revenex_school_001",
@@ -768,8 +901,7 @@ class ErpDataRepository private constructor() {
     // Demo/offline mode: no false claim of a real upload. Surface clearly that this
     // build records metadata only (Firebase config unavailable at runtime).
     throw IllegalStateException(
-      "Upload requires Firebase Storage configuration. " +
-        "In demo mode attachments are recorded as metadata only."
+      "Local demo does not upload files. Sign in to Supabase demo to store a document."
     )
   }
 

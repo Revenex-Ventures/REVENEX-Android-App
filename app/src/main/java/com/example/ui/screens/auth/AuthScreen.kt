@@ -33,7 +33,7 @@ import com.example.ui.theme.*
  * Authentication entry point for REVENEX School ERP.
  *
  * Production Mode:
- *   - Principal: Google Workspace Sign-In (verified against allowlist)
+ *   - Principal and administrator: Google Workspace Sign-In (verified against allowlist)
  *   - Teacher: Employee ID + Date of Birth
  *   - Student/Parent: No independent login (parent accesses via guardian link)
  *
@@ -77,6 +77,7 @@ fun AuthScreen(
         .fillMaxSize()
         .statusBarsPadding()
         .navigationBarsPadding()
+        .imePadding()
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 16.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
@@ -134,19 +135,21 @@ fun AuthScreen(
             )
           }
           FilterChip(
-            selected = dataMode == DataMode.PRODUCTION,
+            enabled = !isLoggingIn,
+            selected = dataMode == DataMode.SUPABASE_DEMO,
             onClick = {
-              val nextMode = if (dataMode == DataMode.DEMO) DataMode.PRODUCTION else DataMode.DEMO
+              val nextMode = if (dataMode == DataMode.DEMO) DataMode.SUPABASE_DEMO else DataMode.DEMO
               repository.setDataMode(nextMode)
               errorMessage = null
             },
             label = {
               Text(
-                text = if (dataMode == DataMode.DEMO) "Switch to Live Cloud" else "Switch to Demo Mode",
-                fontSize = 11.sp
+                text = if (dataMode == DataMode.DEMO) "Use Supabase Demo" else "Switch to Demo Mode",
+                fontSize = 12.sp
               )
             },
             colors = FilterChipDefaults.filterChipColors(
+              labelColor = Color.White,
               selectedContainerColor = RevenexGold,
               selectedLabelColor = Color.White
             )
@@ -159,7 +162,7 @@ fun AuthScreen(
       // Login Card
       Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
       ) {
@@ -181,11 +184,27 @@ fun AuthScreen(
               errorMessage = errorMessage,
               onLogin = {
                 isLoggingIn = true
-                repository.switchRole(selectedRole)
-                isLoggingIn = false
-                onLoginSuccess()
+                repository.switchRole(selectedRole) {
+                  isLoggingIn = false
+                  onLoginSuccess()
+                }
               }
             )
+          } else if (dataMode == DataMode.SUPABASE_DEMO) {
+            Text("Supabase school demo", style = MaterialTheme.typography.titleMedium)
+            Text("Use your assigned school account. Your role is loaded securely after sign-in.", style = MaterialTheme.typography.bodySmall)
+            OutlinedTextField(value=principalEmail,onValueChange={ principalEmail=it;errorMessage=null },label={Text("Email")},singleLine=true,enabled=!isLoggingIn,modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(value=principalPassword,onValueChange={ principalPassword=it;errorMessage=null },label={Text("Password")},visualTransformation=PasswordVisualTransformation(),singleLine=true,enabled=!isLoggingIn,modifier=Modifier.fillMaxWidth())
+            errorMessage?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+            Button(onClick={
+              isLoggingIn=true
+              repository.loginWithSupabase(principalEmail,principalPassword) { ok,error ->
+                isLoggingIn=false
+                if(ok) { principalPassword="";onLoginSuccess() } else errorMessage=error
+              }
+            },enabled=!isLoggingIn && principalEmail.isNotBlank() && principalPassword.isNotBlank(),modifier=Modifier.fillMaxWidth()) {
+              Text(if(isLoggingIn) "Signing in…" else "Sign in")
+            }
           } else {
             // ========== PRODUCTION MODE: Role-Specific Login ==========
             ProductionModeLoginContent(
@@ -294,7 +313,7 @@ fun AuthScreen(
       Spacer(modifier = Modifier.height(10.dp))
 
       Text(
-        text = "Revenex Cloud Enterprise v4.2 • Protected with TLS 1.3 & Role Authorization",
+        text = "Revenex School ERP • Demonstration build",
         style = MaterialTheme.typography.labelSmall,
         color = Color.White.copy(alpha = 0.65f),
         textAlign = TextAlign.Center
@@ -309,7 +328,7 @@ fun AuthScreen(
 
 enum class LoginTab(val label: String, val icon: @Composable () -> Unit) {
   PRINCIPAL(
-    "Principal",
+    "Management",
     { Icon(Icons.Default.AdminPanelSettings, contentDescription = null, modifier = Modifier.size(18.dp)) }
   ),
   TEACHER(
@@ -342,8 +361,7 @@ private fun DemoModeLoginContent(
 
   Spacer(modifier = Modifier.height(10.dp))
 
-  // Show only 3 roles: Principal, Teacher, Student/Parent unified
-  val demoRoles = listOf(UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.STUDENT)
+  val demoRoles = listOf(UserRole.ADMIN, UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.STUDENT)
 
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     demoRoles.forEach { role ->
@@ -364,6 +382,7 @@ private fun DemoModeLoginContent(
           Icon(
             imageVector = when (role) {
               UserRole.PRINCIPAL -> Icons.Default.AdminPanelSettings
+              UserRole.ADMIN -> Icons.Default.ManageAccounts
               UserRole.TEACHER -> Icons.Default.School
               else -> Icons.Default.FamilyRestroom
             },
@@ -375,7 +394,8 @@ private fun DemoModeLoginContent(
           Column(modifier = Modifier.weight(1f)) {
             Text(
               text = when (role) {
-                UserRole.PRINCIPAL -> "Principal / Administrator"
+                UserRole.PRINCIPAL -> "Principal / Academic Leader"
+                UserRole.ADMIN -> "School Administrator"
                 UserRole.TEACHER -> "Teacher / Faculty"
                 else -> "Student / Parent Portal"
               },
@@ -385,12 +405,13 @@ private fun DemoModeLoginContent(
             )
             Text(
               text = when (role) {
-                UserRole.PRINCIPAL -> "Dr. Arvind Sharma (Principal & Admin)"
+                UserRole.PRINCIPAL -> "Dr. Arvind Sharma (Academic Director)"
+                UserRole.ADMIN -> "Meera Iyer (School Operations)"
                 UserRole.TEACHER -> "Prof. Sunita Rao (Math Faculty)"
                 else -> "Aarav Patel (Class 10-A) / Parent Portal"
               },
               style = MaterialTheme.typography.bodySmall,
-              fontSize = 11.sp,
+              fontSize = 12.sp,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
           }
@@ -430,7 +451,7 @@ private fun DemoModeLoginContent(
         .height(50.dp)
         .testTag("submit_login_button"),
       shape = RoundedCornerShape(14.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue)
+      colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
     ) {
       Icon(Icons.Default.Login, contentDescription = null)
       Spacer(modifier = Modifier.width(8.dp))
@@ -609,14 +630,14 @@ private fun ProductionModeLoginContent(
         }
 
         LoginTab.PRINCIPAL -> {
-          // Principal: Google Workspace Sign-In
+          // Management: Google Workspace sign-in; verified custom claims choose Principal or Admin.
           Text(
-            text = "Principal / Administrator",
+            text = "School management sign-in",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
           )
           Text(
-            text = "Sign in with your Google Workspace account",
+            text = "Use the approved school Workspace account assigned to you",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
@@ -659,7 +680,7 @@ private fun ProductionModeLoginContent(
               .height(50.dp)
               .testTag("btn_principal_signin"),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue)
+            colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
           ) {
             if (isLoggingIn) {
               CircularProgressIndicator(
@@ -729,7 +750,7 @@ private fun ProductionModeLoginContent(
               .height(50.dp)
               .testTag("btn_teacher_signin"),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue)
+            colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
           ) {
             if (isLoggingIn) {
               CircularProgressIndicator(

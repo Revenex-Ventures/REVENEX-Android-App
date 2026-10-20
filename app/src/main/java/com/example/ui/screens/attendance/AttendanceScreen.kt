@@ -79,7 +79,7 @@ fun AttendanceScreen(
 
   val livePresenceRate = if (totalScholars > 0) {
     ((presentCount + lateCount + excusedCount).toDouble() / totalScholars.toDouble()) * 100.0
-  } else 100.0
+  } else 0.0
 
   Scaffold(
     containerColor = GlassBgTransparent,
@@ -119,6 +119,7 @@ fun AttendanceScreen(
           AppButton(
             text = "Dispatch Roll Call ($presentCount Present, $lateCount Late, $absentCount Absent, $excusedCount Excused)",
             onClick = {
+              showSuccessNotification = false
               val list = classStudents.map { st ->
                 StudentAttendance(
                   studentId = st.id,
@@ -137,9 +138,9 @@ fun AttendanceScreen(
                 classGrade = grade,
                 division = div,
                 sessionSlot = selectedSessionSlot,
-                studentList = list
+                studentList = list,
+                onResult = { saved -> showSuccessNotification = saved }
               )
-              showSuccessNotification = true
             },
             containerColor = ScholaTerracotta,
             modifier = Modifier
@@ -332,7 +333,7 @@ fun AttendanceScreen(
                   text = "Roll #${student.rollNumber} • Adm #${student.admissionNumber}",
                   style = MaterialTheme.typography.bodySmall,
                   color = ScholaMuted,
-                  fontSize = 11.sp
+                  fontSize = 12.sp
                 )
               }
             }

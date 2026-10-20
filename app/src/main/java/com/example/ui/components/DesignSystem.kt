@@ -1758,4 +1758,7 @@ fun Badge(
 }
 
 @Composable
-fun rememberReducedMotion(): Boolean = false
+fun rememberReducedMotion(): Boolean {
+  val context = LocalContext.current
+  return android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+}

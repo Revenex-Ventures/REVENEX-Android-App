@@ -23,4 +23,19 @@ debug.keystore
 app-debug.apk
 node_modules/
 .opencode/
+/supabase.local.properties
+/supabase/.temp/
 
+
+/supabase/__pycache__/
+
+# Local build caches, credentials and packaged artifacts
+/.audit-gradle/
+**/build/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.pem
+*.key
+/supabase/.env*

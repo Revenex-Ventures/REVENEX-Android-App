@@ -1,75 +1,63 @@
 package com.example
 
-import android.util.Log
-import com.google.firebase.messaging.RemoteMessage
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * Firebase Cloud Messaging (FCM) service for REVENEX School ERP.
- *
- * Responsibilities:
- *  - Receive push notifications from Firebase Cloud Messaging.
- *  - Handle foreground messages (onMessageReceived).
- *  - Handle background messages (onMessageReceived).
- *  - Refresh device tokens and expose them to the authenticated user.
- *
- * All notification delivery is handled by the system; this service only
- * observes and surfaces the payload. It never stores server credentials.
- */
+/** Displays received notifications. Server delivery and user/device registration are separate. */
 class MyFirebaseMessagingService : FirebaseMessagingService() {
+  override fun onMessageReceived(message: RemoteMessage) {
+    super.onMessageReceived(message)
+    val title = message.notification?.title ?: message.data["title"]
+    val body = message.notification?.body ?: message.data["body"]
+    if (title.isNullOrBlank() && body.isNullOrBlank()) return
+    showNotification(this, title ?: "Revenex School ERP", body.orEmpty(), CHANNEL_DEFAULT)
+  }
 
-    private val tag = "MyFirebaseMessagingService"
+  companion object {
+    const val CHANNEL_DEFAULT = "revenex_erp_default"
+    private val notificationIds = AtomicInteger(0)
 
-    /**
-     * Called when the device receives a push message.
-     * Runs on the main thread; heavy work should be offloaded.
-     */
-    override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        super.onMessageReceived(remoteMessage)
-
-        val from = remoteMessage.from
-        val notification = remoteMessage.notification
-        val data = remoteMessage.data
-
-        Log.i(
-            tag,
-            "Received push message. from=$from title=${notification?.title} body=${notification?.body} data=$data"
-        )
-
-        // Surface the notification through the system notification tray.
-        notification?.let {
-            showNotification(
-                title = it.title ?: "Revenex School ERP",
-                body = it.body ?: "",
-                channelId = CHANNEL_DEFAULT
-            )
-        }
+    fun createNotificationChannel(context: Context) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(NotificationChannel(
+          CHANNEL_DEFAULT, "School updates", NotificationManager.IMPORTANCE_DEFAULT
+        ).apply { description = "Attendance, fees, exams and school announcements" })
+      }
     }
 
-    /**
-     * Called when the FCM token is refreshed.
-     * The application should upload the new token to its backend
-     * and associate it with the currently authenticated user.
-     */
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-        Log.i(tag, "FCM token refreshed: ${token.take(8)}...")
-        // TODO: upload token to backend and associate with authenticated user.
+    fun showNotification(context: Context, title: String, body: String, channelId: String) {
+      createNotificationChannel(context)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+      val manager = NotificationManagerCompat.from(context)
+      if (!manager.areNotificationsEnabled()) return
+      val openApp = PendingIntent.getActivity(context, 0,
+        Intent(context, MainActivity::class.java).apply {
+          flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+      val notification = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle(title)
+        .setContentText(body)
+        .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+        .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+        .setContentIntent(openApp)
+        .setAutoCancel(true)
+        .build()
+      manager.notify(notificationIds.incrementAndGet(), notification)
     }
-
-    companion object {
-        const val CHANNEL_DEFAULT = "revenex_erp_default"
-
-        /**
-         * Displays a system notification. This is a minimal implementation;
-         * production code should use NotificationManager with a proper channel.
-         */
-        fun showNotification(title: String, body: String, channelId: String) {
-            Log.d(
-                "MyFirebaseMessagingService",
-                "showNotification title=$title body=$body channelId=$channelId"
-            )
-            // Production code should build a NotificationCompat.Builder here.
-        }
-    }
+  }
 }

@@ -1,0 +1,29 @@
+{
+  "android": {
+    "tests": 55,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "android_build": "BUILD SUCCESSFUL in 3m27s",
+  "lint": {
+    "Warning": 67
+  },
+  "database_checks_passed": 99,
+  "edge_handler_tests_passed": 31,
+  "legacy_backend_tests_passed": 32,
+  "deno_typecheck": "passed both entrypoints with official Deno 2.9.7, archive SHA-256 verified",
+  "deno_lint": "4 server files passed",
+  "active_demo_npm_audit": "0 vulnerabilities",
+  "credential_and_history_scan": "passed",
+  "apk_server_boundary_scan": "passed",
+  "workflow_validation": "actionlint 1.7.12 passed",
+  "prompt_copy_matches_user_attachment": true,
+  "model_calls_made": 0,
+  "limitations": [
+    "Hosted AI remains disabled until migration 8, model configuration and deployment are supplied",
+    "No live AI or hosted school-data access test with user credentials was performed",
+    "Chat mutation tools, web search and permanent conversation memory are unavailable",
+    "Repository identity has push but not admin permissions; branch protection/environment protections require owner configuration"
+  ]
+}

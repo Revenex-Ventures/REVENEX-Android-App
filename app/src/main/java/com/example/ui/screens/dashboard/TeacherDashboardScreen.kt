@@ -46,7 +46,7 @@ fun TeacherDashboardScreen(
     teachers.firstOrNull { it.email.equals(currentUser.email, ignoreCase = true) || it.name.equals(currentUser.name, ignoreCase = true) }
   }
 
-  val mentorClass = matchedTeacher?.assignedClasses?.firstOrNull() ?: "10-A"
+  val mentorClass = matchedTeacher?.assignedClasses?.firstOrNull() ?: currentUser.associatedClass.ifBlank { "10-A" }
   val mentorClassGrade = mentorClass.substringBefore("-")
   val mentorClassDiv = mentorClass.substringAfter("-")
 
@@ -82,12 +82,12 @@ fun TeacherDashboardScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("teacher_dashboard_list"),
-    contentPadding = PaddingValues(bottom = 90.dp)
+    contentPadding = PaddingValues(bottom = Spacing.xl24)
   ) {
     // Teacher Profile & Class Teacher Banner
     item {
       AnimatedFadeIn(delayMillis = 0) {
-        val teacherAttendance = (matchedTeacher?.attendancePercent ?: 98.4).toFloat()
+        val teacherAttendance = (matchedTeacher?.attendancePercent ?: 0.0).toFloat()
         AnimatedAttendanceHero(
           attendanceValue = teacherAttendance,
           label = "Term Attendance",
@@ -115,7 +115,7 @@ fun TeacherDashboardScreen(
                 Text(
                   text = "FACULTY PORTAL",
                   style = MaterialTheme.typography.labelSmall,
-                  fontSize = 9.sp,
+                  fontSize = 12.sp,
                   color = Color.White.copy(alpha = 0.9f),
                   letterSpacing = 1.1.sp,
                   fontWeight = FontWeight.Bold
@@ -133,7 +133,7 @@ fun TeacherDashboardScreen(
               Text(
                 text = "$designation • Class $mentorClass Mentor",
                 style = MaterialTheme.typography.bodySmall,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.75f)
               )
             }
@@ -158,7 +158,7 @@ fun TeacherDashboardScreen(
                 Text(
                   text = "MENTOR",
                   style = MaterialTheme.typography.labelSmall,
-                  fontSize = 9.sp,
+                  fontSize = 12.sp,
                   fontWeight = FontWeight.Bold,
                   letterSpacing = 0.8.sp,
                   color = Color.White
@@ -195,7 +195,7 @@ fun TeacherDashboardScreen(
                 icon = Icons.Default.FactCheck,
                 iconTint = ScholaSlateNavy,
                 backgroundColor = ScholaSlateContainer,
-                modifier = Modifier.width(115.dp),
+                modifier = Modifier.width(180.dp),
                 onClick = { onNavigateTo(Screen.Attendance.route) }
               )
             }
@@ -205,7 +205,7 @@ fun TeacherDashboardScreen(
                 icon = Icons.Default.Assignment,
                 iconTint = ScholaTerracotta,
                 backgroundColor = ScholaTerracottaContainer,
-                modifier = Modifier.width(115.dp),
+                modifier = Modifier.width(180.dp),
                 onClick = onShowCreateAssignment
               )
             }
@@ -215,7 +215,7 @@ fun TeacherDashboardScreen(
                 icon = Icons.Default.CloudUpload,
                 iconTint = ScholaSlateNavy,
                 backgroundColor = ScholaSlateContainer,
-                modifier = Modifier.width(115.dp),
+                modifier = Modifier.width(180.dp),
                 onClick = { onNavigateTo(Screen.StudyMaterial.route) }
               )
             }
@@ -225,7 +225,7 @@ fun TeacherDashboardScreen(
                 icon = Icons.Default.EventBusy,
                 iconTint = ScholaSlateNavy,
                 backgroundColor = ScholaSlateContainer,
-                modifier = Modifier.width(115.dp),
+                modifier = Modifier.width(180.dp),
                 onClick = onShowApplyLeave
               )
             }
@@ -352,7 +352,7 @@ fun TeacherDashboardScreen(
                   text = "Adm: ${st.admissionNumber} • Roll: #${st.rollNumber} • Rank #${st.rank}",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  fontSize = 11.sp
+                  fontSize = 12.sp
                 )
               }
               Surface(
@@ -385,58 +385,12 @@ private data class TeacherStat(
 
 @Composable
 private fun TeacherHeroStatStrip(stats: List<TeacherStat>) {
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp)
-  ) {
+  Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
     stats.forEach { stat ->
-      Surface(
-        modifier = Modifier.weight(1f),
-        shape = RoundedCornerShape(14.dp),
-        color = Color.White.copy(alpha = 0.08f),
-        border = androidx.compose.foundation.BorderStroke(
-          width = 0.8.dp,
-          brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.06f))
-          )
-        )
-      ) {
-        Column(
-          modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-          horizontalAlignment = Alignment.Start
-        ) {
-          Box(
-            modifier = Modifier
-              .size(24.dp)
-              .background(Color.White.copy(alpha = 0.12f), CircleShape),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = stat.icon,
-              contentDescription = null,
-              tint = stat.tint,
-              modifier = Modifier.size(13.dp)
-            )
-          }
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            text = stat.label,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 9.sp,
-            color = Color.White.copy(alpha = 0.65f),
-            letterSpacing = 0.8.sp,
-            fontWeight = FontWeight.SemiBold
-          )
-          Spacer(modifier = Modifier.height(2.dp))
-          Text(
-            text = stat.value,
-            style = MaterialTheme.typography.titleSmall,
-            fontSize = 12.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-          )
-        }
+      Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() }, color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall)
+        Text(stat.value, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+
       }
     }
   }

@@ -1,19 +1,11 @@
-# screens/ai/
+# Revenex Assistant
 
-Gemini AI assistant integration.
+The current assistant is a **bounded local guide**, not a configured Gemini or other live-model integration.
 
-## Files
+- It provides deterministic general study guidance and ERP navigation help.
+- A student can see only their loaded attendance and fee summary.
+- A parent can see only explicitly linked children’s loaded summaries.
+- It refuses all consequential changes; users must use the normal, authorised ERP workflow.
+- Demo mode labels every loaded-record answer as demo data. Production mode states that live AI is unavailable until a server-side provider is configured.
 
-### `AiAssistantScreen.kt`
-
-A conversational AI assistant powered by Firebase AI (Gemini).
-
-- Chat-style UI with a message list and a text input field.
-- Sends user messages to the Gemini model via the Firebase AI SDK.
-- The assistant is context-aware of the user's role — Principal queries can ask about school metrics, teachers can ask for lesson plan help, students can ask academic questions.
-- Responses are streamed token-by-token for a real-time feel.
-- Chat history is maintained in-session (not persisted to Firestore).
-
-**Dependency:** Requires `firebase-ai` included via Firebase BOM 34.17.0.
-
-Accessible to: All roles.
+`AssistantReplyEngine` keeps this policy deterministic and unit-testable. A future model integration must call an authenticated backend endpoint, retrieve only permission-scoped facts, keep provider credentials in Firebase Functions secrets, and preserve the same refusal/confirmation boundary for writes.

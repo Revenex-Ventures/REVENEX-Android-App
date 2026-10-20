@@ -15,6 +15,15 @@ object SampleData {
       avatarInitials = "AS"
     ),
     UserProfile(
+      id = "user_admin",
+      name = "Meera Iyer",
+      email = "admin@revenexschool.edu.in",
+      role = UserRole.ADMIN,
+      designation = "School Operations Administrator",
+      phone = "+91 98110 45232",
+      avatarInitials = "MI"
+    ),
+    UserProfile(
       id = "user_teacher",
       name = "Prof. Sunita Rao",
       email = "sunita.rao@revenexschool.edu.in",

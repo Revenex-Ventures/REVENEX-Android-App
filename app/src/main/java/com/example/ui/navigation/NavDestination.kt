@@ -59,6 +59,13 @@ object NavConfig {
         BottomNavItem(Screen.Fees.route, "Fees", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
         BottomNavItem(Screen.OperationsHub.route, "ERP Hub", Icons.Filled.Apps, Icons.Outlined.Apps)
       )
+      UserRole.ADMIN -> listOf(
+        BottomNavItem(Screen.Dashboard.route, "Control", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
+        BottomNavItem(Screen.Students.route, "Admissions", Icons.Filled.Groups, Icons.Outlined.Groups),
+        BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Fees.route, "Finance", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
+        BottomNavItem(Screen.OperationsHub.route, "Modules", Icons.Filled.Apps, Icons.Outlined.Apps)
+      )
       UserRole.TEACHER -> listOf(
         BottomNavItem(Screen.Dashboard.route, "My Class", Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
         BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.FactCheck, Icons.Outlined.FactCheck),

@@ -37,7 +37,7 @@ private val ScholaLightColorScheme = lightColorScheme(
 private val ScholaDarkColorScheme = darkColorScheme(
   primary = ScholaTerracottaLight,
   onPrimary = ScholaSlateNavyDark,
-  primaryContainer = Color(0xFF2E3A12),
+  primaryContainer = Color(0xFF442113),
   onPrimaryContainer = ScholaTerracottaLight,
   secondary = ScholaTerracottaLight,
   onSecondary = ScholaSlateNavyDark,
@@ -71,6 +71,13 @@ fun ScholaTheme(
   MaterialTheme(
     colorScheme = colorScheme,
     typography = Typography,
+    shapes = androidx.compose.material3.Shapes(
+      extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(Radius.xs),
+      small = androidx.compose.foundation.shape.RoundedCornerShape(Radius.sm),
+      medium = androidx.compose.foundation.shape.RoundedCornerShape(Radius.md),
+      large = androidx.compose.foundation.shape.RoundedCornerShape(Radius.lg),
+      extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(Radius.hero)
+    ),
     content = content
   )
 }

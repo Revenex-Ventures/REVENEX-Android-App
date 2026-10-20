@@ -90,6 +90,8 @@ fun GlobalCommandPaletteModal(
     Box(
       modifier = Modifier
         .fillMaxSize()
+        .safeDrawingPadding()
+        .imePadding()
         .background(Color.Black.copy(alpha = 0.55f))
         .padding(Spacing.s4),
       contentAlignment = Alignment.TopCenter
@@ -144,7 +146,7 @@ fun GlobalCommandPaletteModal(
               shape = RoundedCornerShape(Radius.sm),
               color = ScholaSlateContainer
             ) {
-              Text("ESC", color = ScholaSlateNavy, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+              Text("ESC", color = ScholaSlateNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
             }
           }
 
@@ -163,6 +165,15 @@ fun GlobalCommandPaletteModal(
             contentPadding = PaddingValues(vertical = Spacing.s2)
           ) {
             // Matched Scholars
+            if (query.isNotBlank() && matchedStudents.isEmpty() && filteredActions.isEmpty()) {
+              item {
+                Column(Modifier.fillMaxWidth().padding(Spacing.lg16)) {
+                  Text("No matches found", style = MaterialTheme.typography.titleMedium)
+                  Spacer(Modifier.height(Spacing.xs4))
+                  Text("Try a student name, admission ID, or workspace name.", style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
+                }
+              }
+            }
             if (matchedStudents.isNotEmpty()) {
               item {
                 Text(
@@ -225,15 +236,15 @@ fun GlobalCommandPaletteModal(
                   modifier = Modifier
                     .size(34.dp)
                     .clip(RoundedCornerShape(Radius.sm))
-                    .background(action.iconTint.copy(alpha = 0.12f)),
+                    .background(ScholaTerracottaContainer),
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(action.icon, contentDescription = null, tint = action.iconTint, modifier = Modifier.size(18.dp))
+                  Icon(action.icon, contentDescription = null, tint = ScholaTerracotta, modifier = Modifier.size(18.dp))
                 }
                 Spacer(modifier = Modifier.width(Spacing.s3))
                 Column(modifier = Modifier.weight(1f)) {
                   Text(action.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(action.category, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 9.sp)
+                  Text(action.category, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
                 }
                 Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = ScholaMuted, modifier = Modifier.size(18.dp))
               }

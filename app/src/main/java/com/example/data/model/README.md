@@ -10,7 +10,7 @@ Single file defining every domain type in the system. All models are plain Kotli
 
 | Model | Description |
 |---|---|
-| `UserRole` | Enum: `PRINCIPAL`, `TEACHER`, `STUDENT`, `PARENT` |
+| `UserRole` | Enum: `PRINCIPAL`, `ADMIN`, `TEACHER`, `STUDENT`, `PARENT` |
 | `UserProfile` | Logged-in user with role, name, class association, and `schoolId` |
 | `Student` | Full student record — admission number, class, attendance %, fee status, GPA, rank |
 | `Teacher` | Faculty record — employee ID, subjects taught, assigned classes, experience |

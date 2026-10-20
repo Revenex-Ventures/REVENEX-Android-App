@@ -58,7 +58,7 @@ fun TeacherListScreen(
   Scaffold(
     containerColor = GlassBgTransparent,
     floatingActionButton = {
-      if (currentUser.role == UserRole.PRINCIPAL) {
+      if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
         ExtendedFloatingActionButton(
           onClick = onShowAddTeacher,
           icon = { Icon(Icons.Default.School, contentDescription = null) },
@@ -118,7 +118,7 @@ fun TeacherListScreen(
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(Spacing.s2),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = Spacing.xl24)
       ) {
         items(filteredTeachers, key = { it.id }) { teacher ->
           AppCard(
@@ -147,13 +147,13 @@ fun TeacherListScreen(
                     text = "${teacher.department} • ${teacher.designation}",
                     style = MaterialTheme.typography.bodySmall,
                     color = ScholaMuted,
-                    fontSize = 11.sp
+                    fontSize = 12.sp
                   )
                   Text(
                     text = "Subjects: ${teacher.subjects.joinToString(", ")}",
                     style = MaterialTheme.typography.labelSmall,
                     color = ScholaOnTerracottaContainer,
-                    fontSize = 10.sp
+                    fontSize = 12.sp
                   )
                 }
               }
@@ -165,7 +165,7 @@ fun TeacherListScreen(
                   text = "${teacher.experienceYears}y Exp.",
                   style = MaterialTheme.typography.labelSmall,
                   color = ScholaMuted,
-                  fontSize = 10.sp
+                  fontSize = 12.sp
                 )
               }
             }

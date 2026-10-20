@@ -2,6 +2,7 @@ package com.example.data.datasource
 
 enum class DataMode(val label: String, val description: String) {
   DEMO("Demo Mode", "Standalone local simulation with full Indian school data"),
+  SUPABASE_DEMO("Supabase Demo", "Authenticated school demo backed by Supabase"),
   PRODUCTION("Production Mode", "Live Firebase Cloud synchronization")
 }
 

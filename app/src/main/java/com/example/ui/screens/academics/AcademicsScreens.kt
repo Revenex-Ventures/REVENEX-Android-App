@@ -38,6 +38,7 @@ fun TimetableScreen(
   val currentUser by repository.currentUser.collectAsState()
   val timetable by repository.timetable.collectAsState()
   val gradebookEntries by repository.gradebookEntries.collectAsState()
+  val dataMode by repository.dataMode.collectAsState()
 
   var selectedSubTab by remember { mutableStateOf(0) } // 0 = Timetable & Slots, 1 = Gradebook & GPA
   var selectedDay by remember { mutableStateOf("Monday") }
@@ -63,7 +64,7 @@ fun TimetableScreen(
       .fillMaxSize()
       .background(GlassBgTransparent)
       .testTag("timetable_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     // 1. HERO SURFACE (Dark Onyx, 22dp corners)
@@ -90,10 +91,10 @@ fun TimetableScreen(
             fontWeight = FontWeight.Bold
           )
           Text(
-            text = "Term 2 Evaluative Cycle â€¢ Standard 45-Min Lecture Practicums",
+            text = "Term 2 Evaluative Cycle · Standard 45-Min Lecture Practicums",
             color = ScholaOnyxMuted,
             style = MaterialTheme.typography.bodySmall,
-            fontSize = 11.sp
+            fontSize = 12.sp
           )
         }
       }
@@ -141,7 +142,7 @@ fun TimetableScreen(
 
     // 3. SUB-TAB CONTENT
     if (selectedSubTab == 0) {
-      // TAB 1: TIMETABLE & SLOTS â€” VERTICAL TIMELINE
+      // TAB 1: TIMETABLE & SLOTS — VERTICAL TIMELINE
       item {
         // Day selector chips (Monday - Friday)
         LazyRow(
@@ -252,16 +253,16 @@ fun TimetableScreen(
                 color = ScholaTextPrimary
               )
               Text(
-                text = "Scholar: ${entry.studentName} (${entry.cohort}) â€¢ ${entry.subject}",
+                text = "Scholar: ${entry.studentName} (${entry.cohort}) · ${entry.subject}",
                 style = MaterialTheme.typography.bodySmall,
                 color = ScholaTextSecondary,
-                fontSize = 11.sp
+                fontSize = 12.sp
               )
               Text(
-                text = "Instructor: ${entry.instructorName} â€¢ Evaluated ${entry.date}",
+                text = "Instructor: ${entry.instructorName} · Evaluated ${entry.date}",
                 style = MaterialTheme.typography.labelSmall,
                 color = ScholaMuted,
-                fontSize = 10.sp
+                fontSize = 12.sp
               )
             }
 
@@ -278,7 +279,7 @@ fun TimetableScreen(
               }
               Spacer(modifier = Modifier.height(2.dp))
               Text(
-                text = "GPA: ${entry.gpaPoint}",
+                text = if(dataMode==com.example.data.datasource.DataMode.SUPABASE_DEMO) "GPA not calculated" else "GPA: ${entry.gpaPoint}",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = ScholaGoldText
@@ -304,7 +305,7 @@ fun HomeworkScreen(
     modifier = Modifier
       .fillMaxSize()
       .background(GlassBgTransparent),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     item {
@@ -314,7 +315,7 @@ fun HomeworkScreen(
         verticalAlignment = Alignment.CenterVertically
       ) {
         Text("Active Homework Tasks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        if (currentUser.role == UserRole.TEACHER || currentUser.role == UserRole.PRINCIPAL) {
+        if (currentUser.role == UserRole.TEACHER || currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
           Button(onClick = onShowCreateAssignment, colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta)) {
             Text("Assign", fontWeight = FontWeight.Bold)
           }
@@ -334,11 +335,17 @@ fun HomeworkScreen(
           ) {
             Column(modifier = Modifier.weight(1f)) {
               Text(hw.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-              Text("${hw.subject} â€¢ Class ${hw.classGrade}-${hw.division} â€¢ Due ${hw.dueDate}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+              Text("${hw.subject} · Class ${hw.classGrade}-${hw.division} · Due ${hw.dueDate}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
               Spacer(modifier = Modifier.height(4.dp))
               Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
             }
             ScholaPillBadge(status = hw.submissionStatus)
+          }
+          if(hw.attachmentUrl.isNotBlank()) SchoolDocumentButton(hw.attachmentUrl,hw.attachmentName.ifBlank { "Open attachment" })
+          if(currentUser.role==UserRole.STUDENT) {
+            TextButton(onClick={repository.toggleAssignmentCompletion(hw.id)}) {
+              Text(if(hw.isCompletedByStudent) "Undo submission" else "Mark submitted")
+            }
           }
         }
       }
@@ -355,7 +362,7 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
     modifier = Modifier
       .fillMaxSize()
       .background(GlassBgTransparent),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     item {
@@ -371,12 +378,13 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
         ) {
           Column(modifier = Modifier.weight(1f)) {
             Text(mat.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("${mat.subject} â€¢ ${mat.chapter} â€¢ By ${mat.teacherName}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+            Text("${mat.subject} · ${mat.chapter} · By ${mat.teacherName}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
           }
           Surface(shape = RoundedCornerShape(Radius.pill), color = ScholaSlateContainer) {
             Text(mat.fileType, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
           }
         }
+        if(mat.attachmentUrl.isNotBlank()) SchoolDocumentButton(mat.attachmentUrl,mat.attachmentName.ifBlank { "Open material" })
       }
     }
   }
@@ -391,7 +399,7 @@ fun ExamsScreen(repository: ErpDataRepository) {
     modifier = Modifier
       .fillMaxSize()
       .background(GlassBgTransparent),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     item {
@@ -411,11 +419,11 @@ fun ExamsScreen(repository: ErpDataRepository) {
           ) {
             Column {
               Text(subj.subjectName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-              Text("Room: ${subj.room} â€¢ Max Marks: ${subj.maxMarks}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+              Text("Room: ${subj.room} · Max Marks: ${subj.maxMarks}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
             }
             Column(horizontalAlignment = Alignment.End) {
               Text(subj.date, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = ScholaOnTerracottaContainer)
-              Text(subj.time, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 9.sp)
+              Text(subj.time, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
             }
           }
         }

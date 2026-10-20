@@ -86,13 +86,13 @@ fun PrincipalAttendanceScreen(
         val pres = classRecords.sumOf { it.presentCount }
         val abs = classRecords.sumOf { it.absentCount }
         val lat = classRecords.sumOf { it.lateCount }
-        val percentage = if (totalSt > 0) ((pres + lat).toDouble() / totalSt) * 100.0 else 100.0
+        val percentage = if (totalSt > 0) ((pres + lat).toDouble() / totalSt) * 100.0 else 0.0
         val formattedPct = String.format(Locale.US, "%.1f", percentage).toDouble()
         
         listOf(formattedPct, pres, abs, lat)
       } else {
         val classStudents = students.filter { it.classGrade == grade && it.division == div }
-        val avgPct = if (classStudents.isNotEmpty()) classStudents.map { it.attendancePercent }.average() else 95.0
+        val avgPct = if (classStudents.isNotEmpty()) classStudents.map { it.attendancePercent }.average() else 0.0
         val formattedPct = String.format(Locale.US, "%.1f", avgPct).toDouble()
         
         listOf(formattedPct, classStudents.size, 0, 0)
@@ -154,7 +154,7 @@ fun PrincipalAttendanceScreen(
             AnimatedFadeIn(delayMillis = 0) {
               Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = ScholaOnyxSurface)
               ) {
                 Column(
@@ -313,7 +313,7 @@ fun PrincipalAttendanceScreen(
           item {
             Card(
               modifier = Modifier.fillMaxWidth(),
-              shape = RoundedCornerShape(20.dp),
+              shape = RoundedCornerShape(16.dp),
               colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
               Column(modifier = Modifier.padding(16.dp)) {

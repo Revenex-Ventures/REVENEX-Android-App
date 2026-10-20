@@ -73,13 +73,13 @@ fun StudentListScreen(
   Scaffold(
     containerColor = GlassBgTransparent,
     floatingActionButton = {
-      if (currentUser.role == UserRole.PRINCIPAL) {
+      if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
         ExtendedFloatingActionButton(
           onClick = onShowAddStudent,
           icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
-          text = { Text("Enroll Scholar", fontWeight = FontWeight.Bold) },
+          text = { Text("Add student", fontWeight = FontWeight.Bold) },
           containerColor = ScholaTerracotta,
-          contentColor = ScholaSlateNavyDark,
+          contentColor = Color.White,
           modifier = Modifier.testTag("fab_admit_student")
         )
       }
@@ -102,7 +102,7 @@ fun StudentListScreen(
           ScholaInputField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = "Filter scholars by name, ID, or parent...",
+            placeholder = "Search name, admission ID or guardian",
             leadingIcon = Icons.Default.Search,
             onClear = { searchQuery = "" }
           )
@@ -139,7 +139,7 @@ fun StudentListScreen(
           LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(Spacing.s2),
-            contentPadding = PaddingValues(bottom = 90.dp)
+            contentPadding = PaddingValues(bottom = Spacing.xl24)
           ) {
             items(filteredStudents, key = { it.id }) { student ->
               val isPaneSelected = selectedStudentForPane?.id == student.id
@@ -231,7 +231,7 @@ fun StudentListScreen(
             .fillMaxSize()
             .testTag("students_list"),
           verticalArrangement = Arrangement.spacedBy(Spacing.s2),
-          contentPadding = PaddingValues(bottom = 100.dp)
+          contentPadding = PaddingValues(bottom = Spacing.xl24)
         ) {
           items(filteredStudents, key = { it.id }) { student ->
             ScholarCardItem(
@@ -310,7 +310,7 @@ fun ScholarCardItem(
             text = "Class ${student.fullClass} • Roll #${student.rollNumber} • ${student.admissionNumber}",
             style = MaterialTheme.typography.bodySmall,
             color = ScholaMuted,
-            fontSize = 11.sp
+            fontSize = 12.sp
           )
           Spacer(modifier = Modifier.height(2.dp))
           Row(verticalAlignment = Alignment.CenterVertically) {
@@ -321,7 +321,7 @@ fun ScholarCardItem(
               color = ScholaOnTerracottaContainer
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text("•", color = ScholaMuted, fontSize = 10.sp)
+            Text("•", color = ScholaMuted, fontSize = 12.sp)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
               text = "${student.attendancePercent}% Att.",
@@ -334,8 +334,9 @@ fun ScholarCardItem(
       }
 
       Column(horizontalAlignment = Alignment.End) {
-        ScholaPillBadge(status = student.feeStatus.label)
-        if (student.feePendingAmount > 0) {
+        if (student.feeSummaryAvailable) ScholaPillBadge(status = student.feeStatus.label)
+        else Text("Fees unavailable", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+        if (student.feeSummaryAvailable && student.feePendingAmount > 0) {
           Spacer(modifier = Modifier.height(4.dp))
           Text(
             text = "$${student.feePendingAmount / 100000L}k due",

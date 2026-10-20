@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,7 +68,9 @@ fun ScholaResponsiveScaffold(
 ) {
   val windowSizeClass = rememberWindowSizeClass()
   val navItems = remember(currentUser.role) {
-    NavConfig.getBottomNavItems(currentUser.role).map {
+    NavConfig.getBottomNavItems(currentUser.role).filterNot {
+      currentUser.role == UserRole.TEACHER && it.route == Screen.TeacherProfile.route
+    }.map {
       ScholaDockItem(
         route = it.route,
         label = it.label,
@@ -79,6 +82,15 @@ fun ScholaResponsiveScaffold(
 
   val isTopLevelRoute = currentRoute in navItems.map { it.route } || currentRoute == Screen.Loading.route
 
+  // Own device insets once at the shell boundary. Descendant scaffolds see
+  // consumed insets, avoiding duplicate status/navigation padding.
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(ScholaLinen)
+      .windowInsetsPadding(WindowInsets.safeDrawing)
+      .imePadding()
+  ) {
   when (windowSizeClass) {
     WindowSizeClass.COMPACT_MOBILE -> {
       // 1. MOBILE LAYOUT (< 600dp)
@@ -87,8 +99,8 @@ fun ScholaResponsiveScaffold(
         topBar = {
           if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
             ScholaTopAppBar(
-              title = "ScholaOS",
-              subtitle = "Schola Academy",
+              title = "REVENEX",
+              subtitle = "School ERP demonstration",
               currentRole = currentUser.role,
               currentUserName = currentUser.name,
               unreadCount = unreadNotificationsCount,
@@ -104,13 +116,21 @@ fun ScholaResponsiveScaffold(
             ScholaFloatingDock(
               items = navItems,
               currentRoute = currentRoute,
-              onItemSelected = onNavigateToRoute
+              onItemSelected = onNavigateToRoute,
+              modifier = Modifier.padding(
+                start = Spacing.s2,
+                end = Spacing.s2,
+                top = Spacing.xs4,
+                bottom = Spacing.xs4
+              )
             )
           }
         }
       ) { paddingValues ->
         GlassBackground {
-          content(paddingValues)
+          Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+          }
         }
       }
     }
@@ -139,8 +159,8 @@ fun ScholaResponsiveScaffold(
             topBar = {
               if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
                 ScholaTopAppBar(
-                  title = "ScholaOS Tablet Hub",
-                  subtitle = "Schola Academy • Multitask Suite",
+                  title = "REVENEX",
+                  subtitle = "School ERP demonstration",
                   currentRole = currentUser.role,
                   currentUserName = currentUser.name,
                   unreadCount = unreadNotificationsCount,
@@ -153,7 +173,9 @@ fun ScholaResponsiveScaffold(
             }
           ) { paddingValues ->
             GlassBackground {
-              content(paddingValues)
+              Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+          }
             }
           }
         }
@@ -188,8 +210,8 @@ fun ScholaResponsiveScaffold(
             topBar = {
               if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
                 ScholaTopAppBar(
-                  title = "ScholaOS Executive Operating System",
-                  subtitle = "Schola Academy • Academic Cycle 2026-2027",
+                  title = "REVENEX",
+                  subtitle = "School ERP demonstration",
                   currentRole = currentUser.role,
                   currentUserName = currentUser.name,
                   unreadCount = unreadNotificationsCount,
@@ -202,13 +224,17 @@ fun ScholaResponsiveScaffold(
             }
           ) { paddingValues ->
             GlassBackground {
-              content(paddingValues)
+              Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+          }
             }
           }
         }
       }
     }
   }
+}
+
 }
 
 // Tablet Navigation Rail (80dp width, dark onyx / warm linen hybrid)
@@ -230,6 +256,7 @@ private fun TabletNavigationRail(
     Column(
       modifier = Modifier
         .fillMaxSize()
+        .verticalScroll(androidx.compose.foundation.rememberScrollState())
         .statusBarsPadding()
         .navigationBarsPadding()
         .padding(vertical = Spacing.s4),
@@ -247,7 +274,7 @@ Box(
           ) {
             Icon(
               imageVector = Icons.Default.AccountBalance,
-              contentDescription = "ScholaOS",
+              contentDescription = "REVENEX",
               tint = ScholaSlateNavyDark,
               modifier = Modifier.size(24.dp)
             )
@@ -278,7 +305,7 @@ Box(
           val isSelected = currentRoute == item.route
           Box(
             modifier = Modifier
-              .size(52.dp)
+              .width(76.dp).heightIn(min = 64.dp)
               .clip(RoundedCornerShape(Radius.md))
               .background(if (isSelected) ScholaTerracottaDark else Color.Transparent)
               .clickable { onItemSelected(item.route) }
@@ -293,9 +320,9 @@ Box(
                 modifier = Modifier.size(22.dp)
               )
               Text(
-                text = item.label.take(5),
+                text = item.label,
                 color = if (isSelected) Color.White else ScholaOnyxMuted,
-                fontSize = 8.sp,
+                fontSize = 12.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
               )
             }
@@ -346,6 +373,7 @@ private fun DesktopNavigationDrawer(
     Column(
       modifier = Modifier
         .fillMaxSize()
+        .verticalScroll(androidx.compose.foundation.rememberScrollState())
         .statusBarsPadding()
         .navigationBarsPadding()
         .padding(Spacing.s4),
@@ -367,7 +395,7 @@ Box(
             ) {
               Icon(
                 imageVector = Icons.Default.AccountBalance,
-                contentDescription = "ScholaOS Crest",
+                contentDescription = "REVENEX crest",
                 tint = ScholaSlateNavyDark,
                 modifier = Modifier.size(24.dp)
               )
@@ -375,13 +403,13 @@ Box(
           Spacer(modifier = Modifier.width(Spacing.s3))
           Column {
             Text(
-              text = "ScholaOS",
+              text = "REVENEX",
               color = ScholaOnyxText,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold
             )
             Text(
-              text = "Enterprise Educational OS",
+              text = "School ERP demonstration",
               color = ScholaOnyxMuted,
               style = MaterialTheme.typography.bodySmall,
               fontSize = 10.sp
@@ -425,7 +453,7 @@ Box(
           color = ScholaOnyxMuted,
           style = MaterialTheme.typography.labelSmall,
           letterSpacing = TypeTokens.trackingMicroLabel,
-          fontSize = 9.sp,
+          fontSize = 12.sp,
           modifier = Modifier.padding(horizontal = Spacing.s2, vertical = Spacing.s1)
         )
 
@@ -508,7 +536,7 @@ Box(
               Text(
                 text = currentUser.role.displayName,
                 color = ScholaOnyxMuted,
-                fontSize = 9.sp,
+                fontSize = 12.sp,
                 maxLines = 1
               )
             }

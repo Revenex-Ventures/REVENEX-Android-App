@@ -1,6 +1,14 @@
 package com.example
 
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import com.example.data.datasource.AppEnvironment
+import com.example.data.datasource.DataMode
+import com.example.data.datasource.RazorpayCheckoutOrder
+import com.example.data.datasource.RazorpayPaymentResult
+import com.example.data.datasource.RazorpayPayments
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,6 +51,7 @@ import com.example.ui.screens.auth.AuthScreen
 import com.example.ui.screens.communication.NoticesScreen
 import com.example.ui.screens.communication.NotificationsScreen
 import com.example.ui.screens.dashboard.ParentDashboardScreen
+import com.example.ui.screens.dashboard.AdminDashboardScreen
 import com.example.ui.screens.dashboard.PrincipalDashboardScreen
 import com.example.ui.screens.dashboard.StudentDashboardScreen
 import com.example.ui.screens.dashboard.TeacherDashboardScreen
@@ -60,101 +69,120 @@ import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
-
   companion object {
-    var activeStudentId by mutableStateOf<String?>(null)
     var activeAmount by mutableStateOf(0L)
     var isPaymentProcessing by mutableStateOf(false)
     var isPaymentCompleted by mutableStateOf(false)
     var razorpayPaymentId by mutableStateOf("")
+    var paymentReceipt by mutableStateOf("")
+    var paymentStatusMessage by mutableStateOf("")
+    private var activeFeeId: String? = null
+    private var activePayerId: String? = null
+    private var activeOrder: RazorpayCheckoutOrder? = null
   }
-
+  private val repository get() = ErpDataRepository.getInstance()
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    Checkout.preload(applicationContext)
     enableEdgeToEdge()
     setContent {
       ScholaTheme {
         ScholaErpApp(
-          isProcessing = isPaymentProcessing,
-          paymentCompleted = isPaymentCompleted,
-          razorpayPaymentId = razorpayPaymentId,
-          onStartPayment = { studentId, amount ->
-            startRazorpayPayment(studentId, amount)
-          },
-          onResetPayment = {
-            isPaymentProcessing = false
-            isPaymentCompleted = false
-            razorpayPaymentId = ""
-            activeStudentId = null
-            activeAmount = 0L
-          }
+          isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
+          onStartPayment={ feeId, _ -> startRazorpayPayment(feeId) },
+          onResetPayment={ if(!isPaymentProcessing) {
+            isPaymentCompleted=false;razorpayPaymentId="";activeAmount=0L;paymentReceipt="";paymentStatusMessage=""
+            activeFeeId=null;activePayerId=null;activeOrder=null
+          } },
+          verifiedPaymentAmount=activeAmount,verifiedReceipt=paymentReceipt,paymentStatus=paymentStatusMessage,
+          onCheckPayment={ feeId -> checkPaymentStatus(feeId) }
         )
       }
     }
   }
-
-  private fun startRazorpayPayment(studentId: String, amount: Long) {
-    activeStudentId = studentId
-    activeAmount = amount
-    isPaymentProcessing = true
-    isPaymentCompleted = false
-    razorpayPaymentId = ""
-
-    val co = Checkout()
-    val razorpayKey = runCatching { BuildConfig.RAZORPAY_KEY_ID }.getOrNull()
-    if (razorpayKey.isNullOrBlank() || razorpayKey.trim() == "rzp_test_XXXXXXXXXXXXXXXX") {
-      android.widget.Toast.makeText(this, "Simulating Stripe/Razorpay payment in Test Sandbox.", android.widget.Toast.LENGTH_SHORT).show()
-      onPaymentSuccess("pay_demo_success_${System.currentTimeMillis()}", null)
-      return
+  private fun sameAccount() = AppEnvironment.currentMode==DataMode.SUPABASE_DEMO &&
+    activePayerId==repository.currentUser.value.id
+  private fun paymentFailure(message:String) {
+    isPaymentProcessing=false;isPaymentCompleted=false;paymentStatusMessage=message
+    android.widget.Toast.makeText(this,message,android.widget.Toast.LENGTH_LONG).show()
+  }
+  private fun startRazorpayPayment(feeId:String) {
+    if(isPaymentProcessing)return
+    if(AppEnvironment.currentMode!=DataMode.SUPABASE_DEMO) {
+      paymentFailure("Use Supabase Demo for Razorpay test checkout. Local demo payments remain simulated.");return
     }
-    co.setKeyID(razorpayKey.trim())
-    try {
-      val options = JSONObject()
-      options.put("name", "ScholaOS")
-      options.put("description", "Tuition & Academic Dues")
-      options.put("theme.color", "#C2410C")
-      options.put("currency", "USD")
-      options.put("amount", amount)
-
-      val prefill = JSONObject()
-      prefill.put("email", "parent@scholaos.edu")
-      prefill.put("contact", "9876543210")
-      options.put("prefill", prefill)
-
-      co.open(this, options)
-    } catch (e: Exception) {
-      android.widget.Toast.makeText(this, "Payment error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-      isPaymentProcessing = false
-      activeStudentId = null
-      activeAmount = 0L
+    activeFeeId=feeId;activePayerId=repository.currentUser.value.id;activeOrder=null
+    isPaymentProcessing=true;isPaymentCompleted=false;paymentReceipt="";razorpayPaymentId=""
+    paymentStatusMessage="Creating a server-verified test order…"
+    lifecycleScope.launch {
+      try {
+        val order=RazorpayPayments.create(feeId)
+        check(sameAccount()) { "Account changed. Reopen the fee record." }
+        activeOrder=order;activeAmount=order.amount
+        val options=JSONObject().apply {
+          put("name","Revenex School ERP");put("description","School fees • TEST MODE")
+          put("order_id",order.order_id);put("currency",order.currency);put("amount",order.amount)
+          put("theme.color","#FF5A1F")
+          put("prefill",JSONObject().apply { put("email",repository.currentUser.value.email) })
+        }
+        Checkout.preload(applicationContext)
+        val checkout=Checkout();checkout.setKeyID(order.key_id)
+        paymentStatusMessage="Complete the test payment in secure checkout."
+        checkout.open(this@MainActivity,options)
+      } catch(e:Exception) {
+        if(e is CancellationException)throw e
+        paymentFailure("Test checkout is unavailable. Check Supabase payment deployment and server secrets, then retry.")
+      }
     }
   }
-
-  override fun onPaymentSuccess(paymentId: String?, paymentData: PaymentData?) {
-    isPaymentProcessing = false
-    isPaymentCompleted = true
-    razorpayPaymentId = paymentId ?: "pay_schola_success"
-
-    val studentId = activeStudentId
-    val amount = activeAmount
-    if (studentId != null && amount > 0) {
-      val repository = ErpDataRepository.getInstance()
-      repository.processFeePayment(
-        studentId = studentId,
-        amountPaid = amount,
-        paymentMethod = "Stripe ACH / Card",
-        feeHead = "Term 2 Tuition & Practicum Dues",
-        razorpayPaymentId = paymentId,
-        razorpayOrderId = paymentData?.orderId,
-        razorpaySignature = paymentData?.signature
-      )
+  override fun onPaymentSuccess(paymentId:String?,paymentData:PaymentData?) {
+    val order=activeOrder
+    if(order==null || !sameAccount() || paymentId.isNullOrBlank() || paymentData==null) {
+      paymentFailure("Payment callback could not be matched. Use Check payment status in Fees.");return
+    }
+    isPaymentProcessing=true;paymentStatusMessage="Verifying capture with the school payment server…"
+    lifecycleScope.launch {
+      try {
+        applyPaymentResult(RazorpayPayments.verify(order,paymentId,paymentData.orderId.orEmpty(),paymentData.signature.orEmpty()))
+      } catch(e:Exception) {
+        if(e is CancellationException)throw e
+        paymentFailure("Payment is not confirmed yet. Use Check payment status before retrying checkout.")
+      } finally { isPaymentProcessing=false }
     }
   }
-
-  override fun onPaymentError(code: Int, response: String?, paymentData: PaymentData?) {
-    isPaymentProcessing = false
-    android.widget.Toast.makeText(this, "Payment Cancelled: $response", android.widget.Toast.LENGTH_SHORT).show()
+  private fun checkPaymentStatus(feeId:String) {
+    if(isPaymentProcessing)return
+    if(AppEnvironment.currentMode!=DataMode.SUPABASE_DEMO) {paymentFailure("Sign in to Supabase Demo to check a test payment.");return}
+    activeFeeId=feeId;activePayerId=repository.currentUser.value.id;isPaymentProcessing=true
+    lifecycleScope.launch {
+      try {
+        val result=RazorpayPayments.checkFee(feeId)
+        if(result==null) paymentFailure("No test order exists for this fee on your account.") else {
+          applyPaymentResult(result)
+          android.widget.Toast.makeText(this@MainActivity,if(result.verifiedPaid) "Test payment verified. Ledger refreshed." else if(result.status=="failed") "Payment failed. Fee remains pending; school inbox updated." else "No captured payment yet.",android.widget.Toast.LENGTH_LONG).show()
+        }
+      } catch(e:Exception) {
+        if(e is CancellationException)throw e
+        paymentFailure("Payment status could not be checked. Verify sign-in, server setup and network.")
+      } finally { isPaymentProcessing=false }
+    }
+  }
+  private suspend fun applyPaymentResult(result:RazorpayPaymentResult) {
+    check(sameAccount()) { "Account changed." }
+    if(result.verifiedPaid) {
+      activeAmount=result.amount;razorpayPaymentId=result.payment_id;paymentReceipt=result.receipt_no
+      isPaymentCompleted=true;paymentStatusMessage="Captured and verified by the school payment server."
+      try { repository.supabaseDataSource.refreshVerifiedPaymentData() }
+      catch(e:Exception) {if(e is CancellationException)throw e;paymentStatusMessage="Payment verified. Reopen Fees to refresh the ledger."}
+    } else {
+      check(result.status in setOf("pending","failed")) { "Invalid payment confirmation." }
+      isPaymentCompleted=false
+      try { repository.supabaseDataSource.refreshVerifiedPaymentData() } catch(e:Exception) { if(e is CancellationException) throw e }
+      paymentStatusMessage=result.message.take(200).ifBlank { "Payment is pending. Check status again." }
+    }
+  }
+  override fun onPaymentError(code:Int,response:String?,paymentData:PaymentData?) {
+    paymentFailure("Checkout was cancelled or failed. Checking provider status; no fee credit was assumed.")
+    activeFeeId?.let { checkPaymentStatus(it) }
   }
 }
 
@@ -163,14 +191,20 @@ fun ScholaErpApp(
   isProcessing: Boolean,
   paymentCompleted: Boolean,
   razorpayPaymentId: String,
-  onStartPayment: (studentId: String, amount: Long) -> Unit,
-  onResetPayment: () -> Unit
+  onStartPayment: (feeRecordId: String, amount: Long) -> Unit,
+  onResetPayment: () -> Unit,
+  verifiedPaymentAmount: Long = 0L,
+  verifiedReceipt: String = "",
+  paymentStatus: String = "",
+  onCheckPayment: (String) -> Unit = {}
 ) {
   val repository = remember { ErpDataRepository.getInstance() }
   val navController = rememberNavController()
 
   val currentUser by repository.currentUser.collectAsState()
   val notifications by repository.notifications.collectAsState()
+  val backendState by repository.backendState.collectAsState()
+  val dataMode by repository.dataMode.collectAsState()
   val unreadNotificationsCount = notifications.count { !it.isRead }
 
   val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -189,6 +223,7 @@ fun ScholaErpApp(
   var showFeePaymentModal by remember { mutableStateOf(false) }
   var paymentModalStudentName by remember { mutableStateOf("") }
   var paymentModalAmount by remember { mutableStateOf(0L) }
+  var paymentModalFeeId by remember { mutableStateOf("") }
 
   ScholaResponsiveScaffold(
     currentRoute = currentRoute,
@@ -218,10 +253,19 @@ fun ScholaErpApp(
       }
     }
   ) { paddingValues ->
+    Column(Modifier.fillMaxSize().padding(paddingValues)) {
+    if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank()) {
+      Surface(color=if(backendState.failed) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant) {
+        Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+          if(backendState.busy) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
+          Text(backendState.message,style=MaterialTheme.typography.bodySmall)
+        }
+      }
+    }
     NavHost(
       navController = navController,
       startDestination = Screen.Auth.route,
-      modifier = Modifier.padding(paddingValues),
+      modifier = Modifier.weight(1f),
       enterTransition = {
         val fromAuth = initialState.destination.route == Screen.Auth.route
         val isLoadingOrDashboard = targetState.destination.route == Screen.Loading.route ||
@@ -289,6 +333,13 @@ fun ScholaErpApp(
             onShowAddTeacher = { showAddTeacherDialog = true },
             onShowCreateNotice = { showCreateNoticeDialog = true }
           )
+          UserRole.ADMIN -> AdminDashboardScreen(
+            repository = repository,
+            onNavigateTo = { navController.navigate(it) },
+            onShowAddStudent = { showAddStudentDialog = true },
+            onShowAddTeacher = { showAddTeacherDialog = true },
+            onShowCreateNotice = { showCreateNoticeDialog = true }
+          )
           UserRole.TEACHER -> TeacherDashboardScreen(
             repository = repository,
             onNavigateTo = { navController.navigate(it) },
@@ -327,9 +378,14 @@ fun ScholaErpApp(
           repository = repository,
           onBack = { navController.popBackStack() },
           onPayFee = { name, amt ->
-            paymentModalStudentName = name
-            paymentModalAmount = amt
-            showFeePaymentModal = true
+            if(dataMode!=DataMode.SUPABASE_DEMO) {
+              repository.setDataMode(DataMode.SUPABASE_DEMO);navController.navigate(Screen.Auth.route)
+            } else {
+              val feeId=repository.feeRecords.value.filter { it.studentId==studentId && it.pendingAmount==amt }.singleOrNull()?.id
+              if(feeId==null) navController.navigate(Screen.Fees.route) else {
+                onResetPayment();paymentModalFeeId=feeId;paymentModalStudentName=name;paymentModalAmount=amt;showFeePaymentModal=true
+              }
+            }
           }
         )
       }
@@ -367,7 +423,7 @@ fun ScholaErpApp(
       ) { backStackEntry ->
         val classGrade = backStackEntry.arguments?.getString("classGrade")
         val division = backStackEntry.arguments?.getString("division")
-        if (currentUser.role == UserRole.PRINCIPAL) {
+        if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
           PrincipalAttendanceScreen(
             repository = repository,
             onBack = { navController.popBackStack() }
@@ -390,7 +446,16 @@ fun ScholaErpApp(
             paymentModalStudentName = name
             paymentModalAmount = amt
             showFeePaymentModal = true
-          }
+          },
+          onPayRazorpay = { feeId, name, amt ->
+            if(dataMode!=DataMode.SUPABASE_DEMO) {
+              repository.setDataMode(DataMode.SUPABASE_DEMO);navController.navigate(Screen.Auth.route)
+            } else {
+              onResetPayment();paymentModalFeeId=feeId;paymentModalStudentName=name;paymentModalAmount=amt
+              showFeePaymentModal=true
+            }
+          },
+          onCheckRazorpay = onCheckPayment
         )
       }
 
@@ -496,6 +561,7 @@ fun ScholaErpApp(
         )
       }
     }
+    } // cloud sync status column
   }
 
   // Global Command Palette (⌘K) Modal Overlay
@@ -521,7 +587,8 @@ fun ScholaErpApp(
       existingStudentIds = studentsList.map { it.id },
       existingAdmissionNumbers = studentsList.map { it.admissionNumber },
       onDismiss = { showAddStudentDialog = false },
-      onAddStudent = { student -> repository.addStudent(student) }
+      onAddStudent = { student -> repository.addStudent(student) },
+      onSubmitStudent = { student, fee -> repository.enrollStudent(student,fee) }
     )
   }
 
@@ -574,19 +641,19 @@ fun ScholaErpApp(
   if (showFeePaymentModal) {
     FeePaymentDialog(
       studentName = paymentModalStudentName,
-      amountDue = paymentModalAmount,
+      amountDue = verifiedPaymentAmount.takeIf { it>0L } ?: paymentModalAmount,
       isProcessing = isProcessing,
       paymentCompleted = paymentCompleted,
       razorpayPaymentId = razorpayPaymentId,
+      receiptNo = verifiedReceipt,
+      statusMessage = paymentStatus,
+      onCheckStatus = { onCheckPayment(paymentModalFeeId) },
       onDismiss = {
         showFeePaymentModal = false
         onResetPayment()
       },
-      onStartRazorpay = { method ->
-        val student = repository.students.value.firstOrNull { it.name == paymentModalStudentName }
-        if (student != null) {
-          onStartPayment(student.id, paymentModalAmount)
-        }
+      onStartRazorpay = { _ ->
+        if(paymentModalFeeId.isNotBlank()) onStartPayment(paymentModalFeeId,paymentModalAmount)
       }
     )
   }

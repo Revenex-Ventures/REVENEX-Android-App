@@ -66,7 +66,7 @@ fun PrincipalDashboardScreen(
       .fillMaxSize()
       .background(GlassBgTransparent)
       .testTag("principal_dashboard_list"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp)
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24)
   ) {
     // 1. OPERATIONS HERO CARD (Dark Onyx Surface, 22dp corners, 1px border)
     item {
@@ -74,7 +74,7 @@ fun PrincipalDashboardScreen(
         FeatureHeroCard(
           cycleTitle = "Academic Cycle 2026-2027 • Executive Desk",
           categoryBadge = "Q3 Operations Active",
-          primaryStatistic = "$${String.format(Locale.US, "%,.1f", (totalCollected / 100000.0))}k",
+          primaryStatistic = "₹${String.format(Locale.US, "%,.1f", (totalCollected / 100000.0))}k",
           statisticLabel = "Net Tuition Revenue Realized",
           secondaryKeyMetric = "$formattedAttendance%",
           secondaryMetricLabel = "Daily Roll Call Rate",
@@ -151,11 +151,11 @@ fun PrincipalDashboardScreen(
           ) {
             CompactStatTile(
               categoryLabel = "Active Scholars",
-              statCounter = "1,420",
+              statCounter = totalStudents.toString(),
               icon = Icons.Default.Groups,
               iconTint = ScholaTerracotta,
               iconContainerColor = ScholaTerracottaContainer,
-              deltaText = "+4.2% YoY",
+              deltaText = "Demo dataset",
               isPositiveDelta = true,
               modifier = Modifier.weight(1f),
               onClick = { onNavigateTo(Screen.Students.route) }
@@ -167,7 +167,7 @@ fun PrincipalDashboardScreen(
               icon = Icons.Default.HowToReg,
               iconTint = Color(0xFF15803D),
               iconContainerColor = StatusSuccessBg,
-              deltaText = "96.8% Target",
+              deltaText = "Recorded rate",
               isPositiveDelta = true,
               modifier = Modifier.weight(1f),
               onClick = { onNavigateTo(Screen.Attendance.route) }
@@ -176,14 +176,14 @@ fun PrincipalDashboardScreen(
 
           Spacer(modifier = Modifier.height(Spacing.s3))
 
-          // Row 2: Outstanding Receivables & Institutional GPA
+          // Row 2: Outstanding Receivables & Active Faculty
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
           ) {
             CompactStatTile(
               categoryLabel = "Receivables Due",
-              statCounter = "$${totalReceivables / 100000L}k",
+              statCounter = "₹${totalReceivables / 100000L}k",
               icon = Icons.Default.ReceiptLong,
               iconTint = StatusDangerText,
               iconContainerColor = StatusDangerBg,
@@ -194,15 +194,15 @@ fun PrincipalDashboardScreen(
             )
 
             CompactStatTile(
-              categoryLabel = "Institutional GPA",
-              statCounter = "3.84 / 4.0",
-              icon = Icons.Default.Grade,
+              categoryLabel = "Active Faculty",
+              statCounter = totalFaculty.toString(),
+              icon = Icons.Default.Groups,
               iconTint = ScholaGold,
               iconContainerColor = ScholaGoldContainer,
-              deltaText = "Top 5% Nat'l",
+              deltaText = "Demo dataset",
               isPositiveDelta = true,
               modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.ReportCard.route) }
+              onClick = { onNavigateTo(Screen.Teachers.route) }
             )
           }
         }
@@ -253,10 +253,10 @@ fun PrincipalDashboardScreen(
                     color = StatusDangerText
                   )
                   Text(
-                    text = "$${overdueInvoices.sumOf { it.pendingAmount } / 100000L}k outstanding tuition requiring bursar review.",
+                    text = "₹${overdueInvoices.sumOf { it.pendingAmount } / 100000L}k outstanding tuition requiring bursar review.",
                     style = MaterialTheme.typography.bodySmall,
                     color = StatusDangerText.copy(alpha = 0.85f),
-                    fontSize = 11.sp
+                    fontSize = 12.sp
                   )
                 }
               }
@@ -374,14 +374,14 @@ fun PrincipalDashboardScreen(
                         text = log.timestamp,
                         style = MaterialTheme.typography.labelSmall,
                         color = ScholaMuted,
-                        fontSize = 10.sp
+                        fontSize = 12.sp
                       )
                     }
                     Text(
                       text = "${log.actorName} (${log.actorRole}) • ${log.details}",
                       style = MaterialTheme.typography.bodySmall,
                       color = ScholaTextSecondary,
-                      fontSize = 11.sp,
+                      fontSize = 12.sp,
                       maxLines = 2,
                       overflow = TextOverflow.Ellipsis
                     )

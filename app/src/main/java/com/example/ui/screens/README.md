@@ -2,18 +2,20 @@
 
 All feature screens grouped by domain. Each subdirectory maps to a navigation destination or a set of related destinations.
 
+Current visual rationale, official research sources, screen/state inventory and verification coverage: [Revenex UI redesign](REDESIGN.md).
+
 ## Directories
 
 | Directory | Screens | Description |
 |---|---|---|
 | `auth/` | `AuthScreen.kt` | Login screen with Demo/Production mode toggle |
-| `dashboard/` | 4 role-specific dashboard screens | Home screens for Principal, Teacher, Student, Parent |
+| `dashboard/` | 5 role-specific dashboard screens | Home screens for Principal, Administrator, Teacher, Student, Parent |
 | `students/` | `StudentListScreen.kt`, `StudentDetailScreen.kt` | Student directory and 360° student profile |
 | `teachers/` | `TeacherListScreen.kt`, `TeacherDetailScreen.kt` | Faculty directory and teacher profile |
 | `attendance/` | `AttendanceScreen.kt`, `PrincipalAttendanceScreen.kt` | Teacher roll call and school-wide attendance overview |
 | `fees/` | `FeeManagementScreen.kt` | Fee ledger, invoice list, and Razorpay payment trigger |
 | `academics/` | `AcademicsScreens.kt`, `ReportCardScreen.kt` | Timetable, homework, study materials, exams, report cards |
-| `ai/` | `AiAssistantScreen.kt` | Gemini AI assistant chat interface |
+| `ai/` | `AiAssistantScreen.kt`, `AssistantReplyEngine.kt` | Role-scoped study and ERP guidance; live AI is explicitly unavailable until configured |
 | `communication/` | `CommunicationScreens.kt` | School notices and in-app notifications |
 | `operations/` | `OperationsScreens.kt` | Operations hub, transport, library, inventory, leave management |
 | `reports/` | `ReportsAnalyticsScreen.kt` | Analytics dashboard and downloadable reports |

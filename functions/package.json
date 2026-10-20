@@ -7,12 +7,14 @@
     "node": "20"
   },
   "scripts": {
+    "test": "node --test test/authorization.test.js test/http-authorization.test.js test/notifications.test.js test/payments.test.js",
     "serve": "firebase emulators:start --only functions,firestore",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "test:rules": "firebase emulators:exec --only firestore --project demo-revenex \"node test/run-rules-tests.js\"",
-    "check": "node --check index.js && node --check src/config.js && node --check src/logger.js && node --check src/monitor.js && node --check src/claims.js && node --check src/provision.js"
+    "test:storage-rules": "firebase emulators:exec --only storage --project demo-revenex \"node test/storage-rules.test.js\"",
+    "check": "node --check index.js && node --check src/authorization.js && node --check src/config.js && node --check src/logger.js && node --check src/monitor.js && node --check src/claims.js && node --check src/provision.js && node --check src/notifications.js && node --check src/payments.js"
   },
   "dependencies": {
     "@sentry/node": "^8.30.0",

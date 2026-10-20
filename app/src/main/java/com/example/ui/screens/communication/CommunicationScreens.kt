@@ -55,7 +55,7 @@ fun NoticesScreen(
       .fillMaxSize()
       .background(GlassBgTransparent)
       .testTag("notices_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     // 1. HERO SURFACE (Dark Onyx, 22dp corners)
@@ -88,7 +88,7 @@ fun NoticesScreen(
                 fontWeight = FontWeight.Bold
               )
             }
-            if (currentUser.role == UserRole.PRINCIPAL) {
+            if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
               Button(
                 onClick = onShowCreateNotice,
                 colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta),
@@ -227,7 +227,7 @@ fun NoticesScreen(
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Text(log.actionSummary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(log.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 10.sp)
+                  Text(log.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -268,7 +268,7 @@ fun NoticesScreen(
             text = "Issued by ${notice.authorName} (${notice.authorRole}) • Target: ${notice.targetAudience}",
             style = MaterialTheme.typography.labelSmall,
             color = ScholaMuted,
-            fontSize = 10.sp
+            fontSize = 12.sp
           )
         }
       }
@@ -289,7 +289,7 @@ fun NotificationsScreen(
     containerColor = GlassBgTransparent,
     topBar = {
       TopAppBar(
-        title = { Text("Institutional Notifications", fontWeight = FontWeight.Bold) },
+        title = { Text("Notifications", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -306,8 +306,20 @@ fun NotificationsScreen(
         .padding(horizontal = Spacing.s4, vertical = Spacing.s2),
       verticalArrangement = Arrangement.spacedBy(Spacing.s2)
     ) {
-      items(notifications, key = { it.id }) { notif ->
+      item {
         AppCard(modifier = Modifier.fillMaxWidth()) {
+          Text("In-app school inbox",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+          Text("Updates sync while the Supabase demo is open. Device push notifications are not enabled in this demo.",style=MaterialTheme.typography.bodySmall,color=ScholaTextSecondary)
+        }
+      }
+      if (notifications.isEmpty()) {
+        item { EmptyStateView(title = "No notifications", message = "School updates will appear here.") }
+      }
+      items(notifications, key = { it.id }) { notif ->
+        AppCard(modifier = Modifier.fillMaxWidth().clickable(
+          enabled = !notif.isRead,
+          onClickLabel = "Mark notification as read"
+        ) { repository.markNotificationAsRead(notif.id) }) {
           Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
@@ -339,14 +351,14 @@ fun NotificationsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
               ) {
-                Text(notif.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(notif.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 if (!notif.isRead) {
                   Box(modifier = Modifier.size(8.dp).background(ScholaTerracotta, CircleShape))
                 }
               }
               Text(notif.message, style = MaterialTheme.typography.bodySmall, color = ScholaTextSecondary)
               Spacer(modifier = Modifier.height(2.dp))
-              Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 9.sp)
+              Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
             }
           }
         }

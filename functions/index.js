@@ -9,9 +9,13 @@ const { config, validate } = require('./src/config');
 const log = require('./src/logger');
 const { initMonitor, captureAndLog } = require('./src/monitor');
 const { provisionUsers } = require('./src/provision');
+const { authorize } = require('./src/authorization');
+const { chunk, deviceId, normalizeDeviceToken, normalizeNotificationPayload } = require('./src/notifications');
+const { callerMayPayForStudent, normalizeStudentId, payableAmount } = require('./src/payments');
 
 validate();
 admin.initializeApp();
+initMonitor(config.sentryDsn, config.env);
 
 let razorpay = null;
 if (config.razorpayKeyId) {
@@ -60,6 +64,8 @@ app.use((req, res, next) => {
 });
 
 // --- Health check --------------------------------------------------------------
+app.use(authorize((token, checkRevoked) => admin.auth().verifyIdToken(token, checkRevoked)));
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'HEALTHY',
@@ -71,12 +77,130 @@ app.get('/health', (req, res) => {
   });
 });
 
+// --- FCM device registration -------------------------------------------------
+// A device record is tenant-, session-, and user-scoped. The client never
+// chooses those boundaries; they are taken from its verified custom claims.
+app.post('/registerDevice', async (req, res, next) => {
+  try {
+    const fcmToken = normalizeDeviceToken(req.body.fcmToken);
+    const platform = typeof req.body.platform === 'string'
+      ? req.body.platform.trim().slice(0, 32)
+      : 'android';
+    const deviceRef = admin.firestore()
+      .collection('schools').doc(req.user.schoolId)
+      .collection('devices').doc(deviceId(req.user.uid, fcmToken));
+
+    await deviceRef.set({
+      uid: req.user.uid,
+      token: fcmToken,
+      role: req.user.role,
+      sessionId: req.user.sessionId,
+      platform,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    res.json({ status: 'SUCCESS' });
+  } catch (err) {
+    if (err.message && /^(fcmToken)/.test(err.message)) {
+      return res.status(400).json({ status: 'ERROR', message: err.message });
+    }
+    return next(err);
+  }
+});
+
+// --- Auditable, role-targeted notification delivery -------------------------
+app.post('/publishNotification', async (req, res, next) => {
+  try {
+    const payload = normalizeNotificationPayload(req.body);
+    const db = admin.firestore();
+    const schoolRef = db.collection('schools').doc(req.user.schoolId);
+    const notificationRef = schoolRef.collection('notifications').doc();
+    const now = new Date().toISOString();
+
+    await notificationRef.set({
+      id: notificationRef.id,
+      title: payload.title,
+      message: payload.body,
+      category: payload.category,
+      targetRoles: payload.targetRoles,
+      schoolId: req.user.schoolId,
+      sessionId: req.user.sessionId,
+      createdBy: req.user.uid,
+      createdAt: now,
+      isRead: false,
+    });
+    await schoolRef.collection('audit_log').add({
+      actionType: 'NOTIFICATION_PUBLISHED',
+      actionSummary: 'Published a role-targeted school notification',
+      actorId: req.user.uid,
+      actorRole: req.user.role,
+      schoolId: req.user.schoolId,
+      sessionId: req.user.sessionId,
+      timestamp: now,
+    });
+
+    const devices = await schoolRef.collection('devices')
+      .where('sessionId', '==', req.user.sessionId).get();
+    const recipients = devices.docs.filter((doc) => payload.targetRoles.includes(doc.get('role')));
+    let delivered = 0;
+    let invalidTokens = 0;
+    for (const group of chunk(recipients)) {
+      let response;
+      try {
+        response = await admin.messaging().sendEachForMulticast({
+          tokens: group.map((doc) => doc.get('token')),
+          notification: { title: payload.title, body: payload.body },
+          data: {
+            notificationId: notificationRef.id,
+            title: payload.title,
+            body: payload.body,
+            category: payload.category,
+          },
+          android: { priority: 'high', notification: { channelId: 'revenex_erp_default' } },
+        });
+      } catch (deliveryError) {
+        // The notification document is durable and can be shown in-app even
+        // when FCM is temporarily unavailable. A later worker can retry it.
+        log.error('notification delivery batch failed', {
+          notificationId: notificationRef.id,
+          errorCode: deliveryError.code,
+          errorMessage: deliveryError.message,
+        });
+        continue;
+      }
+      delivered += response.successCount;
+      const deletes = [];
+      response.responses.forEach((result, index) => {
+        const code = result.error && result.error.code;
+        if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+          deletes.push(group[index].ref.delete());
+          invalidTokens += 1;
+        }
+      });
+      await Promise.all(deletes);
+    }
+    log.info('notification published', {
+      notificationId: notificationRef.id,
+      audienceRoles: payload.targetRoles,
+      recipientCount: recipients.length,
+      delivered,
+      invalidTokens,
+    });
+    return res.status(201).json({ status: 'SUCCESS', notificationId: notificationRef.id, delivered });
+  } catch (err) {
+    if (err.message && /^(title|body|targetRoles)/.test(err.message)) {
+      return res.status(400).json({ status: 'ERROR', message: err.message });
+    }
+    return next(err);
+  }
+});
+
 // --- Bulk provision users + custom claims ---------------------------------------
 app.post('/provisionUsers', async (req, res, next) => {
   try {
     const db = admin.firestore();
     const auth = admin.auth();
-    const results = await provisionUsers({ db, auth, config, ...(req.body || {}) });
+    const results = await provisionUsers({ db, auth, config,
+      schoolId: req.body.schoolId, sessionId: req.body.sessionId });
     log.info('provisionUsers completed', {
       teachers: results.teachers,
       students: results.students,
@@ -243,32 +367,46 @@ app.post('/promoteStudents', async (req, res, next) => {
 // --- Create Razorpay Order endpoint -------------------------------------------
 app.post('/createOrder', async (req, res, next) => {
   try {
-    const { amount, currency, receipt } = req.body;
-    if (!amount) {
-      return res.status(400).json({ status: 'ERROR', message: 'Missing amount parameter' });
+    const studentId = normalizeStudentId(req.body.studentId);
+    if (!callerMayPayForStudent(req.user, studentId)) {
+      return res.status(403).json({ status: 'ERROR', message: 'You cannot make a payment for this student' });
     }
+    const schoolRef = admin.firestore().collection('schools').doc(req.user.schoolId);
+    const feeRef = schoolRef.collection('fees').doc(`fee_${studentId}`);
+    const feeSnap = await feeRef.get();
+    if (!feeSnap.exists || feeSnap.get('sessionId') !== req.user.sessionId) {
+      return res.status(404).json({ status: 'ERROR', message: 'No active fee record found for this student' });
+    }
+    const amount = payableAmount({
+      requestedAmount: req.body.amount,
+      pendingAmount: feeSnap.get('feePendingAmount'),
+    });
+    const receipt = `fee_${req.user.sessionId}_${studentId}_${Date.now()}`;
+    const orderRequest = {
+      amount,
+      currency: 'INR',
+      receipt,
+      notes: { studentId, schoolId: req.user.schoolId, sessionId: req.user.sessionId, feeId: feeRef.id },
+    };
     if (!razorpay) {
       log.info('Mocking Razorpay order creation (no key configured)');
       return res.json({
         status: 'SUCCESS',
         order: {
           id: `order_mock_${crypto.randomBytes(8).toString('hex')}`,
-          amount: amount,
-          currency: currency || 'INR',
-          receipt: receipt || 'receipt_1'
+          ...orderRequest,
         }
       });
     }
 
-    const order = await razorpay.orders.create({
-      amount: parseInt(amount, 10),
-      currency: currency || 'INR',
-      receipt: receipt || `receipt_${Date.now()}`
-    });
+    const order = await razorpay.orders.create(orderRequest);
 
     log.info('Razorpay order created successfully', { orderId: order.id });
     res.json({ status: 'SUCCESS', order });
   } catch (err) {
+    if (err.message && /^(studentId|amount|Outstanding fee balance)/.test(err.message)) {
+      return res.status(400).json({ status: 'ERROR', message: err.message });
+    }
     next(err);
   }
 });
@@ -392,10 +530,10 @@ app.post('/recordOfflinePayment', async (req, res, next) => {
         feeHead: feeHead || 'Term 2 Tuition & Activity Dues',
         status: 'SUCCESS',
         receiptNumber,
-        receivedBy: receivedBy || 'School Accountant',
+        receivedBy: req.user.uid,
         timestamp: new Date().toISOString(),
         schoolId: sid,
-        sessionId: config.sessionId
+        sessionId: req.user.sessionId
       });
 
       const feeId = `fee_${studentId}`;
@@ -437,4 +575,9 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   });
 });
 
-exports.api = onRequest({ cors: true, maxInstances: 10, region: config.region }, app);
+exports.api = onRequest({
+  cors: true,
+  maxInstances: 10,
+  region: config.region,
+  secrets: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'SENTRY_DSN'],
+}, app);

@@ -12,7 +12,7 @@ Custom claims written:
 
 | Claim | Type | Description |
 |---|---|---|
-| `role` | string | User role: `PRINCIPAL`, `TEACHER`, `STUDENT`, `PARENT` |
+| `role` | string | User role: `PRINCIPAL`, `ADMIN`, `TEACHER`, `STUDENT`, `PARENT` |
 | `schoolId` | string | Tenant school identifier (e.g. `revenex_school_001`) |
 | `sessionId` | string | Active academic session (e.g. `session_2026_2027`) |
 | `employeeId` | string | For teachers — staff ID |

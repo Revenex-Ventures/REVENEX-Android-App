@@ -64,27 +64,29 @@ fun ParentDashboardScreen(
   val activeChild = remember(children, selectedStudentId) {
     children.firstOrNull { it.id == selectedStudentId }
       ?: children.firstOrNull()
-      ?: Student(
-        id = "stu_1001",
-        admissionNumber = "REV-2026-1001",
-        rollNumber = 3,
-        name = "Aarav Patel",
-        classGrade = "10",
-        division = "A",
-        dob = "15/08/2009",
-        gender = "Male",
-        bloodGroup = "A+",
-        parentName = currentUser.name,
-        parentPhone = currentUser.phone,
-        parentEmail = currentUser.email,
-        address = "",
-        admissionDate = "",
-        attendancePercent = 96.4,
-        feeStatus = FeeStatus.PENDING,
-        feePendingAmount = 1450000L,
-        rank = 3,
-        gpa = 9.4
-      )
+  }
+
+  if (activeChild == null) {
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(Spacing.s4),
+      contentAlignment = Alignment.Center
+    ) {
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Default.School, contentDescription = null, tint = ScholaTextSecondary, modifier = Modifier.size(48.dp))
+        Spacer(modifier = Modifier.height(Spacing.s4))
+        Text("No Linked Student Found", style = MaterialTheme.typography.titleMedium, color = ScholaTextPrimary)
+        Spacer(modifier = Modifier.height(Spacing.s2))
+        Text(
+          "No student record is linked to your parent account in this session. Parent-student relationships are established by school administrators.",
+          style = MaterialTheme.typography.bodySmall,
+          color = ScholaTextSecondary,
+          textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+      }
+    }
+    return
   }
 
   val childFee = feeRecords.firstOrNull { it.studentId == activeChild.id }
@@ -111,7 +113,7 @@ fun ParentDashboardScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("parent_dashboard_list"),
-    contentPadding = PaddingValues(bottom = 90.dp)
+    contentPadding = PaddingValues(bottom = Spacing.xl24)
   ) {
     // Parent Header & Multi-Child Switcher
     item {
@@ -123,45 +125,6 @@ fun ParentDashboardScreen(
             .padding(16.dp)
             .clip(parentShape)
             .background(ScholaSlateNavyDark, parentShape)
-            .drawBehind {
-              drawRect(
-                brush = Brush.linearGradient(
-                  colors = listOf(
-                    Color(0xFF261D18),
-                    ScholaSlateNavy,
-                    InkBlack
-                  ),
-                  start = Offset(0f, 0f),
-                  end = Offset(size.width, size.height)
-                )
-              )
-              val gw = size.width
-              val glowCenter = Offset(gw * 0.85f, size.height * 0.20f)
-              val glowRadius = gw * 0.9f
-              drawCircle(
-                brush = Brush.radialGradient(
-                  0f to ScholaTerracotta.copy(alpha = 0.12f),
-                  0.5f to ScholaTerracotta.copy(alpha = 0.03f),
-                  1f to Color.Transparent,
-                  center = glowCenter,
-                  radius = glowRadius
-                ),
-                radius = glowRadius,
-                center = glowCenter
-              )
-              drawRoundRect(
-                brush = Brush.horizontalGradient(
-                  colors = listOf(
-                    ScholaTerracotta,
-                    ScholaTerracottaLight.copy(alpha = 0.6f),
-                    Color.Transparent
-                  )
-                ),
-                topLeft = Offset(0f, 0f),
-                size = Size(gw * 0.75f, 2.5f * density),
-                cornerRadius = CornerRadius(1.5f * density, 1.5f * density)
-              )
-            }
             .border(
               width = 1.dp,
               brush = Brush.verticalGradient(
@@ -171,7 +134,7 @@ fun ParentDashboardScreen(
               ),
               shape = parentShape
             )
-            .shadow(16.dp, parentShape, clip = false)
+            .shadow(0.dp, parentShape, clip = false)
         ) {
           Column(
             modifier = Modifier
@@ -200,7 +163,7 @@ fun ParentDashboardScreen(
                   Text(
                     text = "PARENT DESK",
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                     color = Color.White.copy(alpha = 0.9f),
                     letterSpacing = 1.1.sp,
                     fontWeight = FontWeight.Bold
@@ -233,7 +196,7 @@ fun ParentDashboardScreen(
                   Text(
                     text = "GUARDIAN",
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
                     color = Color.White
@@ -247,7 +210,7 @@ fun ParentDashboardScreen(
             Text(
               text = "SELECT WARD / SCHOLAR",
               style = MaterialTheme.typography.labelSmall,
-              fontSize = 9.sp,
+              fontSize = 12.sp,
               letterSpacing = 1.0.sp,
               fontWeight = FontWeight.SemiBold,
               color = Color.White.copy(alpha = 0.70f)
@@ -304,7 +267,7 @@ fun ParentDashboardScreen(
                       Text(
                         text = "Class ${child.fullClass}",
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         color = if (isSelected) ScholaTerracottaLight else Color.White.copy(alpha = 0.70f)
                       )
                     }
@@ -474,12 +437,12 @@ fun ParentDashboardScreen(
         )
         StatCard(
           title = "Class Rank",
-          value = "#${activeChild.rank}",
-          sublabel = "Top 10% in Class ${activeChild.fullClass}",
+          value = if(repository.dataMode.value==com.example.data.datasource.DataMode.SUPABASE_DEMO) "Not ranked" else "#${activeChild.rank}",
+          sublabel = if(repository.dataMode.value==com.example.data.datasource.DataMode.SUPABASE_DEMO) "Class ${activeChild.fullClass}" else "Top 10% in Class ${activeChild.fullClass}",
           icon = Icons.Default.MilitaryTech,
           iconTint = RevenexGold,
           iconBackground = RevenexGoldContainer,
-          trendText = "GPA ${activeChild.gpa}",
+          trendText = if(repository.dataMode.value==com.example.data.datasource.DataMode.SUPABASE_DEMO) "GPA not calculated" else "GPA ${activeChild.gpa}",
           isPositiveTrend = true,
           modifier = Modifier.weight(1f)
         )

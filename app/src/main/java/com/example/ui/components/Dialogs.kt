@@ -43,8 +43,12 @@ fun AddStudentDialog(
   existingStudentIds: List<String> = emptyList(),
   existingAdmissionNumbers: List<String> = emptyList(),
   onDismiss: () -> Unit,
-  onAddStudent: (Student) -> Unit
+  onAddStudent: (Student) -> Unit,
+  onSubmitStudent: (suspend (Student, Long) -> Unit)? = null
 ) {
+  val submitScope = rememberCoroutineScope()
+  var saving by remember { mutableStateOf(false) }
+  var annualFee by remember { mutableStateOf("") }
   var name by remember { mutableStateOf("") }
   var studentId by remember { mutableStateOf("stu_${(1007..9999).random()}") }
   var admissionNo by remember { mutableStateOf("REV-2026-${(1000..9999).random()}") }
@@ -61,16 +65,18 @@ fun AddStudentDialog(
   var validationError by remember { mutableStateOf<String?>(null) }
 
   Dialog(
-    onDismissRequest = onDismiss,
+    onDismissRequest = { if(!saving) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     Card(
       modifier = Modifier
-        .fillMaxWidth(0.92f)
+        .widthIn(max = 600.dp)
+        .fillMaxWidth(0.94f)
+        .imePadding()
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(24.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+      shape = RoundedCornerShape(16.dp),
+      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
     ) {
       Column(
         modifier = Modifier
@@ -95,7 +101,7 @@ fun AddStudentDialog(
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
           }
-          IconButton(onClick = onDismiss) {
+          IconButton(onClick = onDismiss, enabled = !saving) {
             Icon(Icons.Default.Close, contentDescription = "Close")
           }
         }
@@ -259,6 +265,10 @@ fun AddStudentDialog(
           maxLines = 2
         )
 
+        if (onSubmitStudent != null && com.example.data.datasource.AppEnvironment.currentMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) {
+          Spacer(Modifier.height(10.dp))
+          OutlinedTextField(value=annualFee,onValueChange={ annualFee=it },label={ Text("Initial fee in INR (optional)") },supportingText={ Text("Creates an unpaid invoice. Blank means no invoice; it does not create login accounts.") },modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=!saving)
+        }
         // Validation error display
         if (validationError != null) {
           Spacer(modifier = Modifier.height(8.dp))
@@ -341,7 +351,7 @@ fun AddStudentDialog(
                   bloodGroup = bloodGroup.ifBlank { "Unknown" },
                   parentName = parentName.trim(),
                   parentPhone = parentPhone.trim(),
-                  parentEmail = parentEmail.ifBlank { "${name.lowercase().replace(" ", ".")}@parent.in" },
+                  parentEmail = parentEmail.trim(),
                   address = address.ifBlank { "Address pending" },
                   admissionDate = indiaDateFormat.format(java.util.Date()),
                   attendancePercent = 100.0,
@@ -351,8 +361,16 @@ fun AddStudentDialog(
                   gpa = 0.0,
                   status = "ACTIVE"
                 )
-                onAddStudent(newStudent)
-                onDismiss()
+                val feePaise=if(annualFee.isBlank()) 0L else runCatching { java.math.BigDecimal(annualFee.trim()).movePointRight(2).longValueExact() }.getOrNull()
+                if(feePaise==null || feePaise !in 0L..1000000000L) { validationError="Enter a valid non-negative INR amount with at most two decimals.";return@Button }
+                if(onSubmitStudent==null) { onAddStudent(newStudent);onDismiss() } else {
+                  saving=true;validationError=null
+                  submitScope.launch {
+                    try { onSubmitStudent(newStudent,feePaise);onDismiss() }
+                    catch(e:Exception) { if(e is kotlinx.coroutines.CancellationException)throw e;validationError=e.message ?: "Enrollment was not confirmed. Check the directory before retrying." }
+                    finally { saving=false }
+                  }
+                }
               }
             }
           },
@@ -361,8 +379,8 @@ fun AddStudentDialog(
             .height(50.dp)
             .testTag("submit_add_student_button"),
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue),
-          enabled = name.isNotBlank() && parentName.isNotBlank() && classGrade.isNotBlank()
+          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White),
+          enabled = !saving && name.isNotBlank() && parentName.isNotBlank() && classGrade.isNotBlank()
         ) {
           Icon(Icons.Default.PersonAdd, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
@@ -399,11 +417,13 @@ fun AddTeacherDialog(
   ) {
     Card(
       modifier = Modifier
-        .fillMaxWidth(0.92f)
+        .widthIn(max = 600.dp)
+        .fillMaxWidth(0.94f)
+        .imePadding()
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(24.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+      shape = RoundedCornerShape(16.dp),
+      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
     ) {
       Column(
         modifier = Modifier
@@ -645,7 +665,7 @@ fun AddTeacherDialog(
             .height(50.dp)
             .testTag("submit_add_teacher_button"),
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue),
+          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White),
           enabled = name.isNotBlank() && employeeId.isNotBlank()
         ) {
           Icon(Icons.Default.School, contentDescription = null)
@@ -674,11 +694,13 @@ fun CreateNoticeDialog(
   ) {
     Card(
       modifier = Modifier
-        .fillMaxWidth(0.92f)
+        .widthIn(max = 600.dp)
+        .fillMaxWidth(0.94f)
+        .imePadding()
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(24.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+      shape = RoundedCornerShape(16.dp),
+      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
     ) {
       Column(
         modifier = Modifier
@@ -741,7 +763,7 @@ fun CreateNoticeDialog(
             FilterChip(
               selected = category == cat,
               onClick = { category = cat },
-              label = { Text(cat.label, fontSize = 11.sp) }
+              label = { Text(cat.label, fontSize = 12.sp) }
             )
           }
         }
@@ -860,11 +882,13 @@ fun CreateAssignmentDialog(
   ) {
     Card(
       modifier = Modifier
-        .fillMaxWidth(0.92f)
+        .widthIn(max = 600.dp)
+        .fillMaxWidth(0.94f)
+        .imePadding()
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(24.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+      shape = RoundedCornerShape(16.dp),
+      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
     ) {
       Column(
         modifier = Modifier
@@ -1092,11 +1116,13 @@ fun ApplyLeaveDialog(
   ) {
     Card(
       modifier = Modifier
-        .fillMaxWidth(0.92f)
+        .widthIn(max = 600.dp)
+        .fillMaxWidth(0.94f)
+        .imePadding()
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(24.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+      shape = RoundedCornerShape(16.dp),
+      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
     ) {
       Column(
         modifier = Modifier
@@ -1134,7 +1160,7 @@ fun ApplyLeaveDialog(
             FilterChip(
               selected = leaveType.contains(type),
               onClick = { leaveType = "$type Leave" },
-              label = { Text(type, fontSize = 11.sp) }
+              label = { Text(type, fontSize = 12.sp) }
             )
           }
         }
@@ -1225,22 +1251,24 @@ fun FeePaymentDialog(
   paymentCompleted: Boolean,
   razorpayPaymentId: String,
   onDismiss: () -> Unit,
-  onStartRazorpay: (method: String) -> Unit
+  onStartRazorpay: (method: String) -> Unit,
+  receiptNo: String = "",
+  statusMessage: String = "",
+  onCheckStatus: (() -> Unit)? = null
 ) {
-  var selectedMethod by remember { mutableStateOf("UPI (Google Pay / PhonePe)") }
-  var generatedReceiptNo by remember { mutableStateOf("REC-2026-${(1000..9999).random()}") }
-
   Dialog(
     onDismissRequest = { if (!isProcessing) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     Card(
       modifier = Modifier
-        .fillMaxWidth(0.92f)
+        .widthIn(max = 600.dp)
+        .fillMaxWidth(0.94f)
+        .imePadding()
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(24.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+      shape = RoundedCornerShape(16.dp),
+      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
     ) {
       Column(
         modifier = Modifier
@@ -1266,7 +1294,7 @@ fun FeePaymentDialog(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
             }
-            IconButton(onClick = onDismiss) {
+            IconButton(onClick = onDismiss, enabled = !isProcessing) {
               Icon(Icons.Default.Close, contentDescription = "Close")
             }
           }
@@ -1291,7 +1319,7 @@ fun FeePaymentDialog(
               )
               Spacer(modifier = Modifier.width(8.dp))
               Text(
-                text = "Razorpay Test Mode â€” No real money will be charged",
+                text = "Razorpay Test Mode — No real money will be charged",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF856404)
@@ -1318,7 +1346,7 @@ fun FeePaymentDialog(
                   color = RevenexOnPrimaryContainer
                 )
                 Text(
-                  text = "₹${String.format(java.util.Locale.US, "%,d", amountDue / 100)}",
+                  text = "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}",
                   style = MaterialTheme.typography.headlineMedium,
                   fontWeight = FontWeight.Bold,
                   color = RevenexOnPrimaryContainer
@@ -1329,7 +1357,7 @@ fun FeePaymentDialog(
                 color = Color.White.copy(alpha = 0.8f)
               ) {
                 Text(
-                  text = "Instant Receipt",
+                  text = "Verified receipt",
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
                   color = RevenexBlue,
@@ -1341,53 +1369,9 @@ fun FeePaymentDialog(
 
           Spacer(modifier = Modifier.height(16.dp))
 
-          Text(
-            text = "Select Payment Gateway / Method",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-          )
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          listOf(
-            "UPI (Google Pay / PhonePe / Paytm)" to Icons.Default.QrCodeScanner,
-            "Debit / Credit Card (Visa / MasterCard)" to Icons.Default.CreditCard,
-            "Net Banking (All Major Indian Banks)" to Icons.Default.AccountBalance
-          ).forEach { (method, icon) ->
-            val isSelected = selectedMethod.startsWith(method.take(5))
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .clickable { selectedMethod = method }
-            ) {
-              Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Icon(
-                  imageVector = icon,
-                  contentDescription = null,
-                  tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                  text = method,
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                  modifier = Modifier.weight(1f)
-                )
-                RadioButton(
-                  selected = isSelected,
-                  onClick = { selectedMethod = method }
-                )
-              }
-            }
-          }
-
+          Text("Choose an available payment method in Razorpay secure checkout.", style=MaterialTheme.typography.bodySmall)
+          if (statusMessage.isNotBlank()) Text(statusMessage, style=MaterialTheme.typography.bodySmall)
+          if (!isProcessing && onCheckStatus != null) TextButton(onClick=onCheckStatus) { Text("Check payment status") }
           Spacer(modifier = Modifier.height(20.dp))
 
           if (isProcessing) {
@@ -1406,19 +1390,19 @@ fun FeePaymentDialog(
           } else {
             Button(
               onClick = {
-                onStartRazorpay(selectedMethod)
+                onStartRazorpay("Razorpay Test")
               },
               modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
                 .testTag("submit_fee_payment_button"),
               shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue)
+              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
             ) {
               Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.width(8.dp))
               Text(
-                text = "Pay â‚¹${String.format(java.util.Locale.US, "%,.0f", amountDue)} Securely",
+                text = "Pay ₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)} Securely",
                 fontWeight = FontWeight.Bold
               )
             }
@@ -1460,19 +1444,19 @@ fun FeePaymentDialog(
               modifier = Modifier.fillMaxWidth()
             ) {
               Column(modifier = Modifier.padding(14.dp)) {
-                ReceiptRow("Receipt No.", generatedReceiptNo)
+                ReceiptRow("Receipt No.", receiptNo)
                 ReceiptRow("Razorpay ID", razorpayPaymentId)
                 ReceiptRow("Student", studentName)
-                ReceiptRow("Amount", "â‚¹${String.format(java.util.Locale.US, "%,.0f", amountDue)}")
-                ReceiptRow("Method", selectedMethod.substringBefore(" ("))
-                ReceiptRow("Status", "SUCCESS âœ“")
+                ReceiptRow("Amount", "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}")
+                ReceiptRow("Method", "Razorpay Test")
+                ReceiptRow("Status", "Captured · verified (test)")
               }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-              text = "SMS & Email confirmation sent to registered contact.",
+              text = "Receipt saved in the school ledger and in-app inbox.",
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1485,7 +1469,7 @@ fun FeePaymentDialog(
                 .fillMaxWidth()
                 .height(48.dp),
               shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue)
+              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
             ) {
               Text("Done & View Updated Ledger", fontWeight = FontWeight.Bold)
             }

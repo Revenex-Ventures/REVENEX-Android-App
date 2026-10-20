@@ -1,0 +1,11 @@
+project_id = "revenex-school-erp"
+
+[functions.razorpay-payments]
+# This function validates user Bearer tokens with Auth. The webhook route instead
+# requires the raw-body Razorpay HMAC. Anonymous user actions remain rejected.
+verify_jwt = false
+
+[functions.revenex-ai]
+# The handler validates every Bearer token through Supabase Auth before deriving context.
+verify_jwt = false
+static_files = ["./functions/revenex-ai/prompt.md"]

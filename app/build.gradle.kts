@@ -1,13 +1,30 @@
-import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import java.net.URI
 
 plugins {
   alias(libs.plugins.android.application)
+  id("org.jetbrains.kotlin.plugin.serialization") version "2.2.10"
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
-  alias(libs.plugins.secrets)
-  alias(libs.plugins.google.services)
 }
+
+// Deliberately do not load .env: it may contain server secrets from legacy integrations.
+val supabaseLocal = Properties().apply {
+  rootProject.file("supabase.local.properties").takeIf { it.isFile }?.inputStream()?.use(::load)
+}
+fun publicConfig(name: String): String = supabaseLocal.getProperty(name, "").trim()
+check(supabaseLocal.stringPropertyNames().all { it in setOf("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY") }) {
+  "supabase.local.properties must contain only the two public Supabase configuration values."
+}
+check(publicConfig("SUPABASE_PUBLISHABLE_KEY").let { it.isBlank() || (it.startsWith("sb_publishable_") && it.none(Char::isWhitespace)) }) {
+  "Only an sb_publishable_ key is allowed in Android configuration."
+}
+check(publicConfig("SUPABASE_URL").let { value -> value.isBlank() || runCatching {
+  val uri=URI(value)
+  uri.scheme=="https" && !uri.host.isNullOrBlank() && uri.userInfo==null && uri.rawQuery==null && uri.rawFragment==null
+}.getOrDefault(false) }) { "SUPABASE_URL must be a public HTTPS project URL, without credentials or query parameters." }
+fun javaLiteral(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "").replace("\r", "") + "\""
 
 android {
   namespace = "com.example"
@@ -19,6 +36,10 @@ android {
     targetSdk = 36
     versionCode = 1
     versionName = "1.0"
+    buildConfigField("String", "SUPABASE_URL", javaLiteral(publicConfig("SUPABASE_URL")))
+    buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", javaLiteral(publicConfig("SUPABASE_PUBLISHABLE_KEY")))
+    // Retained API compatibility only; demo builds never invoke checkout.
+    buildConfigField("String", "RAZORPAY_KEY_ID", "\"\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -31,12 +52,6 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
 
   buildTypes {
@@ -46,9 +61,9 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
   compileOptions {
+    isCoreLibraryDesugaringEnabled = true
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
@@ -63,22 +78,30 @@ android {
   }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
-secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
-  ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
-  // Unused empty env keys would otherwise generate `String X = ;` and break the Java build.
-  ignoreList.add("CLOUDFLARE_WORKER_URL")
-  ignoreList.add("CLOUDFLARE_R2_BUCKET_URL")
+// Keep large native test files off system TEMP. The shared Gradle artifact cache
+// also avoids Robolectric's Android 16 native-loader bug with spaces in jar paths.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+  val testTemp = layout.buildDirectory.dir("tmp/$name/robolectric").get().asFile
+  val testArtifacts = gradle.gradleUserHomeDir.resolve("caches/robolectric-m2")
+  systemProperty("java.io.tmpdir", testTemp.absolutePath)
+  systemProperty("maven.repo.local", testArtifacts.absolutePath)
+  doFirst {
+    check(testTemp.mkdirs() || testTemp.isDirectory)
+    check(testArtifacts.mkdirs() || testArtifacts.isDirectory)
+  }
 }
-
-googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+  implementation(platform("io.github.jan-tennert.supabase:bom:3.2.3"))
+  implementation("io.github.jan-tennert.supabase:auth-kt")
+  implementation("io.github.jan-tennert.supabase:postgrest-kt")
+  implementation("io.github.jan-tennert.supabase:storage-kt")
+  implementation("io.github.jan-tennert.supabase:realtime-kt")
+  implementation("io.github.jan-tennert.supabase:functions-kt")
+  implementation("io.ktor:ktor-client-okhttp:3.2.3")
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)

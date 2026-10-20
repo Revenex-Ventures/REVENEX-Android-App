@@ -9,5 +9,6 @@ class RevenexApplication : Application() {
     super.onCreate()
     StudentProfileStore.init(this)
     TeacherProfileStore.init(this)
+    // Demo uses the database inbox only; do not initialize FCM or device push.
   }
 }

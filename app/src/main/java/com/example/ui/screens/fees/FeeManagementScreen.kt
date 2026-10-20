@@ -34,13 +34,16 @@ import java.util.Locale
 @Composable
 fun FeeManagementScreen(
   repository: ErpDataRepository,
-  onShowPaymentModal: (studentName: String, amountDue: Long) -> Unit
+  onShowPaymentModal: (studentName: String, amountDue: Long) -> Unit,
+  onPayRazorpay: (String, String, Long) -> Unit = { _, name, amount -> onShowPaymentModal(name, amount) },
+  onCheckRazorpay: (String) -> Unit = {}
 ) {
   val invoices by repository.invoices.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
+  val dataMode by repository.dataMode.collectAsState()
 
-  var selectedFilter by remember { mutableStateOf("All Invoices") }
-  val filters = listOf("All Invoices", "Overdue", "Partial", "Paid")
+  var selectedFilter by remember { mutableStateOf("Pending") }
+  val filters = listOf("Pending", "All Invoices", "Overdue", "Partial", "Paid")
 
   // Selected invoice for payment dialog
   var selectedInvoiceForPayment by remember { mutableStateOf<LedgerInvoice?>(null) }
@@ -48,10 +51,11 @@ fun FeeManagementScreen(
   val totalBilled = invoices.sumOf { it.totalAmount }
   val totalCollected = invoices.sumOf { it.paidAmount }
   val totalReceivables = invoices.sumOf { it.pendingAmount }
-  val collectionPercentage = if (totalBilled > 0) ((totalCollected.toDouble() / totalBilled.toDouble()) * 100.0).toInt() else 94
+  val collectionPercentage = if (totalBilled > 0) ((totalCollected.toDouble() / totalBilled.toDouble()) * 100.0).toInt() else 0
 
   val filteredInvoices = remember(invoices, selectedFilter) {
     when (selectedFilter) {
+      "Pending" -> invoices.filter { it.pendingAmount>0 }
       "Overdue" -> invoices.filter { it.status == FeeStatus.OVERDUE }
       "Partial" -> invoices.filter { it.status == FeeStatus.PARTIAL }
       "Paid" -> invoices.filter { it.status == FeeStatus.PAID }
@@ -64,7 +68,7 @@ fun FeeManagementScreen(
       .fillMaxSize()
       .background(GlassBgTransparent)
       .testTag("fee_management_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = 100.dp),
+    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     // 1. NET REVENUE REALIZATION HERO CARD (Dark Onyx Surface, 22dp corners)
@@ -132,16 +136,16 @@ fun FeeManagementScreen(
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
             Column {
-              Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 9.sp)
-              Text("$${totalBilled / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ScholaOnyxText)
+              Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
+              Text("₹${totalBilled / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ScholaOnyxText)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 9.sp)
-              Text("$${totalCollected / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessText)
+              Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
+              Text("₹${totalCollected / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessText)
             }
             Column(horizontalAlignment = Alignment.End) {
-              Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 9.sp)
-              Text("$${totalReceivables / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusDangerText)
+              Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
+              Text("₹${totalReceivables / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusDangerText)
             }
           }
         }
@@ -209,20 +213,20 @@ fun FeeManagementScreen(
                   text = "(${invoice.cohort})",
                   style = MaterialTheme.typography.bodySmall,
                   color = ScholaMuted,
-                  fontSize = 11.sp
+                  fontSize = 12.sp
                 )
               }
               Text(
                 text = "${invoice.invoiceNumber} • ${invoice.title}",
                 style = MaterialTheme.typography.bodySmall,
                 color = ScholaTextSecondary,
-                fontSize = 11.sp
+                fontSize = 12.sp
               )
               Text(
                 text = "Due: ${invoice.dueDate} • Channel: ${invoice.paymentChannel}",
                 style = MaterialTheme.typography.labelSmall,
                 color = ScholaMuted,
-                fontSize = 10.sp
+                fontSize = 12.sp
               )
             }
 
@@ -250,16 +254,21 @@ fun FeeManagementScreen(
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text(
-              text = "$${invoice.paidAmount / 100L} paid of $${invoice.totalAmount / 100L}",
+              text = "₹${invoice.paidAmount / 100L} paid of ₹${invoice.totalAmount / 100L}",
               style = MaterialTheme.typography.bodySmall,
               color = ScholaMuted,
-              fontSize = 11.sp
+              fontSize = 12.sp
             )
 
-            if (invoice.pendingAmount > 0) {
+            if (invoice.pendingAmount > 0 && dataMode==com.example.data.datasource.DataMode.SUPABASE_DEMO) {
+              Column(horizontalAlignment = Alignment.End) {
+                AppButton(text="Razorpay Test", onClick={ onPayRazorpay(invoice.id, invoice.studentName, invoice.pendingAmount) })
+                TextButton(onClick={ onCheckRazorpay(invoice.id) }) { Text("Check payment status") }
+              }
+            } else if (invoice.pendingAmount > 0) {
               AppButton(
-                text = "Collect Payment ($${invoice.pendingAmount / 100L})",
-                onClick = { selectedInvoiceForPayment = invoice },
+                text = "Razorpay Test (₹${invoice.pendingAmount / 100L})",
+                onClick = { onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount) },
                 containerColor = ScholaTerracotta,
                 fontSize = 12.sp,
                 minHeight = 38.dp
@@ -275,7 +284,7 @@ fun FeeManagementScreen(
                 ) {
                   Icon(Icons.Default.Check, contentDescription = null, tint = StatusSuccessText, modifier = Modifier.size(14.dp))
                   Spacer(modifier = Modifier.width(4.dp))
-                  Text("Settled in Full", color = StatusSuccessText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                  Text("Settled in Full", color = StatusSuccessText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
               }
             }
@@ -337,14 +346,14 @@ fun ScholaPaymentCollectionDialog(
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
             Text("Total Demanded:", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
-            Text("$${invoice.totalAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+            Text("₹${invoice.totalAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
           }
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
             Text("Outstanding Balance:", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
-            Text("$${invoice.pendingAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = StatusDangerText)
+            Text("₹${invoice.pendingAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = StatusDangerText)
           }
         }
 
@@ -383,7 +392,7 @@ fun ScholaPaymentCollectionDialog(
         ScholaInputField(
           value = customAmountInput,
           onValueChange = { customAmountInput = it },
-          label = "Amount to Charge ($)",
+          label = "Amount to Charge (₹)",
           placeholder = "e.g. 1450",
           keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
         )

@@ -23,9 +23,26 @@ All endpoints are mounted on a single `api` HTTP Cloud Function behind Express w
 | `POST` | `/migrateSessionIds` | Admin token | Backfill `sessionId` field across all Firestore collections |
 | `POST` | `/rollbackSessionIds` | Admin token | Remove `sessionId` fields (migration rollback) |
 | `POST` | `/promoteStudents` | Admin token | Year-end promotion — creates new session records and fee entries |
-| `POST` | `/createOrder` | User JWT | Create a Razorpay payment order (mocked if no key configured) |
+| `POST` | `/createOrder` | User JWT | Create a Razorpay order from the server-verified fee balance (mocked if no key configured) |
 | `POST` | `/razorpayWebhook` | HMAC signature | Verifies Razorpay webhook, updates fee records via Firestore transaction on `payment.captured` |
 | `POST` | `/recordOfflinePayment` | User JWT | Record a cash or cheque payment via Firestore transaction |
+| `POST` | `/registerDevice` | User JWT | Register or rotate an FCM device token in the caller's school and session |
+| `POST` | `/publishNotification` | Staff JWT | Store an auditable, role-targeted notification and deliver it through FCM |
+
+## Notification delivery
+
+`/registerDevice` takes `{ fcmToken, platform? }`. The server derives the user,
+school, session, and role from the verified Firebase token; a client cannot
+register a token for another tenant or person.
+
+`/publishNotification` takes `{ title, body, category?, targetRoles? }`. It
+persists an in-app record, writes an audit entry, sends to matching devices in
+batches of 500, and removes tokens Firebase reports as invalid. A temporary
+FCM failure does not discard the durable in-app notification record.
+
+`/createOrder` takes `studentId` and an optional partial `amount` in paise.
+The server rejects unrelated students and amounts above the active fee-ledger
+balance, then creates its own Razorpay receipt and order notes.
 
 ## Local development
 

@@ -16,6 +16,9 @@
     }
   ],
   "emulators": {
+    "storage": {
+      "port": 9199
+    },
     "firestore": {
       "port": 8085,
       "version": "v1.19.8"

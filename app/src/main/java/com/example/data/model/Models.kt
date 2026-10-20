@@ -1,7 +1,8 @@
 package com.example.data.model
 
 enum class UserRole(val displayName: String) {
-  PRINCIPAL("Principal / Admin"),
+  PRINCIPAL("Principal"),
+  ADMIN("School Administrator"),
   TEACHER("Teacher / Faculty"),
   STUDENT("Student"),
   PARENT("Parent")
@@ -46,7 +47,8 @@ data class Student(
   val schoolId: String = "schola_school_001",
   val status: String = "ACTIVE",
   val sessionId: String = "session_2026_2027",
-  val cohort: String = "Grade 10-A"
+  val cohort: String = "Grade 10-A",
+  val feeSummaryAvailable: Boolean = true
 ) {
   val fullClass: String get() = "$classGrade-$division"
 }

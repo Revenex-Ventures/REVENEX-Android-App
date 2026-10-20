@@ -84,6 +84,14 @@ async function main() {
   const teacher = env.authenticatedContext('teacher1', claims('TEACHER', 's1')).firestore();
   const principal = env.authenticatedContext('principal1', claims('PRINCIPAL', 's1')).firestore();
   const crossSchool = env.authenticatedContext('teacher2', claims('TEACHER', 's2')).firestore();
+  const crossAdmin = env.authenticatedContext('principal2', claims('PRINCIPAL', 's2')).firestore();
+
+  await expect(() => crossSchool.doc('schools/s1/students/student1').get(), false, 'tenant: foreign staff cannot read students');
+  await expect(() => crossSchool.doc('schools/s1/teachers/teacher1').get(), false, 'tenant: foreign staff cannot read teachers');
+  await expect(() => crossAdmin.doc('schools/s1/audit_log/log1').get(), false, 'tenant: foreign admin cannot read audit');
+  await expect(() => crossAdmin.doc('schools/s1/users/student1').update({ fullName: 'Intruder' }), false, 'tenant: foreign admin cannot update profiles');
+  await expect(() => crossSchool.doc('schools/s1/leaves/leave1').update({ status: 'APPROVED' }), false, 'tenant: foreign staff cannot approve leave');
+  await expect(() => crossSchool.doc('schools/s1/assignments/injected').set({ schoolId: 's2', sessionId: '2026-2027', title: 'Injected' }), false, 'tenant: payload school must match path');
 
   // ================= 1. Unauthenticated — everything denied =================
   await expect(() => anon.doc('schools/s1/fees/fee1').get(), false, 'anon: read fee');
@@ -199,6 +207,9 @@ async function main() {
   // ========== 7. Self profile update limited to allowed keys =================
   await expect(() => student1.doc('schools/s1/users/student1').update({ fullName: 'Updated Name' }), true, 'student: update own profile name');
   await expect(() => student1.doc('schools/s1/users/student1').update({ role: 'PRINCIPAL' }), false, 'student: cannot self-elevate role');
+  await expect(() => student1.doc('schools/s1/users/student1').update({ studentIds: ['student2'] }), false, 'student: cannot relink profile identity');
+  await expect(() => crossSchool.doc('schools/s1/notices/n2').delete(), false, 'tenant: foreign teacher cannot delete notice');
+  await expect(() => teacher.doc('schools/s1/notices/n2').delete(), true, 'teacher: delete own school session notice');
 
   // ========== 8. Messages / complaints =======================================
   await expect(() => parent.doc('schools/s1/complaints/c1').set({ schoolId: 's1', studentId: 'student1', subject: 'bus' }), true, 'parent: file complaint');

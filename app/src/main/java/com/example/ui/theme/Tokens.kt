@@ -116,6 +116,7 @@ object RoleAccent {
 
   fun of(role: UserRole?): Color = when (role) {
     UserRole.PRINCIPAL -> Admin
+    UserRole.ADMIN -> Admin
     UserRole.TEACHER -> Teacher
     UserRole.STUDENT -> Student
     UserRole.PARENT -> Parent
@@ -124,6 +125,7 @@ object RoleAccent {
 
   fun softContainer(role: UserRole?): Color = when (role) {
     UserRole.PRINCIPAL -> ScholaSlateContainer
+    UserRole.ADMIN -> ScholaSlateContainer
     UserRole.TEACHER -> PastelLavenderContainer
     UserRole.STUDENT -> PastelSageContainer
     UserRole.PARENT -> PastelPowderContainer

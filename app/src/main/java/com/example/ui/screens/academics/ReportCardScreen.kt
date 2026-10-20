@@ -1,6 +1,5 @@
 package com.example.ui.screens.academics
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Paint
@@ -8,8 +7,6 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
-import android.os.Environment
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,9 +69,35 @@ fun ReportCardScreen(
   val selectedStudentId by repository.selectedStudentId.collectAsState()
 
   val student = remember(students, selectedStudentId) {
-    students.firstOrNull { it.id == selectedStudentId.ifBlank { "stu_1001" } }
-      ?: students.firstOrNull()
-  } ?: return
+    if (selectedStudentId.isNotBlank()) {
+      students.firstOrNull { it.id == selectedStudentId }
+    } else {
+      students.firstOrNull()
+    }
+  }
+
+  if (student == null) {
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(Spacing.s4),
+      contentAlignment = Alignment.Center
+    ) {
+      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Default.School, contentDescription = null, tint = ScholaTextSecondary, modifier = Modifier.size(48.dp))
+        Spacer(modifier = Modifier.height(Spacing.s4))
+        Text("No Student Profile Found", style = MaterialTheme.typography.titleMedium, color = ScholaTextPrimary)
+        Spacer(modifier = Modifier.height(Spacing.s2))
+        Text(
+          "No student record is available to display report card marks.",
+          style = MaterialTheme.typography.bodySmall,
+          color = ScholaTextSecondary,
+          textAlign = TextAlign.Center
+        )
+      }
+    }
+    return
+  }
 
   val annualReports = remember(reportCards, student.id) {
     buildAnnualReports(student, reportCards)
@@ -161,7 +184,7 @@ private fun ProfileHub(
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(14.dp)
   ) {
     item {
@@ -236,7 +259,7 @@ private fun ProfileMenuCard(
 ) {
   Card(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(20.dp),
+    shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = containerColor)
   ) {
     Row(
@@ -311,7 +334,7 @@ private fun SubPageScaffold(
       modifier = Modifier
         .fillMaxSize()
         .verticalScroll(rememberScrollState())
-        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
       content = content
     )
   }
@@ -659,7 +682,7 @@ private fun ProfileHeaderCard(
   val accent = ScholaTerracotta
   Card(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(24.dp),
+    shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = ScholaTerracottaContainer),
     border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
   ) {
@@ -1086,7 +1109,7 @@ private fun projectPdfDownload(
       withContext(Dispatchers.Main) {
         Toast.makeText(
           context,
-          if (uri != null) "Saved to Downloads → ${uri.lastPathSegment}" else "Could not save report",
+          if (uri != null) "PDF saved to ${pdfSaveLocationLabel()}" else "Could not save report",
           Toast.LENGTH_LONG
         ).show()
       }
@@ -1114,7 +1137,7 @@ private fun certificatePdfDownload(
       withContext(Dispatchers.Main) {
         Toast.makeText(
           context,
-          if (uri != null) "Saved to Downloads → ${uri.lastPathSegment}" else "Could not save certificate",
+          if (uri != null) "PDF saved to ${pdfSaveLocationLabel()}" else "Could not save certificate",
           Toast.LENGTH_LONG
         ).show()
       }
@@ -1246,19 +1269,8 @@ private object CertificatePdfRenderer {
     style = Paint.Style.FILL
   }
 
-  private fun saveToDownloads(context: Context, doc: PdfDocument, fileName: String): Uri? {
-    val values = ContentValues().apply {
-      put(MediaStore.Downloads.DISPLAY_NAME, "$fileName.pdf")
-      put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
-      put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Revenex")
-    }
-    val resolver = context.contentResolver
-    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
-    resolver.openOutputStream(uri)?.use { os ->
-      doc.writeTo(os)
-    } ?: return null
-    return uri
-  }
+  private fun saveToDownloads(context: Context, doc: PdfDocument, fileName: String): Uri? =
+    saveSchoolPdf(context, "$fileName.pdf") { doc.writeTo(it) }
 }
 
 private object ReportPdfRenderer {
@@ -1448,20 +1460,8 @@ private object ReportPdfRenderer {
     style = Paint.Style.FILL
   }
 
-  private fun saveToDownloads(context: Context, doc: PdfDocument, student: Student, report: ReportCard): Uri? {
-    val name = "${student.name.replace(" ", "_")}_${report.academicYear}.pdf"
-    val values = ContentValues().apply {
-      put(MediaStore.Downloads.DISPLAY_NAME, name)
-      put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
-      put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Revenex")
-    }
-    val resolver = context.contentResolver
-    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
-    resolver.openOutputStream(uri)?.use { os ->
-      doc.writeTo(os)
-    } ?: return null
-    return uri
-  }
+  private fun saveToDownloads(context: Context, doc: PdfDocument, student: Student, report: ReportCard): Uri? =
+    saveSchoolPdf(context, "${student.name.replace(" ", "_")}_${report.academicYear}.pdf") { doc.writeTo(it) }
 }
 
 // ── Year-wise report seeding (demo) ──────────────────────────────────────────

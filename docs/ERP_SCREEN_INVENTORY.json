@@ -1,0 +1,94 @@
+[
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\academics\\AcademicsScreens.kt",
+    "Lines": 425
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\academics\\PdfExportStorage.kt",
+    "Lines": 51
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\academics\\ReportCardScreen.kt",
+    "Lines": 1494
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\ai\\AiAssistantScreen.kt",
+    "Lines": 277
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\attendance\\AttendanceScreen.kt",
+    "Lines": 383
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\attendance\\PrincipalAttendanceScreen.kt",
+    "Lines": 476
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\auth\\AuthScreen.kt",
+    "Lines": 781
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\communication\\CommunicationScreens.kt",
+    "Lines": 387
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\dashboard\\AdminDashboardScreen.kt",
+    "Lines": 279
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\dashboard\\ParentDashboardScreen.kt",
+    "Lines": 620
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\dashboard\\PrincipalDashboardScreen.kt",
+    "Lines": 397
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\dashboard\\StudentDashboardScreen.kt",
+    "Lines": 459
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\dashboard\\TeacherDashboardScreen.kt",
+    "Lines": 443
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\fees\\FeeManagementScreen.kt",
+    "Lines": 434
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\operations\\OperationsScreens.kt",
+    "Lines": 610
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\profile\\ProfileScreen.kt",
+    "Lines": 221
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\reports\\ReportsAnalyticsScreen.kt",
+    "Lines": 183
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\search\\GlobalSearchScreen.kt",
+    "Lines": 215
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\students\\StudentDetailScreen.kt",
+    "Lines": 364
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\students\\StudentListScreen.kt",
+    "Lines": 350
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\teachers\\TeacherDetailScreen.kt",
+    "Lines": 150
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\teachers\\TeacherListScreen.kt",
+    "Lines": 177
+  },
+  {
+    "File": "app\\src\\main\\java\\com\\example\\ui\\screens\\teachers\\TeacherProfileScreen.kt",
+    "Lines": 454
+  }
+]

@@ -93,7 +93,7 @@ fun GlobalSearchScreen(
           SearchResultItem(
             id = it.id,
             title = "${it.invoiceNumber}: ${it.studentName}",
-            subtitle = "Ledger • ${it.title} • $${it.paidAmount / 100L} paid / $${it.totalAmount / 100L}",
+            subtitle = "Ledger • ${it.title} • ₹${it.paidAmount / 100L} paid / ₹${it.totalAmount / 100L}",
             category = "INVOICE",
             icon = Icons.Default.Receipt,
             iconTint = ScholaGold,
@@ -173,7 +173,7 @@ fun GlobalSearchScreen(
           .padding(horizontal = Spacing.s4, vertical = Spacing.s2)
           .testTag("global_search_results_list"),
         verticalArrangement = Arrangement.spacedBy(Spacing.s2),
-        contentPadding = PaddingValues(bottom = 80.dp)
+        contentPadding = PaddingValues(bottom = Spacing.xl24)
       ) {
         items(results, key = { "${it.category}_${it.id}" }) { item ->
           AppCard(

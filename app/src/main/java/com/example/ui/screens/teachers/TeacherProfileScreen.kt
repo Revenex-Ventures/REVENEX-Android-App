@@ -129,7 +129,7 @@ private fun TeacherHeaderCard(
   val accent = ScholaSlateNavy
   Card(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(24.dp),
+    shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.12f)),
     border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
   ) {
@@ -233,7 +233,7 @@ private fun EditableFacultyCard(
 
   Card(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(20.dp),
+    shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     border = BorderStroke(1.dp, ScholaBorder)
   ) {
@@ -407,7 +407,7 @@ private fun EditableFacultyCard(
 private fun FacultyRecordCard(teacher: Teacher) {
   Card(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(20.dp),
+    shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = ScholaSurfaceWarm),
     border = BorderStroke(1.dp, ScholaBorder)
   ) {

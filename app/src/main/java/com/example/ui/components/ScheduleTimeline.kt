@@ -99,13 +99,7 @@ fun scheduleStatus(isToday: Boolean, nowMinutes: Int, slot: TimetableSlot): Sche
 // ── LIVE CLOCK (pulsing accent dot + current time) ─────────────────────────
 @Composable
 fun ScheduleLiveClock(minutes: Int, modifier: Modifier = Modifier) {
-  val pulse = rememberInfiniteTransition(label = "liveClock")
-  val dotAlpha by pulse.animateFloat(
-    initialValue = 1f,
-    targetValue = 0.15f,
-    animationSpec = infiniteRepeatable(tween(950), RepeatMode.Reverse),
-    label = "dotAlpha"
-  )
+  val dotAlpha = 1f
   Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
     Box(
       modifier = Modifier
@@ -173,7 +167,7 @@ fun ScheduleTimelineRow(
         text = stripMeridiem(slot.endTime),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Medium,
-        color = if (isDone) ScholaMuted.copy(alpha = 0.6f) else ScholaMuted
+        color = if (isDone) ScholaMuted else ScholaMuted
       )
     }
 
@@ -198,7 +192,7 @@ fun ScheduleTimelineRow(
       modifier = Modifier
         .weight(1f)
         .padding(top = 12.dp, bottom = 12.dp, end = 16.dp)
-        .alpha(if (isDone) 0.5f else 1f)
+        .alpha(1f)
     ) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -275,9 +269,8 @@ private fun TimelineNode(
       )
 
       ScheduleRowStatus.CURRENT -> {
-        val pulse = rememberInfiniteTransition(label = "currentNode")
-        val ringAlpha by pulse.animateFloat(0.5f, 0f, infiniteRepeatable(tween(1300)), label = "ringAlpha")
-        val ringScale by pulse.animateFloat(1f, 2.3f, infiniteRepeatable(tween(1300)), label = "ringScale")
+        val ringAlpha = 0f
+        val ringScale = 1f
         Box(
           modifier = Modifier
             .size(12.dp)
@@ -304,13 +297,7 @@ private fun TimelineNode(
 // ── LIVE BADGE (current period) ────────────────────────────────────────────
 @Composable
 private fun LiveBadge(color: Color, modifier: Modifier = Modifier) {
-  val pulse = rememberInfiniteTransition(label = "liveBadge")
-  val dotAlpha by pulse.animateFloat(
-    initialValue = 1f,
-    targetValue = 0.2f,
-    animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-    label = "badgeDot"
-  )
+  val dotAlpha = 1f
   Surface(shape = RoundedCornerShape(50), color = color) {
     Row(
       modifier = modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -324,7 +311,7 @@ private fun LiveBadge(color: Color, modifier: Modifier = Modifier) {
       )
       Spacer(modifier = Modifier.width(4.dp))
       Text(
-        text = "LIVE",
+        text = "NOW",
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Bold,
         color = Color.White
@@ -371,7 +358,7 @@ fun ScheduleBlockRow(
         text = stripMeridiem(slot.endTime),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Medium,
-        color = if (isDone) ScholaMuted.copy(alpha = 0.6f) else ScholaMuted
+        color = if (isDone) ScholaMuted else ScholaMuted
       )
     }
 
@@ -395,7 +382,7 @@ fun ScheduleBlockRow(
     Column(
       modifier = Modifier
         .weight(1f)
-        .alpha(if (isDone) 0.55f else 1f)
+        .alpha(1f)
         .clip(blockShape)
         .background(ScholaSurface, blockShape)
         .border(1.dp, if (isCurrent) accent.copy(alpha = 0.6f) else ScholaBorder, blockShape)

@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import kotlinx.coroutines.launch
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -36,8 +38,8 @@ import java.util.Locale
 // ============================================================================
 @Composable
 fun ScholaTopAppBar(
-  title: String = "ScholaOS",
-  subtitle: String? = "Institutional Operating System",
+  title: String = "REVENEX",
+  subtitle: String? = "School ERP demonstration",
   currentRole: UserRole = UserRole.PRINCIPAL,
   currentUserName: String = "Dr. Arthur Pendelton",
   unreadCount: Int = 3,
@@ -60,7 +62,7 @@ fun ScholaTopAppBar(
         modifier = Modifier
           .fillMaxWidth()
           .statusBarsPadding()
-          .padding(horizontal = Spacing.s4, vertical = Spacing.s3),
+          .padding(horizontal = Spacing.s3, vertical = Spacing.xs4),
         verticalAlignment = Alignment.CenterVertically
       ) {
         if (navigationIcon != null) {
@@ -78,7 +80,7 @@ fun ScholaTopAppBar(
         ) {
           Icon(
             imageVector = Icons.Default.AccountBalance,
-            contentDescription = "ScholaOS Crest",
+            contentDescription = "REVENEX crest",
             tint = ScholaTerracottaLight,
             modifier = Modifier.size(20.dp)
           )
@@ -101,7 +103,7 @@ fun ScholaTopAppBar(
               color = ScholaTerracotta
             ) {
               Text(
-                text = "v2.6",
+                text = "DEMO",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White,
                 fontSize = 9.sp,
@@ -112,7 +114,7 @@ fun ScholaTopAppBar(
           }
           if (subtitle != null) {
             Text(
-              text = subtitle,
+              text = currentRole.displayName,
               style = MaterialTheme.typography.bodySmall,
               color = Color.White.copy(alpha = 0.70f),
               fontSize = 11.sp,
@@ -122,43 +124,14 @@ fun ScholaTopAppBar(
           }
         }
 
-        // Quick Search Trigger Pill (⌘K)
-        Surface(
-          shape = RoundedCornerShape(Radius.pill),
-          color = Color.White.copy(alpha = 0.12f),
-          modifier = Modifier
-            .clip(RoundedCornerShape(Radius.pill))
-            .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(Radius.pill))
-            .clickable(onClick = onSearchClick)
-            .testTag("command_palette_trigger_pill")
-        ) {
-          Row(
-            modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(
-              imageVector = Icons.Default.Search,
-              contentDescription = "Search",
-              tint = Color.White.copy(alpha = 0.70f),
-              modifier = Modifier.size(15.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = "⌘K",
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold,
-              color = Color.White,
-              fontSize = 11.sp
-            )
-          }
+        IconButton(onClick = onSearchClick, modifier = Modifier.size(48.dp).testTag("command_palette_trigger_pill")) {
+          Icon(Icons.Default.Search, contentDescription = "Search school records", tint = Color.White)
         }
-
-        Spacer(modifier = Modifier.width(Spacing.s2))
 
         // Notification Bell with Badge
         Box(
           modifier = Modifier
-            .size(36.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.12f))
             .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
@@ -168,7 +141,7 @@ fun ScholaTopAppBar(
         ) {
           Icon(
             imageVector = Icons.Outlined.Notifications,
-            contentDescription = "Notifications",
+            contentDescription = "Notifications, $unreadCount unread",
             tint = Color.White,
             modifier = Modifier.size(18.dp)
           )
@@ -182,7 +155,7 @@ fun ScholaTopAppBar(
               contentAlignment = Alignment.Center
             ) {
               Text(
-                text = if (unreadCount > 9) "9" else unreadCount.toString(),
+                text = if (unreadCount > 9) "9+" else unreadCount.toString(),
                 color = Color.White,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold
@@ -198,7 +171,7 @@ fun ScholaTopAppBar(
         Box {
           Box(
             modifier = Modifier
-              .size(36.dp)
+              .size(48.dp)
               .clip(CircleShape)
               .background(RoleAccent.of(currentRole))
               .clickable { showProfileMenu = true }
@@ -292,6 +265,7 @@ fun WorkflowQuickPill(
     modifier = modifier
 .glassEffect(cornerRadius = Radius.pill)
       .clickable(onClick = onClick)
+      .heightIn(min = 48.dp)
       .testTag("workflow_pill_${title.lowercase().replace(" ", "_")}")
       .padding(horizontal = Spacing.s4, vertical = 10.dp)
   ) {
@@ -308,6 +282,8 @@ fun WorkflowQuickPill(
       Spacer(modifier = Modifier.width(Spacing.s2))
       Text(
         text = title,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Medium,
         color = if (isHighlighted) ScholaTerracotta else ScholaTextPrimary
@@ -645,5 +621,29 @@ object PdfExportHelper {
     transaction: com.example.data.model.FeePaymentTransaction?
   ) {
     android.widget.Toast.makeText(context, "Receipt exported for ${record.studentName} (ID: ${record.id})", android.widget.Toast.LENGTH_SHORT).show()
+  }
+}
+
+/** Resolves a private document only on request; errors never fall back to expired bearer URLs. */
+@Composable
+fun SchoolDocumentButton(reference: String, label: String = "Open document") {
+  val context=androidx.compose.ui.platform.LocalContext.current
+  val scope=rememberCoroutineScope()
+  var opening by remember(reference) { mutableStateOf(false) }
+  var error by remember(reference) { mutableStateOf(false) }
+  Column {
+    TextButton(enabled=!opening,onClick={
+      opening=true;error=false
+      scope.launch {
+        try {
+          val url=com.example.data.datasource.SupabaseFileStore.resolveUrl(reference)
+          context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(url)))
+        } catch(e:Exception) {
+          if(e is kotlinx.coroutines.CancellationException) throw e
+          error=true
+        } finally { opening=false }
+      }
+    }) { Text(if(opening) "Opening…" else label) }
+    if(error) Text("Document could not be opened. Check access and connection, then retry.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
   }
 }
