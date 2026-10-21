@@ -9,14 +9,13 @@ Local PostgreSQL fixtures do not certify hosted Supabase Auth or Realtime transp
 
 ## Latest completed checks
 
-- Android build, 79 tests, and lint passed in the completed intermediate run
-  (`app/build/redesign-final-verification.log`): lint 0 errors, 68 warnings.
+- Clean GitHub Actions run [39593259267](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39593259267) passed for redesign commit `10af549`: Android build, **82 tests, 0 failures/errors, 0 skipped**, lint **0 errors, 70 warnings**, APK boundary scan and server checks. Downloaded XML reports independently confirm these totals.
 - PostgreSQL/PGlite schema and RLS fixtures: **105 passed**.
 - AI/payment Edge Function security tests: **31 passed**.
 - Working tree and Git history credential scan: passed.
 - Theme text-pair contrast test: at least 4.5:1 in both palettes.
-- The final expanded suite adds three login/settings/form captures. Final results
-  will be recorded here after the isolated local build or clean CI runner completes.
+- CI deployment was skipped as intended on the review branch. No hosted database was reset or migrated.
+- A final copy refinement shortens phone navigation Attendance to Roll call and avoids unverified live-sync wording; its follow-up CI is tracked on the same PR.
 
 ## Commands
 
@@ -29,10 +28,11 @@ python scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
 git diff --check
 ```
 
-The final local run uses a task-local Gradle user home and a copy of dependencies
-excluding lock files. The shared Windows cache stalled in metadata resolution and
-then retained a journal lock; no shared cache files were deleted. CI uses the same
-Gradle 9.3.1 wrapper with JDK 21 and records the Compose screenshots.
+The final local retry stalled on the shared Windows Gradle metadata/journal cache.
+An isolated-cache retry did not establish a final local result; no shared cache
+files were deleted. The completed intermediate local run passed 79 tests. The
+clean CI runner above supplies the final 82-test evidence, using the existing
+Gradle 9.3.1 wrapper and JDK 21, and records actual Compose screenshots.
 
 ## Rendered coverage and refinements
 
@@ -77,3 +77,11 @@ emulator without uninstalling the app. Screenshots are in
   child states, every keyboard/orientation and launch-frame timing are unverified.
 - Additional SQL roles do not yet have Android portals; no UI role switch grants
   cloud access. Existing backend RLS and school/session/child boundaries remain.
+
+## Review artifacts and sources
+
+- Draft PR: https://github.com/Revenex-Ventures/REVENEX-Android-App/pull/11
+- Tested APK: `app/build/ci-redesign-apk/app-debug.apk` (downloaded from the green CI run above).
+- CI XML, lint and rendered images: `app/build/ci-redesign-reports/`.
+- The final CI images were inspected for phone navigation, attendance controls, student details, role contrast and narrow text wrapping. These are Robolectric Compose renders, distinct from the emulator checks above.
+- Official guidance used: [Compose Material 3](https://developer.android.com/develop/ui/compose/designsystems/material3), [Compose accessibility defaults](https://developer.android.com/develop/ui/compose/accessibility/api-defaults), [Android dark theme](https://developer.android.com/develop/ui/views/theming/darktheme), and [Supabase Kotlin streams](https://supabase.com/docs/reference/kotlin/stream).

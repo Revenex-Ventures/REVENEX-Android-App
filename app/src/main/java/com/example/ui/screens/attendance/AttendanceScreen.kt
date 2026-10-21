@@ -197,7 +197,7 @@ fun AttendanceScreen(
                 color = SemanticColors.warningContainer
               ) {
                 Text(
-                  text = "Live Sync",
+                  text = "Register",
                   color = SemanticColors.onWarning,
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,

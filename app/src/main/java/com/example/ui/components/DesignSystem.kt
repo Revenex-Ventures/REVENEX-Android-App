@@ -158,7 +158,7 @@ fun CompactStatTile(
 }
 
 // ============================================================================
-// 3. BOTTOM NAVIGATION BAR (Ink black, solid, jump-up icon animation)
+// 3. COMPACT BOTTOM NAVIGATION
 // ============================================================================
 
 @Composable
@@ -174,7 +174,7 @@ fun ScholaFloatingDock(
       val selected = currentRoute == item.route
       NavigationBarItem(selected = selected, onClick = { onItemSelected(item.route) },
         icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = null) },
-        label = { Text(item.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) })
+        label = { Text(if (item.label == "Attendance") "Roll call" else item.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) })
     }
   }
 }

@@ -181,7 +181,7 @@ class SupabaseDataSource : ErpDataSource {
                 val recovered=interrupted.remove(name)
                 if(ready.size==tables.size && interrupted.isEmpty() && !syncState.value.busy &&
                   (recovered || syncState.value.message.contains("Connecting live updates"))) {
-                  syncState.value=BackendSyncState(message="School data loaded • live updates active")
+                  syncState.value=BackendSyncState(message="School data loaded • in-app updates enabled")
                 }
               }
           }
