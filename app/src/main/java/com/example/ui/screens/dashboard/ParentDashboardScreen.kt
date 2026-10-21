@@ -314,7 +314,7 @@ fun ParentDashboardScreen(
                   text = if (childPendingFee > 0L) "Dues: ₹${childPendingFee / 100}" else "Fees: Cleared",
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
-                  color = if (childPendingFee > 0L) Color(0xFFFBBF24) else Color(0xFF34D399)
+                  color = if (childPendingFee > 0L) SemanticColors.onWarning else SemanticColors.onSuccess
                 )
               }
             }
