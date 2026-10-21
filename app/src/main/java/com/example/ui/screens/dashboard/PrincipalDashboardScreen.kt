@@ -64,7 +64,7 @@ fun PrincipalDashboardScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(GlassBgTransparent)
+      .background(MaterialTheme.colorScheme.background)
       .testTag("principal_dashboard_list"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24)
   ) {
@@ -80,9 +80,9 @@ fun PrincipalDashboardScreen(
           secondaryMetricLabel = "Daily Roll Call Rate",
           actionButtonText = "Review Institutional Ledger",
           onActionClick = { onNavigateTo(Screen.Fees.route) },
-          badgeBgColor = ScholaTerracottaContainer,
-          badgeTextColor = ScholaOnTerracottaContainer,
-          heroHighlightColor = ScholaTerracotta,
+          badgeBgColor = MaterialTheme.colorScheme.primaryContainer,
+          badgeTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+          heroHighlightColor = MaterialTheme.colorScheme.primary,
           modifier = Modifier.padding(bottom = Spacing.s4)
         )
       }
@@ -92,7 +92,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 100) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(title = "Workflow Shortcuts")
+          SectionHeader(title = "Quick actions")
           LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
@@ -142,7 +142,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 200) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(title = "Operational Health Matrix")
+          SectionHeader(title = "School at a glance")
 
           // Row 1: Active Scholars & Daily Attendance
           Row(
@@ -153,8 +153,8 @@ fun PrincipalDashboardScreen(
               categoryLabel = "Active Scholars",
               statCounter = totalStudents.toString(),
               icon = Icons.Default.Groups,
-              iconTint = ScholaTerracotta,
-              iconContainerColor = ScholaTerracottaContainer,
+              iconTint = MaterialTheme.colorScheme.primary,
+              iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
               deltaText = "Demo dataset",
               isPositiveDelta = true,
               modifier = Modifier.weight(1f),
@@ -166,7 +166,7 @@ fun PrincipalDashboardScreen(
               statCounter = "$formattedAttendance%",
               icon = Icons.Default.HowToReg,
               iconTint = Color(0xFF15803D),
-              iconContainerColor = StatusSuccessBg,
+              iconContainerColor = SemanticColors.successContainer,
               deltaText = "Recorded rate",
               isPositiveDelta = true,
               modifier = Modifier.weight(1f),
@@ -185,8 +185,8 @@ fun PrincipalDashboardScreen(
               categoryLabel = "Receivables Due",
               statCounter = "₹${totalReceivables / 100000L}k",
               icon = Icons.Default.ReceiptLong,
-              iconTint = StatusDangerText,
-              iconContainerColor = StatusDangerBg,
+              iconTint = SemanticColors.onDanger,
+              iconContainerColor = SemanticColors.dangerContainer,
               deltaText = "${overdueInvoices.size} Overdue",
               isPositiveDelta = false,
               modifier = Modifier.weight(1f),
@@ -198,7 +198,7 @@ fun PrincipalDashboardScreen(
               statCounter = totalFaculty.toString(),
               icon = Icons.Default.Groups,
               iconTint = ScholaGold,
-              iconContainerColor = ScholaGoldContainer,
+              iconContainerColor = SemanticColors.warningContainer,
               deltaText = "Demo dataset",
               isPositiveDelta = true,
               modifier = Modifier.weight(1f),
@@ -218,8 +218,8 @@ fun PrincipalDashboardScreen(
               .fillMaxWidth()
               .padding(bottom = Spacing.s4)
               .clip(RoundedCornerShape(Radius.lg))
-              .background(StatusDangerBg)
-              .border(1.dp, StatusDangerText.copy(alpha = 0.3f), RoundedCornerShape(Radius.lg))
+              .background(SemanticColors.dangerContainer)
+              .border(1.dp, SemanticColors.onDanger.copy(alpha = 0.3f), RoundedCornerShape(Radius.lg))
               .padding(Spacing.cardPadding)
           ) {
             Row(
@@ -234,13 +234,13 @@ fun PrincipalDashboardScreen(
                 Box(
                   modifier = Modifier
                     .size(40.dp)
-                    .background(StatusDangerText, CircleShape),
+                    .background(SemanticColors.onDanger, CircleShape),
                   contentAlignment = Alignment.Center
                 ) {
                   Icon(
                     imageVector = Icons.Default.WarningAmber,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(22.dp)
                   )
                 }
@@ -250,19 +250,19 @@ fun PrincipalDashboardScreen(
                     text = "${overdueInvoices.size} Accounts Overdue (>10 Days)",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = StatusDangerText
+                    color = SemanticColors.onDanger
                   )
                   Text(
                     text = "₹${overdueInvoices.sumOf { it.pendingAmount } / 100000L}k outstanding tuition requiring bursar review.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = StatusDangerText.copy(alpha = 0.85f),
+                    color = SemanticColors.onDanger.copy(alpha = 0.85f),
                     fontSize = 12.sp
                   )
                 }
               }
               Surface(
                 shape = RoundedCornerShape(Radius.pill),
-                color = StatusDangerText,
+                color = SemanticColors.onDanger,
                 modifier = Modifier
                   .clip(RoundedCornerShape(Radius.pill))
                   .clickable { onNavigateTo(Screen.Fees.route) }
@@ -299,7 +299,7 @@ fun PrincipalDashboardScreen(
               "Thu" to 95.8f,
               "Fri" to 97.1f
             ),
-            barColor = ScholaTerracotta
+            barColor = MaterialTheme.colorScheme.primary
           )
         }
       }
@@ -331,10 +331,10 @@ fun PrincipalDashboardScreen(
                       .clip(CircleShape)
                       .background(
                         when (log.actionType) {
-                          "ROLL_CALL" -> StatusSuccessBg
-                          "FEE_PAYMENT" -> ScholaTerracottaContainer
+                          "ROLL_CALL" -> SemanticColors.successContainer
+                          "FEE_PAYMENT" -> MaterialTheme.colorScheme.primaryContainer
                           "GRADEBOOK" -> Color(0xFFEDE9FE)
-                          else -> ScholaSlateContainer
+                          else -> MaterialTheme.colorScheme.secondaryContainer
                         }
                       ),
                     contentAlignment = Alignment.Center
@@ -348,9 +348,9 @@ fun PrincipalDashboardScreen(
                       },
                       contentDescription = null,
                       tint = when (log.actionType) {
-                        "ROLL_CALL" -> StatusSuccessText
-                        "FEE_PAYMENT" -> ScholaTerracotta
-                        "GRADEBOOK" -> ScholaTerracottaDark
+                        "ROLL_CALL" -> SemanticColors.onSuccess
+                        "FEE_PAYMENT" -> MaterialTheme.colorScheme.primary
+                        "GRADEBOOK" -> MaterialTheme.colorScheme.primary
                         else -> ScholaSlateNavy
                       },
                       modifier = Modifier.size(20.dp)
@@ -373,14 +373,14 @@ fun PrincipalDashboardScreen(
                       Text(
                         text = log.timestamp,
                         style = MaterialTheme.typography.labelSmall,
-                        color = ScholaMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                       )
                     }
                     Text(
                       text = "${log.actorName} (${log.actorRole}) • ${log.details}",
                       style = MaterialTheme.typography.bodySmall,
-                      color = ScholaTextSecondary,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant,
                       fontSize = 12.sp,
                       maxLines = 2,
                       overflow = TextOverflow.Ellipsis

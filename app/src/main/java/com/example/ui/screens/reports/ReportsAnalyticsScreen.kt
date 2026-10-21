@@ -47,7 +47,7 @@ fun ReportsAnalyticsScreen(
           .fillMaxWidth()
           .padding(16.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = RevenexNavy)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
       ) {
         Column(
           modifier = Modifier
@@ -64,12 +64,12 @@ fun ReportsAnalyticsScreen(
                 text = "School reports",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
               )
               Text(
                 text = "Operational totals with illustrative demo charts",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
               )
             }
             IconButton(
@@ -98,7 +98,7 @@ fun ReportsAnalyticsScreen(
           sublabel = "₹${totalCollected / 100000L}k Collected",
           icon = Icons.Default.AccountBalanceWallet,
           iconTint = ScholaSlateNavy,
-          iconBackground = ScholaSlateContainer,
+          iconBackground = MaterialTheme.colorScheme.secondaryContainer,
           trendText = "Current fee records",
           isPositiveTrend = true,
           modifier = Modifier.weight(1f)
@@ -109,7 +109,7 @@ fun ReportsAnalyticsScreen(
           sublabel = "Illustrative demo figure",
           icon = Icons.Default.FactCheck,
           iconTint = RevenexBlue,
-          iconBackground = RevenexPrimaryContainer,
+          iconBackground = MaterialTheme.colorScheme.primaryContainer,
           trendText = "98% Target",
           isPositiveTrend = true,
           modifier = Modifier.weight(1f)
@@ -136,7 +136,7 @@ fun ReportsAnalyticsScreen(
             "CS/AI" to 96.2f,
             "Hindi" to 86.8f
           ),
-          barColor = RevenexPrimary
+          barColor = MaterialTheme.colorScheme.primary
         )
 
         SimpleBarChart(
@@ -148,7 +148,7 @@ fun ReportsAnalyticsScreen(
             "G-7" to 95.0f,
             "G-6" to 90.2f
           ),
-          barColor = Color(0xFF059669)
+          barColor = MaterialTheme.colorScheme.tertiary
         )
       }
       Spacer(modifier = Modifier.height(14.dp))

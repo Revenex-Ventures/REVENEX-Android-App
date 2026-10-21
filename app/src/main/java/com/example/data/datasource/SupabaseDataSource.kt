@@ -149,6 +149,23 @@ class SupabaseDataSource : ErpDataSource {
       val ready=java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
       val interrupted=java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
       liveJob=CoroutineScope(Dispatchers.IO+SupervisorJob()).launch {
+        // Realtime is a hint, not a durable inbox. Re-read authorized rows after
+        // interrupted delivery; this child job is cancelled on every identity change.
+        launch {
+          while (isActive && sessionRevision.get()==liveRevision) {
+            delay(30_000)
+            try {
+              listOf("notifications","assignments","attendance","marks","notices","fee_records").forEach { refresh(it) }
+              if (sessionRevision.get()==liveRevision && !syncState.value.busy) {
+                syncState.value=BackendSyncState(message="School inbox and task data reconciled")
+              }
+            } catch (e: Exception) {
+              if (e is CancellationException) throw e
+              if (sessionRevision.get()==liveRevision) syncState.value=BackendSyncState(
+                message="Unable to refresh school updates. Displayed data may be stale; retrying automatically.",failed=true)
+            }
+          }
+        }
         tables.forEach { name ->
           launch {
             client.from(name).selectAsFlow(SupabaseRow::id)
@@ -345,7 +362,14 @@ class SupabaseDataSource : ErpDataSource {
   }
   override suspend fun addNotification(title:String,message:String,category:NotificationCategory,targetRole:UserRole?):Unit = error("The database creates notifications from saved school events.")
   override suspend fun markNotificationAsRead(id:String) {
-    requireSession();client.from("notifications").update(buildJsonObject { put("is_read",true) }) { filter { eq("id",id) } };refresh("notifications")
+    requireSession()
+    val revision = sessionRevision.get()
+    check(table("notifications").any { it.id==id }) { "This update is no longer available on your account." }
+    client.from("notifications").update(buildJsonObject { put("is_read",true) }) { filter { eq("id",id) } }
+    refresh("notifications")
+    check(sessionRevision.get()==revision && table("notifications").any { it.id==id && it.is_read }) {
+      "Read status could not be confirmed. Refresh the inbox and retry."
+    }
   }
   override suspend fun markAllNotificationsAsRead() {
     requireSession();client.from("notifications").update(buildJsonObject { put("is_read",true) }) { filter { eq("recipient_id",user.value.id) } };refresh("notifications")

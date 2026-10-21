@@ -1,3 +1,5 @@
+> UI redesign: warm-white/ink/teal, coordinated light/dark palettes, persisted Light/Dark/System appearance, compact role navigation and confirmed form/inbox states. See the [screen/flow checklist](docs/REVENEX_REDESIGN_CHECKLIST.md) and [verification evidence](docs/REDESIGN_VERIFICATION.md). Local checks are distinguished from hosted acceptance; no hosted Supabase data was reset.
+
 > Server AI and delivery update: [security architecture, activation and CI/CD](docs/SERVER_AI_AND_CICD.md). The supplied assistant prompt is server-only; Android sends text through Auth, and the backend derives every permission from school data. Live AI is unavailable until server secrets and migration 8 are configured. GitHub Actions builds the APK and gates optional Supabase function deployment on tests/lint/security checks.
 
 # REVENEX SCHOOL ERP — ENTERPRISE EDITION

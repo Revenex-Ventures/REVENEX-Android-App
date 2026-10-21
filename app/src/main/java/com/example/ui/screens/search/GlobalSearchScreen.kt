@@ -122,7 +122,7 @@ fun GlobalSearchScreen(
   }
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -137,7 +137,7 @@ fun GlobalSearchScreen(
           verticalAlignment = Alignment.CenterVertically
         ) {
           IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = ScholaTextPrimary)
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
           }
           ScholaInputField(
             value = query,
@@ -154,7 +154,7 @@ fun GlobalSearchScreen(
     if (query.isBlank()) {
       EmptyStateView(
         icon = Icons.Default.Search,
-        title = "Omni Search Across ScholaOS",
+        title = "Search Revenex",
         description = "Instant lookup across scholars, admissions, faculty credentials, tuition invoices, and circular broadcasts.",
         modifier = Modifier.padding(paddingValues)
       )
@@ -204,7 +204,7 @@ fun GlobalSearchScreen(
                   Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                   ScholaPillBadge(status = item.category)
                 }
-                Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+                Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
             }
           }

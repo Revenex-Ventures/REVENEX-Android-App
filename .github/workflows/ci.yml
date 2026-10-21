@@ -83,7 +83,7 @@ jobs:
       - name: Build and run Android quality checks
         run: |
           chmod +x gradlew
-          ./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 assembleDebug testDebugUnitTest lintDebug --console=plain
+          ./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Proborazzi.test.record=true assembleDebug testDebugUnitTest lintDebug --console=plain
       - name: Verify server prompt and private configuration stay out of APK
         run: python3 scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
       - name: Upload tested demo APK

@@ -66,7 +66,7 @@ fun FeeManagementScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(GlassBgTransparent)
+      .background(MaterialTheme.colorScheme.background)
       .testTag("fee_management_screen"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
@@ -77,8 +77,8 @@ fun FeeManagementScreen(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.hero))
-          .background(ScholaOnyx)
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
+          .background(MaterialTheme.colorScheme.surfaceVariant)
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
           .padding(Spacing.cardPaddingLarge)
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -89,25 +89,25 @@ fun FeeManagementScreen(
           ) {
             Column {
               Text(
-                text = "BURSAR & FINANCIAL LEDGER",
-                color = ScholaOnyxMuted,
+                text = "FEES & PAYMENTS",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall,
                 letterSpacing = TypeTokens.trackingMicroLabel
               )
               Text(
-                text = "Net Revenue Realization",
-                color = ScholaOnyxText,
+                text = "Fee collection",
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
               )
             }
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = ScholaGoldContainer
+              color = SemanticColors.warningContainer
             ) {
               Text(
                 text = "$collectionPercentage% Collected",
-                color = ScholaGoldText,
+                color = SemanticColors.onWarning,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -124,8 +124,8 @@ fun FeeManagementScreen(
               .fillMaxWidth()
               .height(10.dp)
               .clip(RoundedCornerShape(Radius.pill)),
-            color = ScholaTerracotta,
-            trackColor = ScholaOnyxBorder
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.outlineVariant
           )
 
           Spacer(modifier = Modifier.height(Spacing.s4))
@@ -136,16 +136,16 @@ fun FeeManagementScreen(
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
             Column {
-              Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalBilled / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ScholaOnyxText)
+              Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
+              Text("₹${totalBilled / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalCollected / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessText)
+              Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
+              Text("₹${totalCollected / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onSuccess)
             }
             Column(horizontalAlignment = Alignment.End) {
-              Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalReceivables / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusDangerText)
+              Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
+              Text("₹${totalReceivables / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
             }
           }
         }
@@ -162,17 +162,17 @@ fun FeeManagementScreen(
           val isSelected = selectedFilter == flt
           Surface(
             shape = RoundedCornerShape(Radius.pill),
-            color = if (isSelected) ScholaTerracotta else ScholaSurface,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
             modifier = Modifier
               .clip(RoundedCornerShape(Radius.pill))
-              .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+              .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
               .clickable { selectedFilter = flt }
           ) {
             Text(
               text = flt,
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
-              color = if (isSelected) Color.White else ScholaTextPrimary,
+              color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
               modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
             )
           }
@@ -182,7 +182,7 @@ fun FeeManagementScreen(
 
     // 3. LEDGER INVOICE CARDS
     item {
-      SectionHeader(title = "Ledger Invoices (${filteredInvoices.size})")
+      SectionHeader(title = "Fee accounts (${filteredInvoices.size})")
     }
 
     if (filteredInvoices.isEmpty()) {
@@ -206,26 +206,26 @@ fun FeeManagementScreen(
                   text = invoice.studentName,
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
-                  color = ScholaTextPrimary
+                  color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                   text = "(${invoice.cohort})",
                   style = MaterialTheme.typography.bodySmall,
-                  color = ScholaMuted,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   fontSize = 12.sp
                 )
               }
               Text(
                 text = "${invoice.invoiceNumber} • ${invoice.title}",
                 style = MaterialTheme.typography.bodySmall,
-                color = ScholaTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
               )
               Text(
                 text = "Due: ${invoice.dueDate} • Channel: ${invoice.paymentChannel}",
                 style = MaterialTheme.typography.labelSmall,
-                color = ScholaMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
               )
             }
@@ -242,8 +242,8 @@ fun FeeManagementScreen(
               .fillMaxWidth()
               .height(6.dp)
               .clip(RoundedCornerShape(Radius.pill)),
-            color = if (invoice.status == FeeStatus.OVERDUE) StatusDangerText else ScholaTerracotta,
-            trackColor = ScholaBorder
+            color = if (invoice.status == FeeStatus.OVERDUE) SemanticColors.onDanger else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.outlineVariant
           )
 
           Spacer(modifier = Modifier.height(Spacing.s3))
@@ -256,7 +256,7 @@ fun FeeManagementScreen(
             Text(
               text = "₹${invoice.paidAmount / 100L} paid of ₹${invoice.totalAmount / 100L}",
               style = MaterialTheme.typography.bodySmall,
-              color = ScholaMuted,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
               fontSize = 12.sp
             )
 
@@ -269,22 +269,22 @@ fun FeeManagementScreen(
               AppButton(
                 text = "Razorpay Test (₹${invoice.pendingAmount / 100L})",
                 onClick = { onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount) },
-                containerColor = ScholaTerracotta,
+                containerColor = MaterialTheme.colorScheme.primary,
                 fontSize = 12.sp,
                 minHeight = 38.dp
               )
             } else {
               Surface(
                 shape = RoundedCornerShape(Radius.pill),
-                color = StatusSuccessBg
+                color = SemanticColors.successContainer
               ) {
                 Row(
                   modifier = Modifier.padding(horizontal = Spacing.s2, vertical = 4.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Icon(Icons.Default.Check, contentDescription = null, tint = StatusSuccessText, modifier = Modifier.size(14.dp))
+                  Icon(Icons.Default.Check, contentDescription = null, tint = SemanticColors.onSuccess, modifier = Modifier.size(14.dp))
                   Spacer(modifier = Modifier.width(4.dp))
-                  Text("Settled in Full", color = StatusSuccessText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                  Text("Settled in Full", color = SemanticColors.onSuccess, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
               }
             }
@@ -330,7 +330,7 @@ fun ScholaPaymentCollectionDialog(
         Text(
           text = "Scholar: ${invoice.studentName} (${invoice.invoiceNumber})",
           style = MaterialTheme.typography.bodySmall,
-          color = ScholaMuted
+          color = MaterialTheme.colorScheme.onSurfaceVariant
         )
       }
     },
@@ -345,29 +345,29 @@ fun ScholaPaymentCollectionDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Total Demanded:", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+            Text("Total Demanded:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("₹${invoice.totalAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
           }
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Outstanding Balance:", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
-            Text("₹${invoice.pendingAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = StatusDangerText)
+            Text("Outstanding Balance:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("₹${invoice.pendingAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
           }
         }
 
         // Quick Presets Row
-        Text("Quick Preset Amount:", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+        Text("Quick Preset Amount:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
           listOf("Full Due", "50% Split", "Custom").forEach { preset ->
             val isSelected = selectedPreset == preset
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) ScholaTerracotta else ScholaSurface,
+              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
               modifier = Modifier
                 .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
                 .clickable {
                   selectedPreset = preset
                   customAmountInput = when (preset) {
@@ -379,7 +379,7 @@ fun ScholaPaymentCollectionDialog(
             ) {
               Text(
                 text = preset,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
@@ -398,21 +398,21 @@ fun ScholaPaymentCollectionDialog(
         )
 
         // Payment Channel Chips (Stripe ACH, Wire, Apple Pay)
-        Text("Payment Processing Channel:", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+        Text("Payment Processing Channel:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
           channels.forEach { ch ->
             val isSelected = selectedChannel == ch
             Surface(
               shape = RoundedCornerShape(Radius.sm),
-              color = if (isSelected) ScholaSlateNavy else ScholaSurface,
+              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
               modifier = Modifier
                 .clip(RoundedCornerShape(Radius.sm))
-                .border(1.dp, if (isSelected) ScholaSlateNavy else ScholaBorder, RoundedCornerShape(Radius.sm))
+                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.sm))
                 .clickable { selectedChannel = ch }
             ) {
               Text(
                 text = ch,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
@@ -428,16 +428,16 @@ fun ScholaPaymentCollectionDialog(
           val amt = (customAmountInput.toLongOrNull() ?: (invoice.pendingAmount / 100L)) * 100L
           onConfirmPayment(amt, selectedChannel)
         },
-        colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
       ) {
         Text("Process Payment", fontWeight = FontWeight.Bold)
       }
     },
     dismissButton = {
       TextButton(onClick = onDismiss) {
-        Text("Cancel", color = ScholaMuted)
+        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
     },
-    containerColor = ScholaSurface
+    containerColor = MaterialTheme.colorScheme.surface
   )
 }

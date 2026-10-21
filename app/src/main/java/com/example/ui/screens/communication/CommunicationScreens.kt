@@ -27,6 +27,8 @@ import com.example.data.model.*
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
 import com.example.ui.theme.*
+import com.example.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 // ============================================================================
 // AUDIT TRAIL & BROADCASTS WORKSPACE
@@ -41,7 +43,7 @@ fun NoticesScreen(
   val notices by repository.notices.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
 
-  var selectedSubTab by remember { mutableStateOf(0) } // 0 = System Audit Logs, 1 = Parent Broadcasts
+  var selectedSubTab by remember(currentUser.id) { mutableStateOf(1) } // 0 = System Audit Logs, 1 = Parent Broadcasts
   var auditFilter by remember { mutableStateOf("All") }
   val auditFilters = listOf("All", "ROLL_CALL", "FEE_PAYMENT", "GRADEBOOK", "ADMISSION", "BROADCAST")
 
@@ -53,7 +55,7 @@ fun NoticesScreen(
   LazyColumn(
     modifier = Modifier
       .fillMaxSize()
-      .background(GlassBgTransparent)
+      .background(MaterialTheme.colorScheme.background)
       .testTag("notices_screen"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
@@ -64,8 +66,8 @@ fun NoticesScreen(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.hero))
-          .background(ScholaOnyx)
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
+          .background(MaterialTheme.colorScheme.surfaceVariant)
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
           .padding(Spacing.cardPaddingLarge)
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -77,13 +79,13 @@ fun NoticesScreen(
             Column {
               Text(
                 text = "COMMUNICATION & GOVERNANCE",
-                color = ScholaOnyxMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall,
                 letterSpacing = TypeTokens.trackingMicroLabel
               )
               Text(
                 text = if (selectedSubTab == 0) "System Audit Trail" else "Parent Broadcasts & Circulars",
-                color = ScholaOnyxText,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
               )
@@ -91,7 +93,7 @@ fun NoticesScreen(
             if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
               Button(
                 onClick = onShowCreateNotice,
-                colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
               ) {
                 Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -108,11 +110,11 @@ fun NoticesScreen(
     item {
       Surface(
         shape = RoundedCornerShape(Radius.pill),
-        color = ScholaSurface,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.pill))
-          .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.pill))
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
       ) {
         Row(
           modifier = Modifier
@@ -120,13 +122,14 @@ fun NoticesScreen(
             .padding(4.dp),
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-          listOf("System Audit Logs", "Parent Broadcasts").forEachIndexed { index, title ->
+          listOf("Audit log", "Notices").forEachIndexed { index, title ->
+            if (index == 0 && currentUser.role !in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) return@forEachIndexed
             val isSelected = selectedSubTab == index
             Box(
               modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(Radius.pill))
-                .background(if (isSelected) ScholaTerracotta else Color.Transparent)
+                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                 .clickable { selectedSubTab = index }
                 .padding(vertical = 10.dp),
               contentAlignment = Alignment.Center
@@ -135,7 +138,7 @@ fun NoticesScreen(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else ScholaTextSecondary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
               )
             }
@@ -156,17 +159,17 @@ fun NoticesScreen(
             val isSelected = auditFilter == flt
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) ScholaSlateNavy else ScholaSurface,
+              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
               modifier = Modifier
                 .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) ScholaSlateNavy else ScholaBorder, RoundedCornerShape(Radius.pill))
+                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
                 .clickable { auditFilter = flt }
             ) {
               Text(
                 text = flt.replace("_", " "),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
               )
             }
@@ -191,10 +194,10 @@ fun NoticesScreen(
                   .clip(CircleShape)
                   .background(
                     when (log.actionType) {
-                      "ROLL_CALL" -> StatusSuccessBg
-                      "FEE_PAYMENT" -> ScholaTerracottaContainer
+                      "ROLL_CALL" -> SemanticColors.successContainer
+                      "FEE_PAYMENT" -> MaterialTheme.colorScheme.primaryContainer
                       "GRADEBOOK" -> Color(0xFFEDE9FE)
-                      else -> ScholaSlateContainer
+                      else -> MaterialTheme.colorScheme.secondaryContainer
                     }
                   ),
                 contentAlignment = Alignment.Center
@@ -209,9 +212,9 @@ fun NoticesScreen(
                   },
                   contentDescription = null,
                   tint = when (log.actionType) {
-                    "ROLL_CALL" -> StatusSuccessText
-                    "FEE_PAYMENT" -> ScholaTerracotta
-                    "GRADEBOOK" -> ScholaTerracottaDark
+                    "ROLL_CALL" -> SemanticColors.onSuccess
+                    "FEE_PAYMENT" -> MaterialTheme.colorScheme.primary
+                    "GRADEBOOK" -> MaterialTheme.colorScheme.primary
                     else -> ScholaSlateNavy
                   },
                   modifier = Modifier.size(20.dp)
@@ -227,17 +230,17 @@ fun NoticesScreen(
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Text(log.actionSummary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(log.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
+                  Text(log.timestamp, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                   text = "${log.actorName} (${log.actorRole}) • Target: ${log.targetScholar}",
                   style = MaterialTheme.typography.labelSmall,
-                  color = ScholaOnTerracottaContainer,
+                  color = MaterialTheme.colorScheme.onPrimaryContainer,
                   fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(log.details, style = MaterialTheme.typography.bodySmall, color = ScholaTextSecondary)
+                Text(log.details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
             }
           }
@@ -257,17 +260,17 @@ fun NoticesScreen(
             verticalAlignment = Alignment.CenterVertically
           ) {
             ScholaPillBadge(status = notice.category.label)
-            Text(notice.publishedDate, style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+            Text(notice.publishedDate, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
           Spacer(modifier = Modifier.height(Spacing.s2))
           Text(notice.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
           Spacer(modifier = Modifier.height(4.dp))
-          Text(notice.content, style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
+          Text(notice.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
           Spacer(modifier = Modifier.height(Spacing.s2))
           Text(
             text = "Issued by ${notice.authorName} (${notice.authorRole}) • Target: ${notice.targetAudience}",
             style = MaterialTheme.typography.labelSmall,
-            color = ScholaMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
           )
         }
@@ -281,12 +284,17 @@ fun NoticesScreen(
 @Composable
 fun NotificationsScreen(
   repository: ErpDataRepository,
-  onBack: () -> Unit
+  onBack: () -> Unit,
+  onNavigateTo: (String) -> Unit = {}
 ) {
   val notifications by repository.notifications.collectAsState()
+  val currentUser by repository.currentUser.collectAsState()
+  val scope = rememberCoroutineScope()
+  var opening by remember(currentUser.id) { mutableStateOf<String?>(null) }
+  var inboxError by remember(currentUser.id) { mutableStateOf<String?>(null) }
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       TopAppBar(
         title = { Text("Notifications", fontWeight = FontWeight.Bold) },
@@ -295,7 +303,7 @@ fun NotificationsScreen(
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = ScholaLinen)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
       )
     }
   ) { paddingValues ->
@@ -309,17 +317,29 @@ fun NotificationsScreen(
       item {
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Text("In-app school inbox",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
-          Text("Updates sync while the Supabase demo is open. Device push notifications are not enabled in this demo.",style=MaterialTheme.typography.bodySmall,color=ScholaTextSecondary)
+          Text("Updates sync while the Supabase demo is open. Device push notifications are not enabled in this demo.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
+      inboxError?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
       if (notifications.isEmpty()) {
         item { EmptyStateView(title = "No notifications", message = "School updates will appear here.") }
       }
       items(notifications, key = { it.id }) { notif ->
         AppCard(modifier = Modifier.fillMaxWidth().clickable(
-          enabled = !notif.isRead,
-          onClickLabel = "Mark notification as read"
-        ) { repository.markNotificationAsRead(notif.id) }) {
+          enabled = opening == null,
+          onClickLabel = "Open notification"
+        ) {
+          opening = notif.id; inboxError = null
+          scope.launch {
+            try {
+              if (!notif.isRead) repository.readNotificationConfirmed(notif.id)
+              onNavigateTo(notificationDestination(notif.category))
+            } catch (e: Exception) {
+              if (e is kotlinx.coroutines.CancellationException) throw e
+              inboxError = "Could not open this update. Read state is not confirmed; tap again to retry."
+            } finally { opening = null }
+          }
+        }) {
           Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
@@ -328,7 +348,7 @@ fun NotificationsScreen(
               modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(if (!notif.isRead) ScholaTerracottaContainer else ScholaBorder),
+                .background(if (!notif.isRead) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant),
               contentAlignment = Alignment.Center
             ) {
               Icon(
@@ -339,7 +359,7 @@ fun NotificationsScreen(
                   else -> Icons.Default.Notifications
                 },
                 contentDescription = null,
-                tint = if (!notif.isRead) ScholaTerracotta else ScholaMuted,
+                tint = if (!notif.isRead) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -353,16 +373,27 @@ fun NotificationsScreen(
               ) {
                 Text(notif.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 if (!notif.isRead) {
-                  Box(modifier = Modifier.size(8.dp).background(ScholaTerracotta, CircleShape))
+                  Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
                 }
               }
-              Text(notif.message, style = MaterialTheme.typography.bodySmall, color = ScholaTextSecondary)
+              Text(if (opening == notif.id) "Opening…" else if (!notif.isRead) "Unread" else "Read", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+              Text(notif.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               Spacer(modifier = Modifier.height(2.dp))
-              Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
+              Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
           }
         }
       }
     }
   }
+}
+
+internal fun notificationDestination(category: NotificationCategory): String = when (category) {
+  NotificationCategory.ATTENDANCE -> Screen.Attendance.route
+  NotificationCategory.FEES -> Screen.Fees.route
+  NotificationCategory.HOMEWORK -> Screen.Homework.route
+  NotificationCategory.EXAMS -> Screen.ReportCard.route
+  NotificationCategory.LEAVE -> Screen.Leaves.route
+  NotificationCategory.ANNOUNCEMENTS -> Screen.Notices.route
+  else -> Screen.OperationsHub.route
 }

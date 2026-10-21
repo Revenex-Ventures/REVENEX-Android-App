@@ -103,7 +103,7 @@ fun TeacherDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                   .clip(RoundedCornerShape(Radius.pill))
-                  .background(Color.White.copy(alpha = 0.12f))
+                  .background(MaterialTheme.colorScheme.secondaryContainer)
                   .padding(horizontal = 7.dp, vertical = 2.dp)
               ) {
                 Box(
@@ -116,7 +116,7 @@ fun TeacherDashboardScreen(
                   text = "FACULTY PORTAL",
                   style = MaterialTheme.typography.labelSmall,
                   fontSize = 12.sp,
-                  color = Color.White.copy(alpha = 0.9f),
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                   letterSpacing = 1.1.sp,
                   fontWeight = FontWeight.Bold
                 )
@@ -126,7 +126,7 @@ fun TeacherDashboardScreen(
                 text = currentUser.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
               )
               val designation = matchedTeacher?.designation ?: currentUser.designation
               Spacer(modifier = Modifier.height(2.dp))
@@ -134,15 +134,15 @@ fun TeacherDashboardScreen(
                 text = "$designation • Class $mentorClass Mentor",
                 style = MaterialTheme.typography.bodySmall,
                 fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.75f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
               )
             }
           },
           trailingContent = {
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = ScholaTerracotta.copy(alpha = 0.18f),
-              border = androidx.compose.foundation.BorderStroke(0.8.dp, ScholaTerracotta.copy(alpha = 0.4f))
+              color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+              border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
             ) {
               Row(
                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
@@ -151,7 +151,7 @@ fun TeacherDashboardScreen(
                 Icon(
                   imageVector = Icons.Default.VerifiedUser,
                   contentDescription = null,
-                  tint = ScholaTerracottaLight,
+                  tint = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.size(12.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -161,7 +161,7 @@ fun TeacherDashboardScreen(
                   fontSize = 12.sp,
                   fontWeight = FontWeight.Bold,
                   letterSpacing = 0.8.sp,
-                  color = Color.White
+                  color = MaterialTheme.colorScheme.onSurface
                 )
               }
             }
@@ -169,7 +169,7 @@ fun TeacherDashboardScreen(
           statsContent = {
             TeacherHeroStatStrip(
               stats = listOf(
-                TeacherStat("MY CLASS", "$mentorClass (${classStudents.size} Std)", ScholaTerracottaLight, Icons.Default.Groups),
+                TeacherStat("MY CLASS", "$mentorClass (${classStudents.size} Std)", MaterialTheme.colorScheme.primary, Icons.Default.Groups),
                 TeacherStat("WEEKLY PERIODS", "${matchedTeacher?.weeklyPeriods ?: 22} Periods", Color(0xFF60A5FA), Icons.Default.Schedule),
                 TeacherStat("ATTENDANCE", "$teacherAttendance%", Color(0xFF34D399), Icons.Default.FactCheck)
               )
@@ -193,8 +193,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Mark Attendance",
                 icon = Icons.Default.FactCheck,
-                iconTint = ScholaSlateNavy,
-                backgroundColor = ScholaSlateContainer,
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
                 modifier = Modifier.width(180.dp),
                 onClick = { onNavigateTo(Screen.Attendance.route) }
               )
@@ -203,8 +203,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Add Homework",
                 icon = Icons.Default.Assignment,
-                iconTint = ScholaTerracotta,
-                backgroundColor = ScholaTerracottaContainer,
+                iconTint = MaterialTheme.colorScheme.primary,
+                backgroundColor = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.width(180.dp),
                 onClick = onShowCreateAssignment
               )
@@ -213,8 +213,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Upload Notes",
                 icon = Icons.Default.CloudUpload,
-                iconTint = ScholaSlateNavy,
-                backgroundColor = ScholaSlateContainer,
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
                 modifier = Modifier.width(180.dp),
                 onClick = { onNavigateTo(Screen.StudyMaterial.route) }
               )
@@ -223,8 +223,8 @@ fun TeacherDashboardScreen(
               QuickActionButton(
                 title = "Staff Leave",
                 icon = Icons.Default.EventBusy,
-                iconTint = ScholaSlateNavy,
-                backgroundColor = ScholaSlateContainer,
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
                 modifier = Modifier.width(180.dp),
                 onClick = onShowApplyLeave
               )
@@ -256,7 +256,7 @@ fun TeacherDashboardScreen(
             ) {
               Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = RevenexPrimaryContainer,
+                color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.size(48.dp)
               ) {
                 Column(
@@ -287,13 +287,13 @@ fun TeacherDashboardScreen(
               }
               Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = StatusSuccessContainer
+                color = SemanticColors.successContainer
               ) {
                 Text(
                   text = "Room ${slot.roomNumber.takeLast(3)}",
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
-                  color = StatusSuccessText,
+                  color = SemanticColors.onSuccess,
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
               }
@@ -337,7 +337,7 @@ fun TeacherDashboardScreen(
                     text = st.rollNumber.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                   )
                 }
               }
@@ -357,13 +357,13 @@ fun TeacherDashboardScreen(
               }
               Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = StatusSuccessContainer
+                color = SemanticColors.successContainer
               ) {
                 Text(
                   text = "${st.attendancePercent}%",
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
-                  color = StatusSuccessText,
+                  color = SemanticColors.onSuccess,
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
               }
@@ -388,8 +388,8 @@ private fun TeacherHeroStatStrip(stats: List<TeacherStat>) {
   Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
     stats.forEach { stat ->
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() }, color = Color.White.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall)
-        Text(stat.value, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() }, color = MaterialTheme.colorScheme.onSurface.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall)
+        Text(stat.value, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
 
       }
     }

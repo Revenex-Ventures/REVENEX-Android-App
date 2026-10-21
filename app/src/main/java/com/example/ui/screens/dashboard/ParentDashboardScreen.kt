@@ -52,9 +52,10 @@ fun ParentDashboardScreen(
   val leaveRequests by repository.leaveRequests.collectAsState()
   val classAttendanceMap by repository.classAttendance.collectAsState()
   val notices by repository.notices.collectAsState()
+  val cloud = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
 
-  val children = remember(students, currentUser) {
-    students.filter { st ->
+  val children = remember(students, currentUser, cloud) {
+    if (cloud) students else students.filter { st ->
       st.parentPhone.replace("+91", "").trim().replace(" ", "") == currentUser.phone.replace("+91", "").trim().replace(" ", "") ||
       st.id == currentUser.associatedStudentId ||
       currentUser.associatedChildNames.any { name -> st.name.contains(name.substringBefore(" (").trim(), ignoreCase = true) }
@@ -74,14 +75,14 @@ fun ParentDashboardScreen(
       contentAlignment = Alignment.Center
     ) {
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.School, contentDescription = null, tint = ScholaTextSecondary, modifier = Modifier.size(48.dp))
+        Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
         Spacer(modifier = Modifier.height(Spacing.s4))
-        Text("No Linked Student Found", style = MaterialTheme.typography.titleMedium, color = ScholaTextPrimary)
+        Text("No Linked Student Found", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.height(Spacing.s2))
         Text(
           "No student record is linked to your parent account in this session. Parent-student relationships are established by school administrators.",
           style = MaterialTheme.typography.bodySmall,
-          color = ScholaTextSecondary,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
       }
@@ -92,19 +93,22 @@ fun ParentDashboardScreen(
   val childFee = feeRecords.firstOrNull { it.studentId == activeChild.id }
   val childPendingFee = childFee?.pendingAmount ?: activeChild.feePendingAmount
 
-  // Dynamic today's attendance check
-  val childTodayAttendance = remember(classAttendanceMap, activeChild.id) {
-    repository.getStudentTodayAttendance(activeChild.id)
-  }
-
+  val todayKeys = setOf(
+    java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
+    java.time.LocalDate.now().toString()
+  )
+  val childTodayAttendance = classAttendanceMap.values.lastOrNull { record ->
+    record.date in todayKeys && record.studentList.any { it.studentId == activeChild.id }
+  }?.studentList?.firstOrNull { it.studentId == activeChild.id }?.status
   val isPresent = childTodayAttendance == AttendanceStatus.PRESENT || childTodayAttendance == AttendanceStatus.LATE
-  val attendanceLabel = childTodayAttendance.label
+  val attendanceLabel = childTodayAttendance?.label ?: "Not recorded"
   val attendanceSublabel = when (childTodayAttendance) {
-    AttendanceStatus.PRESENT -> "Recorded in Morning Register"
-    AttendanceStatus.ABSENT -> "Reported Absent by Class Teacher"
-    AttendanceStatus.LATE -> "Marked Late Entry (08:45 AM)"
-    AttendanceStatus.EXCUSED -> "Officially Excused Absence"
-    AttendanceStatus.LEAVE -> "Approved Medical Leave"
+    AttendanceStatus.PRESENT -> "Confirmed in today's register"
+    AttendanceStatus.ABSENT -> "Reported absent by class teacher"
+    AttendanceStatus.LATE -> "Confirmed late entry"
+    AttendanceStatus.EXCUSED -> "Excused absence"
+    AttendanceStatus.LEAVE -> "Recorded leave"
+    null -> "No confirmed register for today"
   }
 
   val childLeaves = leaveRequests.filter { it.applicantName.contains(activeChild.name, ignoreCase = true) || it.applicantId == activeChild.id }
@@ -124,13 +128,13 @@ fun ParentDashboardScreen(
             .fillMaxWidth()
             .padding(16.dp)
             .clip(parentShape)
-            .background(ScholaSlateNavyDark, parentShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant, parentShape)
             .border(
               width = 1.dp,
               brush = Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.24f),
-                0.5f to Color.White.copy(alpha = 0.08f),
-                1f to Color.White.copy(alpha = 0.14f)
+                0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f),
+                0.5f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                1f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
               ),
               shape = parentShape
             )
@@ -151,7 +155,7 @@ fun ParentDashboardScreen(
                   verticalAlignment = Alignment.CenterVertically,
                   modifier = Modifier
                     .clip(RoundedCornerShape(Radius.pill))
-                    .background(Color.White.copy(alpha = 0.12f))
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
                     .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                   Box(
@@ -164,7 +168,7 @@ fun ParentDashboardScreen(
                     text = "PARENT DESK",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     letterSpacing = 1.1.sp,
                     fontWeight = FontWeight.Bold
                   )
@@ -174,13 +178,13 @@ fun ParentDashboardScreen(
                   text = currentUser.name,
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.Bold,
-                  color = Color.White
+                  color = MaterialTheme.colorScheme.onSurface
                 )
               }
               Surface(
                 shape = RoundedCornerShape(Radius.pill),
-                color = ScholaTerracotta.copy(alpha = 0.18f),
-                border = androidx.compose.foundation.BorderStroke(0.8.dp, ScholaTerracotta.copy(alpha = 0.4f))
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
               ) {
                 Row(
                   modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
@@ -189,7 +193,7 @@ fun ParentDashboardScreen(
                   Icon(
                     imageVector = Icons.Default.FamilyRestroom,
                     contentDescription = null,
-                    tint = ScholaTerracottaLight,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(13.dp)
                   )
                   Spacer(modifier = Modifier.width(4.dp))
@@ -199,7 +203,7 @@ fun ParentDashboardScreen(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                   )
                 }
               }
@@ -213,7 +217,7 @@ fun ParentDashboardScreen(
               fontSize = 12.sp,
               letterSpacing = 1.0.sp,
               fontWeight = FontWeight.SemiBold,
-              color = Color.White.copy(alpha = 0.70f)
+              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -226,10 +230,10 @@ fun ParentDashboardScreen(
                 val isSelected = child.id == activeChild.id
                 Surface(
                   shape = RoundedCornerShape(14.dp),
-                  color = if (isSelected) ScholaTerracotta.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f),
+                  color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                   border = androidx.compose.foundation.BorderStroke(
                     width = 1.dp,
-                    color = if (isSelected) ScholaTerracotta else Color.White.copy(alpha = 0.14f)
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
                   ),
                   modifier = Modifier
                     .weight(1f)
@@ -245,7 +249,7 @@ fun ParentDashboardScreen(
                       modifier = Modifier
                         .size(32.dp)
                         .background(
-                          if (isSelected) ScholaTerracotta else Color.White.copy(alpha = 0.15f),
+                          if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
                           CircleShape
                         ),
                       contentAlignment = Alignment.Center
@@ -253,7 +257,7 @@ fun ParentDashboardScreen(
                       Text(
                         text = child.name.take(1),
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                       )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -262,13 +266,13 @@ fun ParentDashboardScreen(
                         text = child.name,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                       )
                       Text(
                         text = "Class ${child.fullClass}",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 12.sp,
-                        color = if (isSelected) ScholaTerracottaLight else Color.White.copy(alpha = 0.70f)
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
                       )
                     }
                   }
@@ -281,8 +285,8 @@ fun ParentDashboardScreen(
             // Active Child Live Status Pill
             Surface(
               shape = RoundedCornerShape(12.dp),
-              color = Color.White.copy(alpha = 0.06f),
-              border = androidx.compose.foundation.BorderStroke(0.8.dp, Color.White.copy(alpha = 0.10f)),
+              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+              border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
               modifier = Modifier.fillMaxWidth()
             ) {
               Row(
@@ -303,7 +307,7 @@ fun ParentDashboardScreen(
                     text = "Today: $attendanceLabel",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                   )
                 }
                 Text(
@@ -327,7 +331,7 @@ fun ParentDashboardScreen(
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
           shape = RoundedCornerShape(16.dp),
-          colors = CardDefaults.cardColors(containerColor = StatusWarningContainer)
+          colors = CardDefaults.cardColors(containerColor = SemanticColors.warningContainer)
         ) {
           Row(
             modifier = Modifier
@@ -341,17 +345,17 @@ fun ParentDashboardScreen(
                 text = "Term 2 Fee Dues Pending",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = StatusWarningText
+                color = SemanticColors.onWarning
               )
               Text(
                 text = "Amount: ₹${childPendingFee / 100} • Due by 15th Sep 2026",
                 style = MaterialTheme.typography.bodySmall,
-                color = StatusWarningText.copy(alpha = 0.9f)
+                color = SemanticColors.onWarning.copy(alpha = 0.9f)
               )
             }
             Button(
               onClick = { onShowPaymentDialog(activeChild.name, childPendingFee) },
-              colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta),
+              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
               contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
               modifier = Modifier.testTag("pay_fees_quick_button")
             ) {
@@ -376,7 +380,7 @@ fun ParentDashboardScreen(
             title = "Fee Ledger",
             icon = Icons.Default.AccountBalanceWallet,
             iconTint = ScholaSlateNavy,
-            backgroundColor = ScholaSlateContainer,
+            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
             modifier = Modifier.width(115.dp),
             onClick = { onNavigateTo(Screen.Fees.route) }
           )
@@ -386,7 +390,7 @@ fun ParentDashboardScreen(
             title = "Apply Leave",
             icon = Icons.Default.EventBusy,
             iconTint = ScholaSlateNavy,
-            backgroundColor = ScholaSlateContainer,
+            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
             modifier = Modifier.width(115.dp),
             onClick = onShowApplyLeave
           )
@@ -396,7 +400,7 @@ fun ParentDashboardScreen(
             title = "Report Card",
             icon = Icons.Default.Grade,
             iconTint = ScholaSlateNavy,
-            backgroundColor = ScholaSlateContainer,
+            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
             modifier = Modifier.width(115.dp),
             onClick = { onNavigateTo(Screen.ReportCard.route) }
           )
@@ -405,8 +409,8 @@ fun ParentDashboardScreen(
           QuickActionButton(
             title = "Bus Tracking",
             icon = Icons.Default.DirectionsBus,
-            iconTint = ScholaTerracotta,
-            backgroundColor = ScholaTerracottaContainer,
+            iconTint = MaterialTheme.colorScheme.primary,
+            backgroundColor = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.width(115.dp),
             onClick = { onNavigateTo(Screen.Transport.route) }
           )
@@ -428,9 +432,9 @@ fun ParentDashboardScreen(
           title = "Today's Attendance",
           value = attendanceLabel,
           sublabel = attendanceSublabel,
-          icon = if (isPresent) Icons.Default.CheckCircle else Icons.Default.Cancel,
-          iconTint = if (isPresent) StatusSuccess else StatusError,
-          iconBackground = if (isPresent) StatusSuccessContainer else StatusErrorContainer,
+          icon = if (childTodayAttendance == null) Icons.Default.Schedule else if (isPresent) Icons.Default.CheckCircle else Icons.Default.Cancel,
+          iconTint = if (childTodayAttendance == null) MaterialTheme.colorScheme.onSurfaceVariant else if (isPresent) SemanticColors.onSuccess else SemanticColors.onDanger,
+          iconBackground = if (childTodayAttendance == null) MaterialTheme.colorScheme.surfaceVariant else if (isPresent) SemanticColors.successContainer else SemanticColors.dangerContainer,
           trendText = "${activeChild.attendancePercent}% Term",
           isPositiveTrend = isPresent,
           modifier = Modifier.weight(1f)
@@ -441,7 +445,7 @@ fun ParentDashboardScreen(
           sublabel = if(repository.dataMode.value==com.example.data.datasource.DataMode.SUPABASE_DEMO) "Class ${activeChild.fullClass}" else "Top 10% in Class ${activeChild.fullClass}",
           icon = Icons.Default.MilitaryTech,
           iconTint = RevenexGold,
-          iconBackground = RevenexGoldContainer,
+          iconBackground = SemanticColors.warningContainer,
           trendText = if(repository.dataMode.value==com.example.data.datasource.DataMode.SUPABASE_DEMO) "GPA not calculated" else "GPA ${activeChild.gpa}",
           isPositiveTrend = true,
           modifier = Modifier.weight(1f)
@@ -486,7 +490,7 @@ fun ParentDashboardScreen(
                     text = "Remarks: ${leave.approverRemark}",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
-                    color = if (leave.status == LeaveStatus.APPROVED) StatusSuccess else StatusErrorText
+                    color = if (leave.status == LeaveStatus.APPROVED) StatusSuccess else SemanticColors.onDanger
                   )
                 }
               }
@@ -511,7 +515,7 @@ fun ParentDashboardScreen(
         ) {
           Surface(
             shape = CircleShape,
-            color = RevenexPrimaryContainer,
+            color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(48.dp)
           ) {
             Box(contentAlignment = Alignment.Center) {

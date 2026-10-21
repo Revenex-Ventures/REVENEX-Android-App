@@ -155,7 +155,7 @@ fun PrincipalAttendanceScreen(
               Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ScholaOnyxSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
               ) {
                 Column(
                   modifier = Modifier
@@ -167,12 +167,12 @@ fun PrincipalAttendanceScreen(
                     text = "Overall School Attendance Rate",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = ScholaOnyxText
+                    color = MaterialTheme.colorScheme.onSurface
                   )
                   Text(
                     text = "Synced: $currentDate",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ScholaOnyxMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                   )
 
                   Spacer(modifier = Modifier.height(20.dp))
@@ -183,9 +183,9 @@ fun PrincipalAttendanceScreen(
                       value = schoolStats.pct.toFloat(),
                       label = "Average Presence",
                       size = VitalRingSize.HERO,
-                      gradientStart = if (schoolStats.pct >= 75.0) StatusSuccessText else StatusDangerText,
-                      trackColor = ScholaOnyxBorder,
-                      textColor = ScholaOnyxText
+                      gradientStart = if (schoolStats.pct >= 75.0) SemanticColors.onSuccess else SemanticColors.onDanger,
+                      trackColor = MaterialTheme.colorScheme.outlineVariant,
+                      textColor = MaterialTheme.colorScheme.onSurface
                     )
                   }
 
@@ -197,17 +197,17 @@ fun PrincipalAttendanceScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                   ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text("Present", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted)
-                      Text("${schoolStats.present}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessText)
+                      Text("Present", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                      Text("${schoolStats.present}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onSuccess)
                     }
-                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = ScholaOnyxBorder)
+                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text("Absent", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted)
-                      Text("${schoolStats.absent}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusErrorText)
+                      Text("Absent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                      Text("${schoolStats.absent}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
                     }
-                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = ScholaOnyxBorder)
+                    Divider(modifier = Modifier.height(30.dp).width(1.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text("Late", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted)
+                      Text("Late", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                       Text("${schoolStats.late}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = RevenexGold)
                     }
                   }
@@ -243,13 +243,13 @@ fun PrincipalAttendanceScreen(
                   Box(
                     modifier = Modifier
                       .size(50.dp)
-                      .background(RevenexPrimaryContainer, CircleShape),
+                      .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                   ) {
                     Text(
                       text = classSection,
                       fontWeight = FontWeight.Bold,
-                      color = RevenexBlue,
+                      color = MaterialTheme.colorScheme.onPrimaryContainer,
                       fontSize = 15.sp
                     )
                   }
@@ -276,7 +276,7 @@ fun PrincipalAttendanceScreen(
                       text = "${stats.percentage}%",
                       style = MaterialTheme.typography.titleMedium,
                       fontWeight = FontWeight.Bold,
-                      color = if (stats.percentage >= 75.0) StatusSuccessText else StatusErrorText
+                      color = if (stats.percentage >= 75.0) SemanticColors.onSuccess else SemanticColors.onDanger
                     )
                     Text(
                       text = "View details",
@@ -333,11 +333,11 @@ fun PrincipalAttendanceScreen(
                   }
                   Column {
                     Text("Today's Present", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${classRecord?.presentCount ?: classStudents.size}", color = StatusSuccessText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text("${classRecord?.presentCount ?: classStudents.size}", color = SemanticColors.onSuccess, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                   }
                   Column {
                     Text("Today's Absent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${classRecord?.absentCount ?: 0}", color = StatusErrorText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text("${classRecord?.absentCount ?: 0}", color = SemanticColors.onDanger, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                   }
                 }
               }
@@ -404,7 +404,7 @@ fun PrincipalAttendanceScreen(
                     text = "$computedPct%",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (computedPct >= 75.0) StatusSuccessText else StatusErrorText
+                    color = if (computedPct >= 75.0) SemanticColors.onSuccess else SemanticColors.onDanger
                   )
                   Text(
                     text = "Click for History",

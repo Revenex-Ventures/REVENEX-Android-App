@@ -33,13 +33,15 @@ fun ProfileScreen(
 ) {
   val currentUser by repository.currentUser.collectAsState()
   val isAppLockEnabled by repository.isAppLockEnabled.collectAsState()
+  val cloud = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val sessionLabel = if (cloud && currentUser.id.isNotBlank()) runCatching { repository.supabaseDataSource.sessionId() }.getOrDefault("Not loaded") else "2026–2027 · local demo"
 
   Scaffold(
     topBar = {
       TopAppBar(
         title = {
           Text(
-            text = "User Profile & Security",
+            text = "Settings & profile",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
           )
@@ -68,7 +70,7 @@ fun ProfileScreen(
           modifier = Modifier
             .fillMaxWidth()
             .padding(Spacing.screenPadding),
-          containerColor = RevenexInk,
+          containerColor = MaterialTheme.colorScheme.surfaceVariant,
           elevation = Elev.e2
         ) {
           Row(
@@ -78,14 +80,14 @@ fun ProfileScreen(
             Box(
               modifier = Modifier
                 .size(64.dp)
-                .background(ScholaOnyx, CircleShape),
+                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
               contentAlignment = Alignment.Center
             ) {
               Text(
                 text = currentUser.avatarInitials.ifBlank { "U" },
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = ScholaTextPrimary
+                color = MaterialTheme.colorScheme.onSurface
               )
             }
             Spacer(modifier = Modifier.width(Spacing.s4))
@@ -94,23 +96,39 @@ fun ProfileScreen(
                 text = currentUser.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
               )
               Text(
                 text = "${currentUser.role.displayName} • ${currentUser.email}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.85f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
               )
               Text(
                 text = "Phone: ${currentUser.phone}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
               )
             }
           }
         }
       }
 
+      item {
+        SectionHeader(title = "Settings · Appearance")
+        val appearance = LocalAppearance.current
+        Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.screenPadding)) {
+          Text("Choose one appearance for the whole app.", style = MaterialTheme.typography.bodyMedium)
+          SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8)) {
+            Appearance.entries.forEachIndexed { index, option ->
+              SegmentedButton(
+                selected = appearance?.selection == option,
+                onClick = { appearance?.select(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, Appearance.entries.size)
+              ) { Text(option.label) }
+            }
+          }
+        }
+      }
       // 2. SECURITY SETTINGS
       item {
         SectionHeader(title = "App Security & Biometrics")
@@ -131,13 +149,13 @@ fun ProfileScreen(
               Box(
                 modifier = Modifier
                   .size(40.dp)
-                  .background(RevenexPrimaryContainer, RoundedCornerShape(Radius.sm)),
+                  .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(Radius.sm)),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
                   imageVector = Icons.Default.Fingerprint,
                   contentDescription = null,
-                  tint = RevenexPrimary,
+                  tint = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.size(24.dp)
                 )
               }
@@ -175,20 +193,20 @@ fun ProfileScreen(
         ) {
           Column(verticalArrangement = Arrangement.spacedBy(Spacing.s2)) {
             Text(
-              text = "Institution: Revenex Public School",
+              text = if (cloud) "School: ${currentUser.schoolId}" else "Institution: Revenex Public School (sample)",
               style = MaterialTheme.typography.bodyMedium,
               fontWeight = FontWeight.SemiBold
             )
             Text(
-              text = "Affiliation: CBSE Board New Delhi (Affil # 1130492)",
+              text = if (cloud) "School membership is assigned by your school operator." else "Sample school affiliation · CBSE",
               style = MaterialTheme.typography.bodyMedium
             )
             Text(
-              text = "Academic Session: 2026-2027 (Active Term 1)",
+              text = "Academic session: $sessionLabel",
               style = MaterialTheme.typography.bodyMedium
             )
             Text(
-              text = "ERP Version: 2.4.0 (Enterprise Native)",
+              text = "Revenex School ERP · demonstration build",
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -205,10 +223,10 @@ fun ProfileScreen(
             .padding(horizontal = Spacing.screenPadding)
         ) {
           OutlinedButton(
-            onClick = { repository.logout() },
+            onClick = { repository.logout(); onNavigateTo(com.example.ui.navigation.Screen.Auth.route) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(Radius.md),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
           ) {
             Icon(Icons.Default.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(Spacing.s2))

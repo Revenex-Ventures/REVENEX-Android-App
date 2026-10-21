@@ -816,6 +816,11 @@ class ErpDataRepository private constructor() {
   // Assignments — Pure delegation
   // ========================================================================
 
+  suspend fun createAssignmentConfirmed(assignment: HomeworkAssignment) = activeSource.createAssignment(assignment)
+  suspend fun publishNoticeConfirmed(notice: SchoolNotice) = activeSource.publishNotice(notice)
+  suspend fun readNotificationConfirmed(id: String) = activeSource.markNotificationAsRead(id)
+  suspend fun submitAssignmentConfirmed(id: String) = activeSource.toggleAssignmentCompletion(id)
+
   fun createAssignment(assignment: HomeworkAssignment) {
     repositoryScope.launch {
       activeSource.createAssignment(assignment)

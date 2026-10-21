@@ -47,16 +47,16 @@ fun TeacherDetailScreen(
   val teacherClasses = timetable.filter { it.teacherName.contains(teacher.name.split(" ").lastOrNull() ?: "") }
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       TopAppBar(
         title = { Text("Faculty Profile", fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = ScholaTextPrimary)
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = ScholaLinen)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
       )
     }
   ) { paddingValues ->
@@ -74,8 +74,8 @@ fun TeacherDetailScreen(
           modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Radius.hero))
-            .background(ScholaOnyx)
-            .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
             .padding(Spacing.cardPaddingLarge)
         ) {
           Row(
@@ -89,17 +89,17 @@ fun TeacherDetailScreen(
                 text = teacher.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = ScholaOnyxText
+                color = MaterialTheme.colorScheme.onSurface
               )
               Text(
                 text = "${teacher.department} • ${teacher.designation}",
                 style = MaterialTheme.typography.bodySmall,
-                color = ScholaOnyxMuted
+                color = MaterialTheme.colorScheme.onSurfaceVariant
               )
               Text(
                 text = "Emp ID: ${teacher.employeeId} • ${teacher.qualification}",
                 style = MaterialTheme.typography.labelSmall,
-                color = ScholaGold,
+                color = SemanticColors.onWarning,
                 fontSize = 12.sp
               )
             }
@@ -144,8 +144,8 @@ fun TeacherDetailScreen(
             ) {
               Column {
                 Text(slot.subject, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text("${slot.dayOfWeek} • Period ${slot.periodNumber} (${slot.startTime} - ${slot.endTime})", style = MaterialTheme.typography.bodySmall, color = ScholaOnTerracottaContainer)
-                Text("Class ${slot.classGrade}-${slot.division} • Room ${slot.roomNumber}", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+                Text("${slot.dayOfWeek} • Period ${slot.periodNumber} (${slot.startTime} - ${slot.endTime})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("Class ${slot.classGrade}-${slot.division} • Room ${slot.roomNumber}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
               ScholaPillBadge(status = "Class ${slot.classGrade}-${slot.division}")
             }

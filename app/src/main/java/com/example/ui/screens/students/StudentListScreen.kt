@@ -41,11 +41,15 @@ fun StudentListScreen(
 
   var searchQuery by remember { mutableStateOf("") }
   var selectedCohortFilter by remember { mutableStateOf("All Cohorts") }
-  var selectedStudentForPane by remember { mutableStateOf<Student?>(students.firstOrNull()) }
+  var selectedStudentForPane by remember(currentUser.id) { mutableStateOf<Student?>(null) }
+
+  LaunchedEffect(students, currentUser.id) {
+    selectedStudentForPane = students.firstOrNull { it.id == selectedStudentForPane?.id } ?: students.firstOrNull()
+  }
 
   // Modal sheet state for mobile
-  var showMobileDetailSheet by remember { mutableStateOf(false) }
-  var activeMobileStudentId by remember { mutableStateOf<String?>(null) }
+  var showMobileDetailSheet by remember(currentUser.id) { mutableStateOf(false) }
+  var activeMobileStudentId by remember(currentUser.id) { mutableStateOf<String?>(null) }
 
   val cohortFilters = listOf("All Cohorts", "Grade 10-A", "Grade 10-B", "Grade 11-Sci", "Grade 12-Arts")
 
@@ -71,17 +75,18 @@ fun StudentListScreen(
   val isSplitPane = windowSizeClass != WindowSizeClass.COMPACT_MOBILE
 
   Scaffold(
-    containerColor = GlassBgTransparent,
-    floatingActionButton = {
-      if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
-        ExtendedFloatingActionButton(
-          onClick = onShowAddStudent,
-          icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
-          text = { Text("Add student", fontWeight = FontWeight.Bold) },
-          containerColor = ScholaTerracotta,
-          contentColor = Color.White,
-          modifier = Modifier.testTag("fab_admit_student")
-        )
+    containerColor = MaterialTheme.colorScheme.background,
+    topBar = {
+      Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg16, vertical = Spacing.xs4),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text("Students", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+          FilledTonalButton(onClick = onShowAddStudent, modifier = Modifier.testTag("fab_admit_student")) {
+            Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(Spacing.sm8))
+            Text("Add student")
+          }
+        }
       }
     }
   ) { paddingValues ->
@@ -117,17 +122,17 @@ fun StudentListScreen(
               val isSelected = selectedCohortFilter == cohort
               Surface(
                 shape = RoundedCornerShape(Radius.pill),
-                color = if (isSelected) ScholaTerracotta else ScholaSurface,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                   .clip(RoundedCornerShape(Radius.pill))
-                  .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+                  .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
                   .clickable { selectedCohortFilter = cohort }
               ) {
                 Text(
                   text = cohort,
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
-                  color = if (isSelected) Color.White else ScholaTextPrimary,
+                  color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                   modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
                 )
               }
@@ -157,7 +162,7 @@ fun StudentListScreen(
           modifier = Modifier
             .width(1.dp)
             .fillMaxHeight()
-            .background(ScholaBorder)
+            .background(MaterialTheme.colorScheme.outlineVariant)
         )
 
         // Right Detail 360 Pane
@@ -207,17 +212,17 @@ fun StudentListScreen(
             val isSelected = selectedCohortFilter == cohort
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) ScholaTerracotta else ScholaSurface,
+              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
               modifier = Modifier
                 .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
                 .clickable { selectedCohortFilter = cohort }
             ) {
               Text(
                 text = cohort,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
               )
             }
@@ -254,7 +259,7 @@ fun StudentListScreen(
     if (activeStudent != null) {
       ModalBottomSheet(
         onDismissRequest = { showMobileDetailSheet = false },
-        containerColor = GlassBgTransparent,
+        containerColor = MaterialTheme.colorScheme.background,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
       ) {
         Box(modifier = Modifier.padding(Spacing.s4)) {
@@ -278,11 +283,11 @@ fun ScholarCardItem(
   val shape = RoundedCornerShape(Radius.lg)
   Surface(
     shape = shape,
-    color = if (isSelected) ScholaTerracottaContainer else ScholaSurface,
+    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
     modifier = Modifier
       .fillMaxWidth()
       .clip(shape)
-      .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, shape)
+      .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, shape)
       .clickable(onClick = onClick)
       .testTag("student_row_${student.id}")
   ) {
@@ -304,12 +309,12 @@ fun ScholarCardItem(
             text = student.name,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = ScholaTextPrimary
+            color = MaterialTheme.colorScheme.onSurface
           )
           Text(
             text = "Class ${student.fullClass} • Roll #${student.rollNumber} • ${student.admissionNumber}",
             style = MaterialTheme.typography.bodySmall,
-            color = ScholaMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
           )
           Spacer(modifier = Modifier.height(2.dp))
@@ -318,16 +323,16 @@ fun ScholarCardItem(
               text = "GPA: ${student.gpa}",
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
-              color = ScholaOnTerracottaContainer
+              color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text("•", color = ScholaMuted, fontSize = 12.sp)
+            Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
               text = "${student.attendancePercent}% Att.",
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
-              color = if (student.attendancePercent >= 90) StatusSuccessText else StatusWarningText
+              color = if (student.attendancePercent >= 90) SemanticColors.onSuccess else SemanticColors.onWarning
             )
           }
         }
@@ -335,13 +340,13 @@ fun ScholarCardItem(
 
       Column(horizontalAlignment = Alignment.End) {
         if (student.feeSummaryAvailable) ScholaPillBadge(status = student.feeStatus.label)
-        else Text("Fees unavailable", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+        else Text("Fees unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (student.feeSummaryAvailable && student.feePendingAmount > 0) {
           Spacer(modifier = Modifier.height(4.dp))
           Text(
-            text = "$${student.feePendingAmount / 100000L}k due",
+            text = "₹${student.feePendingAmount / 100000L}k due",
             style = MaterialTheme.typography.labelSmall,
-            color = StatusDangerText,
+            color = SemanticColors.onDanger,
             fontWeight = FontWeight.Bold
           )
         }

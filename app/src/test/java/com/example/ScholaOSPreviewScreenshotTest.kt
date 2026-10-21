@@ -34,6 +34,13 @@ import java.io.File
 class ScholaOSPreviewScreenshotTest {
 
   @get:Rule val composeTestRule = createComposeRule()
+  @org.junit.Before fun resetPersona() {
+    val repository = ErpDataRepository.getInstance()
+    repository.setDataMode(com.example.data.datasource.DataMode.DEMO)
+    repository.switchRole(com.example.data.model.UserRole.PRINCIPAL)
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+  }
+
 
   private val artifactDir = "build/reports/screenshots"
 

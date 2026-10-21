@@ -76,7 +76,7 @@ fun AddStudentDialog(
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
         modifier = Modifier
@@ -423,7 +423,7 @@ fun AddTeacherDialog(
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
         modifier = Modifier
@@ -680,8 +680,13 @@ fun AddTeacherDialog(
 @Composable
 fun CreateNoticeDialog(
   onDismiss: () -> Unit,
-  onPublish: (SchoolNotice) -> Unit
+  onPublish: (SchoolNotice) -> Unit,
+  onSubmitNotice: (suspend (SchoolNotice) -> Unit)? = null
 ) {
+  val publishScope = rememberCoroutineScope()
+  val noticeId = remember { "not_${java.util.UUID.randomUUID()}" }
+  var saving by remember { mutableStateOf(false) }
+  var saveError by remember { mutableStateOf<String?>(null) }
   var title by remember { mutableStateOf("") }
   var content by remember { mutableStateOf("") }
   var category by remember { mutableStateOf(NoticeCategory.CIRCULAR) }
@@ -689,7 +694,7 @@ fun CreateNoticeDialog(
   var isImportant by remember { mutableStateOf(false) }
 
   Dialog(
-    onDismissRequest = onDismiss,
+    onDismissRequest = { if (!saving) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     Card(
@@ -700,7 +705,7 @@ fun CreateNoticeDialog(
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
         modifier = Modifier
@@ -718,7 +723,7 @@ fun CreateNoticeDialog(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
           )
-          IconButton(onClick = onDismiss) {
+          IconButton(enabled = !saving, onClick = onDismiss) {
             Icon(Icons.Default.Close, contentDescription = "Close")
           }
         }
@@ -787,11 +792,12 @@ fun CreateNoticeDialog(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
         Button(
           onClick = {
             if (title.isNotBlank() && content.isNotBlank()) {
               val notice = SchoolNotice(
-                id = "not_${System.currentTimeMillis()}",
+                id = noticeId,
                 title = title.trim(),
                 content = content.trim(),
                 category = category,
@@ -801,18 +807,27 @@ fun CreateNoticeDialog(
                 targetAudience = targetAudience,
                 isImportant = isImportant
               )
-              onPublish(notice)
-              onDismiss()
+              saving = true
+              saveError = null
+              publishScope.launch {
+                try {
+                  if (onSubmitNotice != null) onSubmitNotice(notice) else onPublish(notice)
+                  onDismiss()
+                } catch (e: Exception) {
+                  if (e is kotlinx.coroutines.CancellationException) throw e
+                  saveError = "Publication could not be confirmed. Your notice is kept here; check the inbox before retrying."
+                } finally { saving = false }
+              }
             }
           },
           modifier = Modifier
             .fillMaxWidth()
             .testTag("submit_publish_notice_button"),
-          enabled = title.isNotBlank() && content.isNotBlank()
+          enabled = title.isNotBlank() && content.isNotBlank() && !saving
         ) {
           Icon(Icons.Default.Campaign, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Publish School Announcement")
+          Text(if (saving) "Publishing…" else "Publish school announcement")
         }
       }
     }
@@ -824,8 +839,10 @@ fun CreateAssignmentDialog(
   teacherName: String,
   repository: ErpDataRepository,
   onDismiss: () -> Unit,
-  onCreate: (HomeworkAssignment) -> Unit
+  onCreate: (HomeworkAssignment) -> Unit,
+  onSubmitAssignment: (suspend (HomeworkAssignment) -> Unit)? = null
 ) {
+  val assignmentId = remember { "hw_${java.util.UUID.randomUUID()}" }
   var title by remember { mutableStateOf("") }
   var subject by remember { mutableStateOf("Mathematics") }
   var classGrade by remember { mutableStateOf("10") }
@@ -877,7 +894,7 @@ fun CreateAssignmentDialog(
   val createScope = rememberCoroutineScope()
 
   Dialog(
-    onDismissRequest = onDismiss,
+    onDismissRequest = { if (!isUploading) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     Card(
@@ -888,7 +905,7 @@ fun CreateAssignmentDialog(
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
         modifier = Modifier
@@ -906,7 +923,7 @@ fun CreateAssignmentDialog(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
           )
-          IconButton(onClick = onDismiss) {
+          IconButton(enabled = !isUploading, onClick = onDismiss) {
             Icon(Icons.Default.Close, contentDescription = "Close")
           }
         }
@@ -1057,7 +1074,7 @@ fun CreateAssignmentDialog(
                     attachedUrl = result.url
                   }
                   val assignment = HomeworkAssignment(
-                    id = "hw_${System.currentTimeMillis()}",
+                    id = assignmentId,
                     title = title.trim(),
                     subject = subject.trim(),
                     classGrade = classGrade.trim(),
@@ -1073,10 +1090,11 @@ fun CreateAssignmentDialog(
                     isCompletedByStudent = false,
                     submissionStatus = "Pending"
                   )
-                  onCreate(assignment)
+                  if (onSubmitAssignment != null) onSubmitAssignment(assignment) else onCreate(assignment)
                   onDismiss()
                 } catch (e: Exception) {
-                  attachmentError = e.message ?: "Could not upload attachment."
+                  if (e is kotlinx.coroutines.CancellationException) throw e
+                  attachmentError = "Assignment could not be confirmed. Your work is retained; check Homework before retrying."
                 } finally {
                   isUploading = false
                 }
@@ -1089,7 +1107,7 @@ fun CreateAssignmentDialog(
         ) {
           Icon(Icons.Default.Assignment, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Assign to Class $classGrade-$division")
+          Text(if (isUploading) "Publishing…" else "Assign to class $classGrade-$division")
         }
       }
     }
@@ -1122,7 +1140,7 @@ fun ApplyLeaveDialog(
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
         modifier = Modifier
@@ -1268,7 +1286,7 @@ fun FeePaymentDialog(
         .padding(vertical = 16.dp)
         .glassEffect(cornerRadius = 24.dp),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
         modifier = Modifier
@@ -1331,7 +1349,7 @@ fun FeePaymentDialog(
 
           Surface(
             shape = RoundedCornerShape(12.dp),
-            color = RevenexPrimaryContainer,
+            color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.fillMaxWidth()
           ) {
             Row(
@@ -1343,13 +1361,13 @@ fun FeePaymentDialog(
                 Text(
                   text = "Total Payable Amount",
                   style = MaterialTheme.typography.labelMedium,
-                  color = RevenexOnPrimaryContainer
+                  color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
                   text = "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}",
                   style = MaterialTheme.typography.headlineMedium,
                   fontWeight = FontWeight.Bold,
-                  color = RevenexOnPrimaryContainer
+                  color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
               }
               Surface(
@@ -1418,7 +1436,7 @@ fun FeePaymentDialog(
             Box(
               modifier = Modifier
                 .size(64.dp)
-                .background(StatusSuccessContainer, CircleShape),
+                .background(SemanticColors.successContainer, CircleShape),
               contentAlignment = Alignment.Center
             ) {
               Icon(
@@ -1433,7 +1451,7 @@ fun FeePaymentDialog(
               text = "Payment Received Successfully!",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.Bold,
-              color = StatusSuccessText
+              color = SemanticColors.onSuccess
             )
             Spacer(modifier = Modifier.height(12.dp))
 

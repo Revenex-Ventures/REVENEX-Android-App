@@ -47,7 +47,7 @@ fun StudentDetailScreen(
   }
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       TopAppBar(
         title = {
@@ -59,11 +59,11 @@ fun StudentDetailScreen(
         },
         navigationIcon = {
           IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = ScholaTextPrimary)
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
           }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-          containerColor = ScholaLinen
+          containerColor = MaterialTheme.colorScheme.background
         )
       )
     }
@@ -118,8 +118,8 @@ fun Student360DetailPane(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.hero))
-          .background(ScholaOnyx)
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
+          .background(MaterialTheme.colorScheme.surfaceVariant)
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
           .padding(Spacing.cardPaddingLarge)
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -128,20 +128,20 @@ fun Student360DetailPane(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Avatar(name = student.name, size = 48.dp, background = ScholaTerracotta)
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+              Avatar(name = student.name, size = 48.dp, background = MaterialTheme.colorScheme.primary)
               Spacer(modifier = Modifier.width(Spacing.s3))
-              Column {
+              Column(Modifier.weight(1f)) {
                 Text(
                   text = student.name,
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
-                  color = ScholaOnyxText
+                  color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                   text = "Class ${student.fullClass} • Roll #${student.rollNumber} • Adm #${student.admissionNumber}",
                   style = MaterialTheme.typography.bodySmall,
-                  color = ScholaOnyxMuted,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   fontSize = 12.sp
                 )
               }
@@ -161,36 +161,36 @@ fun Student360DetailPane(
               value = student.attendancePercent.toFloat(),
               label = "Attendance",
               size = VitalRingSize.MEDIUM,
-              gradientStart = ScholaTerracotta,
-              trackColor = ScholaOnyxBorder,
-              textColor = ScholaOnyxText
+              gradientStart = MaterialTheme.colorScheme.primary,
+              trackColor = MaterialTheme.colorScheme.outlineVariant,
+              textColor = MaterialTheme.colorScheme.onSurface
             )
 
             Box(
               modifier = Modifier
                 .width(1.dp)
                 .height(48.dp)
-                .background(ScholaOnyxBorder)
+                .background(MaterialTheme.colorScheme.outlineVariant)
             )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
               Text(
                 text = "CUMULATIVE GPA",
                 style = MaterialTheme.typography.labelSmall,
-                color = ScholaOnyxMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = TypeTokens.trackingMicroLabel,
                 fontSize = 12.sp
               )
               Text(
-                text = "${student.gpa} / 4.0",
+                text = if (cloudDemo) "Not configured" else "${student.gpa} / 10",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = ScholaGold
+                color = MaterialTheme.colorScheme.primary
               )
               Text(
-                text = "Class Rank: #${student.rank}",
+                text = if (cloudDemo) "Ranking not configured" else "Class Rank: #${student.rank}",
                 style = MaterialTheme.typography.bodySmall,
-                color = ScholaOnyxMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
               )
             }
@@ -203,11 +203,11 @@ fun Student360DetailPane(
     item {
       Surface(
         shape = RoundedCornerShape(Radius.pill),
-        color = ScholaSurface,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.pill))
-          .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.pill))
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
       ) {
         Row(
           modifier = Modifier
@@ -221,7 +221,7 @@ fun Student360DetailPane(
               modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(Radius.pill))
-                .background(if (isSelected) ScholaTerracotta else Color.Transparent)
+                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                 .clickable { selectedTab = index }
                 .padding(vertical = 8.dp),
               contentAlignment = Alignment.Center
@@ -230,7 +230,7 @@ fun Student360DetailPane(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else ScholaTextSecondary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
               )
             }
@@ -273,7 +273,7 @@ fun Student360DetailPane(
             Text(
               text = "Scholar presence is verified at ${student.attendancePercent}%. Examination eligibility requires minimum 75.0% verified presence.",
               style = MaterialTheme.typography.bodyMedium,
-              color = ScholaTextSecondary
+              color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(Spacing.s3))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
@@ -298,7 +298,7 @@ fun Student360DetailPane(
                 Text(
                   text = "Invoice: ${studentInvoice?.invoiceNumber ?: if (cloudDemo) "Not available" else "INV-2026-0842"}",
                   style = MaterialTheme.typography.bodySmall,
-                  color = ScholaMuted
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
               }
               if (student.feeSummaryAvailable) ScholaPillBadge(status = student.feeStatus.label)
@@ -348,10 +348,10 @@ fun Student360DetailPane(
               ) {
                 Column {
                   Text(grd.assessmentTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text("${grd.subject} • ${grd.instructorName}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+                  Text("${grd.subject} • ${grd.instructorName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                  Text("${grd.score} / ${grd.maxScore}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ScholaOnTerracottaContainer)
+                  Text("${grd.score} / ${grd.maxScore}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                   ScholaPillBadge(status = grd.letterGrade)
                 }
               }
@@ -371,7 +371,7 @@ private fun InfoRow(label: String, value: String) {
       .padding(vertical = 4.dp),
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
-    Text(label, modifier = Modifier.weight(0.4f).padding(end = Spacing.sm8), style = MaterialTheme.typography.bodyMedium, color = ScholaMuted)
-    Text(value, modifier = Modifier.weight(0.6f), textAlign = androidx.compose.ui.text.style.TextAlign.End, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ScholaTextPrimary)
+    Text(label, modifier = Modifier.weight(0.4f).padding(end = Spacing.sm8), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(value, modifier = Modifier.weight(0.6f), textAlign = androidx.compose.ui.text.style.TextAlign.End, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
   }
 }

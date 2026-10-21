@@ -71,15 +71,14 @@ object NavConfig {
         BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.FactCheck, Icons.Outlined.FactCheck),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
-        BottomNavItem(Screen.TeacherProfile.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu)
       )
       UserRole.STUDENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
-        BottomNavItem(Screen.ReportCard.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
       )
       // Parent/Parent-Portal is folded into the Student Portal: a parent accessing via a
       // guardian link lands in the Student portal. There is no 4th portal.
@@ -88,7 +87,7 @@ object NavConfig {
         BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
-        BottomNavItem(Screen.ReportCard.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
       )
     }
   }

@@ -46,6 +46,7 @@ import java.io.File
 fun TeacherProfileScreen(
   repository: ErpDataRepository
 ) {
+  val cloudDemo = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
   val context = LocalContext.current
   val teachers by repository.teachers.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
@@ -107,10 +108,12 @@ fun TeacherProfileScreen(
   ) {
     TeacherHeaderCard(
       teacher = teacher,
-      onPickPhoto = { imagePicker.launch("image/*") }
+      onPickPhoto = { if (cloudDemo) Toast.makeText(context, "Faculty updates are managed by the school office in this demo.", Toast.LENGTH_LONG).show() else imagePicker.launch("image/*") }
     )
 
-    EditableFacultyCard(
+    if (cloudDemo) {
+      Text("Faculty updates are managed by the school office in this demo.", style = MaterialTheme.typography.bodyMedium)
+    } else EditableFacultyCard(
       teacher = teacher,
       onSave = { updated -> repository.updateTeacher(updated) }
     )
@@ -126,7 +129,7 @@ private fun TeacherHeaderCard(
   teacher: Teacher,
   onPickPhoto: () -> Unit
 ) {
-  val accent = ScholaSlateNavy
+  val accent = MaterialTheme.colorScheme.primary
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(16.dp),
@@ -139,22 +142,22 @@ private fun TeacherHeaderCard(
         .padding(20.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Box(modifier = Modifier.size(96.dp)) {
+      Box(modifier = Modifier.size(64.dp)) {
         Box(
           modifier = Modifier
             .fillMaxSize()
             .clip(CircleShape)
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, accent.copy(alpha = 0.25f), CircleShape)
             .clickable(onClick = onPickPhoto),
           contentAlignment = Alignment.Center
         ) {
           Avatar(
             name = teacher.name,
-            size = 84.dp,
+            size = 56.dp,
             imagePath = teacher.avatarUrl.ifBlank { null },
             background = accent,
-            textColor = Color.White
+            textColor = MaterialTheme.colorScheme.onPrimary
           )
         }
         // Camera badge — drawn outside the clipped avatar so it is never cut off.
@@ -163,14 +166,14 @@ private fun TeacherHeaderCard(
             .align(Alignment.BottomEnd)
             .size(32.dp)
             .clip(CircleShape)
-            .background(ScholaTerracottaDark)
+            .background(MaterialTheme.colorScheme.primary)
             .border(2.dp, Color.White, CircleShape),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             Icons.Filled.CameraAlt,
             contentDescription = "Change photo",
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.size(16.dp)
           )
         }
@@ -183,12 +186,12 @@ private fun TeacherHeaderCard(
           text = teacher.name,
           style = MaterialTheme.typography.headlineSmall,
           fontWeight = FontWeight.Bold,
-          color = ScholaTextPrimary
+          color = MaterialTheme.colorScheme.onSurface
         )
         Text(
           text = teacher.designation,
           style = MaterialTheme.typography.bodySmall,
-          color = ScholaTextSecondary
+          color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
           text = "Employee ID ${teacher.employeeId}",
@@ -235,7 +238,7 @@ private fun EditableFacultyCard(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = BorderStroke(1.dp, ScholaBorder)
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
   ) {
     Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
       Row(
@@ -257,7 +260,7 @@ private fun EditableFacultyCard(
               else -> "View only"
             },
             style = MaterialTheme.typography.labelSmall,
-            color = if (saved) StatusSuccessText else ScholaTerracotta,
+            color = if (saved) SemanticColors.onSuccess else MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
           )
           if (!editing) {
@@ -382,8 +385,8 @@ private fun EditableFacultyCard(
             },
             enabled = !saved,
             colors = ButtonDefaults.buttonColors(
-              containerColor = if (saved) StatusSuccessContainer else ScholaTerracottaDark,
-              contentColor = if (saved) StatusSuccessText else Color.White
+              containerColor = if (saved) SemanticColors.successContainer else MaterialTheme.colorScheme.primary,
+              contentColor = if (saved) SemanticColors.onSuccess else Color.White
             ),
             modifier = Modifier.weight(1f)
           ) {
@@ -408,15 +411,15 @@ private fun FacultyRecordCard(teacher: Teacher) {
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = ScholaSurfaceWarm),
-    border = BorderStroke(1.dp, ScholaBorder)
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
   ) {
     Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
       Text(
         text = "Faculty Record",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        color = ScholaTextPrimary
+        color = MaterialTheme.colorScheme.onSurface
       )
       Spacer(modifier = Modifier.height(12.dp))
       LabeledValue("Employee ID", teacher.employeeId)
@@ -440,13 +443,13 @@ private fun LabeledValue(label: String, value: String) {
     Text(
       text = label,
       style = MaterialTheme.typography.labelSmall,
-      color = ScholaTextSecondary
+      color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Text(
       text = value.ifBlank { "—" },
       style = MaterialTheme.typography.bodyMedium,
       fontWeight = FontWeight.Medium,
-      color = ScholaTextPrimary,
+      color = MaterialTheme.colorScheme.onSurface,
       modifier = Modifier.fillMaxWidth(),
       textAlign = TextAlign.Start
     )

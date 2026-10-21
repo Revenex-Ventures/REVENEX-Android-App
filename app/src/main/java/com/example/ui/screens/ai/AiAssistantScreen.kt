@@ -99,8 +99,8 @@ fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
           verticalAlignment = Alignment.CenterVertically
         ) {
           IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-          Box(Modifier.size(38.dp).clip(CircleShape).background(ScholaSlateContainer), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.AutoAwesome, null, tint = ScholaSlateNavy)
+          Box(Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
           }
           Spacer(Modifier.width(Spacing.s3))
           Column(Modifier.weight(1f)) {
@@ -163,9 +163,9 @@ private fun AssistantModeBanner(isDemo: Boolean) {
   val title = if (isDemo) "Demo data mode" else "Live AI unavailable"
   val detail = if (isDemo) "Any personal summary uses sample data and is not a real school record."
     else "A secure model provider has not been configured. School facts will not be guessed."
-  Card(colors = CardDefaults.cardColors(containerColor = if (isDemo) StatusInfoBg else StatusNeutralBg)) {
+  Card(colors = CardDefaults.cardColors(containerColor = if (isDemo) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
     Column(Modifier.padding(Spacing.md12)) {
-      Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = if (isDemo) StatusInfoText else StatusNeutralText)
+      Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = if (isDemo) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
       Spacer(Modifier.height(Spacing.xs4))
       Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -180,21 +180,21 @@ private fun MessageBubble(message: ChatMessage) {
     verticalAlignment = Alignment.Top
   ) {
     if (message.isAssistant) {
-      Box(Modifier.size(30.dp).clip(CircleShape).background(ScholaSlateContainer), contentAlignment = Alignment.Center) {
-        Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp), tint = ScholaSlateNavy)
+      Box(Modifier.size(30.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
+        Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
       }
       Spacer(Modifier.width(Spacing.s2))
     }
     Surface(
-      color = if (message.isAssistant) MaterialTheme.colorScheme.surfaceVariant else ScholaSlateNavy,
+      color = if (message.isAssistant) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer,
       shape = RoundedCornerShape(Radius.lg), modifier = Modifier.widthIn(max = 340.dp)
     ) {
       Column(Modifier.padding(Spacing.md12)) {
-        Text(message.text, style = MaterialTheme.typography.bodyMedium, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else Color.White)
+        Text(message.text, style = MaterialTheme.typography.bodyMedium, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer)
         Spacer(Modifier.height(Spacing.xs4))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2), verticalAlignment = Alignment.CenterVertically) {
-          message.source?.let { Text(it.label(), style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) StatusNeutralText else Color.White.copy(alpha = .72f)) }
-          Text(message.timestamp, style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) StatusNeutralText else Color.White.copy(alpha = .72f))
+          message.source?.let { Text(it.label(), style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .72f)) }
+          Text(message.timestamp, style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .72f))
         }
       }
     }
@@ -206,7 +206,7 @@ private fun AssistantReplySource.label(): String = when (this) {
   AssistantReplySource.LOADED_RECORDS -> "Loaded records"
   AssistantReplySource.ERP_GUIDANCE -> "ERP guidance"
   AssistantReplySource.UNAVAILABLE -> "Unavailable"
-  AssistantReplySource.SERVER_AI -> "AI · general knowledge"
-  AssistantReplySource.SERVER_ERP -> "AI · ERP tools used"
-  AssistantReplySource.SERVER_DEMO -> "AI · Supabase demo"
+  AssistantReplySource.SERVER_AI -> "AI Â· general knowledge"
+  AssistantReplySource.SERVER_ERP -> "AI Â· ERP tools used"
+  AssistantReplySource.SERVER_DEMO -> "AI Â· Supabase demo"
 }

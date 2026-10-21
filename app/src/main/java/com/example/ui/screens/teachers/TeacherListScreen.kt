@@ -56,7 +56,7 @@ fun TeacherListScreen(
   }
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     floatingActionButton = {
       if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
         ExtendedFloatingActionButton(
@@ -96,17 +96,17 @@ fun TeacherListScreen(
           val isSelected = selectedDept == dept
           Surface(
             shape = RoundedCornerShape(Radius.pill),
-            color = if (isSelected) ScholaSlateNavy else ScholaSurface,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
             modifier = Modifier
               .clip(RoundedCornerShape(Radius.pill))
-              .border(1.dp, if (isSelected) ScholaSlateNavy else ScholaBorder, RoundedCornerShape(Radius.pill))
+              .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
               .clickable { selectedDept = dept }
           ) {
             Text(
               text = dept,
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
-              color = if (isSelected) Color.White else ScholaTextPrimary,
+              color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
               modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
             )
           }
@@ -141,18 +141,18 @@ fun TeacherListScreen(
                     text = teacher.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = ScholaTextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                   )
                   Text(
                     text = "${teacher.department} • ${teacher.designation}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ScholaMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                   )
                   Text(
                     text = "Subjects: ${teacher.subjects.joinToString(", ")}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = ScholaOnTerracottaContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontSize = 12.sp
                   )
                 }
@@ -164,7 +164,7 @@ fun TeacherListScreen(
                 Text(
                   text = "${teacher.experienceYears}y Exp.",
                   style = MaterialTheme.typography.labelSmall,
-                  color = ScholaMuted,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   fontSize = 12.sp
                 )
               }

@@ -49,27 +49,28 @@ fun GlobalCommandPaletteModal(
   val students by repository.students.collectAsState()
   var query by remember { mutableStateOf("") }
 
-  val defaultActions = remember {
+  val palette = MaterialTheme.colorScheme
+  val defaultActions = remember(palette) {
     listOf(
-      PaletteAction("Executive Dashboard", "WORKSPACE", Icons.Default.Dashboard, ScholaTerracotta, Screen.Dashboard.route),
-      PaletteAction("Scholars Directory (Student 360)", "WORKSPACE", Icons.Default.People, ScholaTerracotta, Screen.Students.route),
-      PaletteAction("Attendance Matrix (Roll Call)", "WORKSPACE", Icons.Default.HowToReg, ScholaTerracottaLight, Screen.Attendance.route),
-      PaletteAction("Bursar & Financial Ledger", "WORKSPACE", Icons.Default.AccountBalanceWallet, ScholaTerracottaLight, Screen.Fees.route),
-      PaletteAction("Academic Timetable & Slots", "WORKSPACE", Icons.Default.CalendarMonth, ScholaTerracottaLight, Screen.Timetable.route),
-      PaletteAction("Student Profile & Reports", "WORKSPACE", Icons.Default.Person, ScholaTerracotta, Screen.ReportCard.route),
-      PaletteAction("Official Circulars & Broadcasts", "WORKSPACE", Icons.Default.Campaign, ScholaTerracottaLight, Screen.Notices.route),
-      PaletteAction("Operations & Leave Hub", "WORKSPACE", Icons.Default.Apps, ScholaTerracottaLight, Screen.OperationsHub.route),
+      PaletteAction("Executive Dashboard", "WORKSPACE", Icons.Default.Dashboard, palette.primary, Screen.Dashboard.route),
+      PaletteAction("Scholars Directory (Student 360)", "WORKSPACE", Icons.Default.People, palette.primary, Screen.Students.route),
+      PaletteAction("Attendance Matrix (Roll Call)", "WORKSPACE", Icons.Default.HowToReg, palette.primary, Screen.Attendance.route),
+      PaletteAction("Bursar & Financial Ledger", "WORKSPACE", Icons.Default.AccountBalanceWallet, palette.primary, Screen.Fees.route),
+      PaletteAction("Academic Timetable & Slots", "WORKSPACE", Icons.Default.CalendarMonth, palette.primary, Screen.Timetable.route),
+      PaletteAction("Student Profile & Reports", "WORKSPACE", Icons.Default.Person, palette.primary, Screen.ReportCard.route),
+      PaletteAction("Official Circulars & Broadcasts", "WORKSPACE", Icons.Default.Campaign, palette.primary, Screen.Notices.route),
+      PaletteAction("Operations & Leave Hub", "WORKSPACE", Icons.Default.Apps, palette.primary, Screen.OperationsHub.route),
 
       // Quick Actions
-      PaletteAction("Take Morning Roll Call", "ACTION", Icons.Default.FactCheck, ScholaTerracotta, Screen.Attendance.route),
-      PaletteAction("Enroll New Scholar", "ACTION", Icons.Default.PersonAdd, ScholaTerracotta, onAction = { onTriggerAction("admit_student") }),
-      PaletteAction("Collect Tuition Payment", "ACTION", Icons.Default.Payment, ScholaTerracottaLight, Screen.Fees.route),
-      PaletteAction("Publish Institutional Notice", "ACTION", Icons.Default.EditNote, ScholaTerracottaLight, onAction = { onTriggerAction("create_notice") }),
-      PaletteAction("Assign STEM Homework", "ACTION", Icons.Default.Assignment, ScholaTerracotta, onAction = { onTriggerAction("create_assignment") })
+      PaletteAction("Take Morning Roll Call", "ACTION", Icons.Default.FactCheck, palette.primary, Screen.Attendance.route),
+      PaletteAction("Enroll New Scholar", "ACTION", Icons.Default.PersonAdd, palette.primary, onAction = { onTriggerAction("admit_student") }),
+      PaletteAction("Collect Tuition Payment", "ACTION", Icons.Default.Payment, palette.primary, Screen.Fees.route),
+      PaletteAction("Publish Institutional Notice", "ACTION", Icons.Default.EditNote, palette.primary, onAction = { onTriggerAction("create_notice") }),
+      PaletteAction("Assign STEM Homework", "ACTION", Icons.Default.Assignment, palette.primary, onAction = { onTriggerAction("create_assignment") })
     )
   }
 
-  val filteredActions = remember(query) {
+  val filteredActions = remember(query, defaultActions) {
     if (query.isBlank()) defaultActions
     else defaultActions.filter { it.title.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true) }
   }
@@ -102,8 +103,8 @@ fun GlobalCommandPaletteModal(
           .fillMaxWidth()
           .padding(top = 40.dp)
           .clip(RoundedCornerShape(Radius.hero))
-          .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.hero)),
-        color = ScholaSurface,
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero)),
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(Radius.hero),
         tonalElevation = Elev.e3
       ) {
@@ -118,14 +119,14 @@ fun GlobalCommandPaletteModal(
             Icon(
               imageVector = Icons.Default.Search,
               contentDescription = "Search",
-              tint = ScholaTerracotta,
+              tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(Spacing.s3))
             TextField(
               value = query,
               onValueChange = { query = it },
-              placeholder = { Text("Type a command, workspace, or scholar name...", color = ScholaMuted, fontSize = 15.sp) },
+              placeholder = { Text("Type a command, workspace, or scholar name...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp) },
               modifier = Modifier
                 .weight(1f)
                 .testTag("command_palette_search_field"),
@@ -139,12 +140,12 @@ fun GlobalCommandPaletteModal(
             )
             if (query.isNotEmpty()) {
               IconButton(onClick = { query = "" }) {
-                Icon(Icons.Default.Close, contentDescription = "Clear", tint = ScholaMuted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
               }
             }
             Surface(
               shape = RoundedCornerShape(Radius.sm),
-              color = ScholaSlateContainer
+              color = MaterialTheme.colorScheme.secondaryContainer
             ) {
               Text("ESC", color = ScholaSlateNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
             }
@@ -154,7 +155,7 @@ fun GlobalCommandPaletteModal(
             modifier = Modifier
               .fillMaxWidth()
               .height(1.dp)
-              .background(ScholaBorder)
+              .background(MaterialTheme.colorScheme.outlineVariant)
           )
 
           // Results / Shortcuts List
@@ -170,7 +171,7 @@ fun GlobalCommandPaletteModal(
                 Column(Modifier.fillMaxWidth().padding(Spacing.lg16)) {
                   Text("No matches found", style = MaterialTheme.typography.titleMedium)
                   Spacer(Modifier.height(Spacing.xs4))
-                  Text("Try a student name, admission ID, or workspace name.", style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
+                  Text("Try a student name, admission ID, or workspace name.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
               }
             }
@@ -179,7 +180,7 @@ fun GlobalCommandPaletteModal(
                 Text(
                   text = "SCHOLARS DIRECTORY",
                   style = MaterialTheme.typography.labelSmall,
-                  color = ScholaMuted,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   letterSpacing = TypeTokens.trackingMicroLabel,
                   modifier = Modifier.padding(horizontal = Spacing.s4, vertical = Spacing.s1)
                 )
@@ -199,7 +200,7 @@ fun GlobalCommandPaletteModal(
                   Spacer(modifier = Modifier.width(Spacing.s3))
                   Column(modifier = Modifier.weight(1f)) {
                     Text(st.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Text("Class ${st.fullClass} • Roll #${st.rollNumber} • Adm: ${st.admissionNumber}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+                    Text("Class ${st.fullClass} • Roll #${st.rollNumber} • Adm: ${st.admissionNumber}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
                   ScholaPillBadge(status = st.feeStatus.label)
                 }
@@ -211,7 +212,7 @@ fun GlobalCommandPaletteModal(
               Text(
                 text = if (query.isBlank()) "QUICK WORKSPACE COMMANDS" else "MATCHED COMMANDS",
                 style = MaterialTheme.typography.labelSmall,
-                color = ScholaMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = TypeTokens.trackingMicroLabel,
                 modifier = Modifier.padding(horizontal = Spacing.s4, vertical = Spacing.s2)
               )
@@ -236,17 +237,17 @@ fun GlobalCommandPaletteModal(
                   modifier = Modifier
                     .size(34.dp)
                     .clip(RoundedCornerShape(Radius.sm))
-                    .background(ScholaTerracottaContainer),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(action.icon, contentDescription = null, tint = ScholaTerracotta, modifier = Modifier.size(18.dp))
+                  Icon(action.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 }
                 Spacer(modifier = Modifier.width(Spacing.s3))
                 Column(modifier = Modifier.weight(1f)) {
                   Text(action.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(action.category, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
+                  Text(action.category, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
-                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = ScholaMuted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
               }
             }
           }

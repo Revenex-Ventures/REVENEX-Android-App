@@ -61,20 +61,24 @@ fun OperationsHubScreen(
   val noStudents = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER, UserRole.PARENT)
 
   val modules = listOf(
-    HubModule("My faculty profile", "Personal and professional details", Icons.Default.Person, ScholaSlateNavy, ScholaSlateContainer, Screen.TeacherProfile.route, setOf(UserRole.TEACHER)),
-    HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, ScholaSlateNavy, ScholaSlateContainer, Screen.Students.route, adminOnly),
-    HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, ScholaSlateNavy, ScholaSlateContainer, Screen.Teachers.route, adminOnly),
-    HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, ScholaSlateNavy, ScholaSlateContainer, Screen.Attendance.route, allRoles),
-    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, ScholaSlateNavy, ScholaSlateContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.PARENT, UserRole.STUDENT)),
-    HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, ScholaSlateNavy, ScholaSlateContainer, Screen.Leaves.route, noStudents),
-    HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, ScholaSlateNavy, ScholaSlateContainer, Screen.Transport.route, allRoles),
-    HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, ScholaSlateNavy, ScholaSlateContainer, Screen.Library.route, allRoles),
-    HubModule("School Assets", "Smart Boards, Labs & IT", Icons.Default.Inventory, ScholaSlateNavy, ScholaSlateContainer, Screen.Inventory.route, adminOnly),
-    HubModule("Executive Reports", "KPI Charts & Export Analytics", Icons.Default.Analytics, ScholaSlateNavy, ScholaSlateContainer, Screen.Reports.route, adminOnly),
-    HubModule("Timetable", "Class Schedule & Periods", Icons.Default.CalendarMonth, ScholaSlateNavy, ScholaSlateContainer, Screen.Timetable.route, allRoles),
-    HubModule("Notices & Circulars", "School Announcements", Icons.Default.Campaign, ScholaSlateNavy, ScholaSlateContainer, Screen.Notices.route, allRoles),
-    HubModule("Study Material", "Notes, PDFs & Resources", Icons.Default.MenuBook, ScholaSlateNavy, ScholaSlateContainer, Screen.StudyMaterial.route, allRoles),
-    HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, ScholaTerracotta, ScholaTerracottaContainer, Screen.AiAssistant.route, allRoles)
+    HubModule("Assignments", "Class work and submissions", Icons.Default.Assignment, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Homework.route, allRoles),
+    HubModule("Examinations", "Exam dates and schedules", Icons.Default.EventNote, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Exams.route, allRoles),
+    HubModule("Results", "Available student reports", Icons.Default.Assessment, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.ReportCard.route, allRoles),
+    HubModule("Settings & profile", "Appearance, security and account", Icons.Default.Settings, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, Screen.Profile.route, allRoles),
+    HubModule("My faculty profile", "Personal and professional details", Icons.Default.Person, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.TeacherProfile.route, setOf(UserRole.TEACHER)),
+    HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Students.route, adminOnly),
+    HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Teachers.route, adminOnly),
+    HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Attendance.route, allRoles),
+    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.PARENT, UserRole.STUDENT)),
+    HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Leaves.route, noStudents),
+    HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Transport.route, allRoles),
+    HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Library.route, allRoles),
+    HubModule("School Assets", "Smart Boards, Labs & IT", Icons.Default.Inventory, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Inventory.route, adminOnly),
+    HubModule("Executive Reports", "KPI Charts & Export Analytics", Icons.Default.Analytics, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Reports.route, adminOnly),
+    HubModule("Timetable", "Class Schedule & Periods", Icons.Default.CalendarMonth, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Timetable.route, allRoles),
+    HubModule("Notices & Circulars", "School Announcements", Icons.Default.Campaign, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Notices.route, allRoles),
+    HubModule("Study Material", "Notes, PDFs & Resources", Icons.Default.MenuBook, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.StudyMaterial.route, allRoles),
+    HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, Screen.AiAssistant.route, allRoles)
   ).filter { it.allowedRoles.contains(currentUser.role) }
 
   val moduleColumns = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840) 3 else if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 2 else 1
@@ -89,7 +93,7 @@ fun OperationsHubScreen(
       Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = RevenexNavy)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
       ) {
         Column(
           modifier = Modifier
@@ -100,12 +104,12 @@ fun OperationsHubScreen(
             text = "School workspaces",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
           )
           Text(
             text = "Your role’s tools, grouped in one place",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
           )
         }
       }
@@ -346,7 +350,7 @@ fun TransportScreen(
       Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = RevenexNavy)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
       ) {
         Column(
           modifier = Modifier
@@ -363,12 +367,12 @@ fun TransportScreen(
                 text = "School Transport",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
               )
               Text(
                 text = "${routes.size} routes • Scheduled stops and driver contacts",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
               )
             }
             Surface(
@@ -381,7 +385,7 @@ fun TransportScreen(
               ) {
                 Box(modifier = Modifier.size(8.dp).background(Color.White, CircleShape))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("ROUTES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("ROUTES", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
               }
             }
           }
@@ -404,13 +408,13 @@ fun TransportScreen(
           ) {
             Surface(
               shape = RoundedCornerShape(6.dp),
-              color = RevenexPrimaryContainer
+              color = MaterialTheme.colorScheme.primaryContainer
             ) {
               Text(
                 text = route.routeNumber,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = RevenexBlue,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
               )
             }
@@ -490,13 +494,13 @@ fun LibraryScreen(
           Box(
             modifier = Modifier
               .size(48.dp)
-              .background(ScholaSlateContainer, RoundedCornerShape(12.dp)),
+              .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.Book,
               contentDescription = null,
-              tint = ScholaSlateNavy,
+              tint = MaterialTheme.colorScheme.onSurface,
               modifier = Modifier.size(24.dp)
             )
           }
@@ -517,7 +521,7 @@ fun LibraryScreen(
             Text(
               text = "${book.shelfLocation} • Available: ${book.availableCopies} / ${book.totalCopies}",
               style = MaterialTheme.typography.labelSmall,
-              color = if (book.availableCopies > 0) StatusSuccessText else StatusErrorText,
+              color = if (book.availableCopies > 0) SemanticColors.onSuccess else SemanticColors.onDanger,
               fontWeight = FontWeight.Bold,
               fontSize = 12.sp
             )

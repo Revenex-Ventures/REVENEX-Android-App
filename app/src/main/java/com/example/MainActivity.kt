@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -82,6 +83,9 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
   }
   private val repository get() = ErpDataRepository.getInstance()
   override fun onCreate(savedInstanceState: Bundle?) {
+    val appearance = Appearance.parse(getSharedPreferences("revenex_appearance", MODE_PRIVATE).getString("mode", null))
+    val systemDark = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    setTheme(if (appearance.usesDark(systemDark)) R.style.Theme_Revenex_Dark else R.style.Theme_MyApplication)
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
@@ -121,7 +125,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         val options=JSONObject().apply {
           put("name","Revenex School ERP");put("description","School fees • TEST MODE")
           put("order_id",order.order_id);put("currency",order.currency);put("amount",order.amount)
-          put("theme.color","#FF5A1F")
+          put("theme.color",java.lang.String.format(java.util.Locale.US,"#%06X",ScholaTerracotta.toArgb() and 0xFFFFFF))
           put("prefill",JSONObject().apply { put("email",repository.currentUser.value.email) })
         }
         Checkout.preload(applicationContext)
@@ -225,6 +229,14 @@ fun ScholaErpApp(
   var paymentModalAmount by remember { mutableStateOf(0L) }
   var paymentModalFeeId by remember { mutableStateOf("") }
 
+  LaunchedEffect(currentUser.id, dataMode) {
+    showCommandPalette = false
+    showAddStudentDialog = false; showAddTeacherDialog = false
+    showCreateNoticeDialog = false; showCreateAssignmentDialog = false; showApplyLeaveDialog = false
+    showFeePaymentModal = false
+    paymentModalStudentName = ""; paymentModalAmount = 0L; paymentModalFeeId = ""
+  }
+
   ScholaResponsiveScaffold(
     currentRoute = currentRoute,
     currentUser = currentUser,
@@ -243,13 +255,13 @@ fun ScholaErpApp(
     onOpenCommandPalette = { showCommandPalette = true },
     onOpenNotifications = { navController.navigate(Screen.Notifications.route) },
     onOpenProfile = {
-      val route = if (currentUser.role == UserRole.TEACHER) Screen.TeacherProfile.route else Screen.Profile.route
+      val route = Screen.Profile.route
       navController.navigate(route)
     },
     onLogout = {
       repository.logout()
       navController.navigate(Screen.Auth.route) {
-        popUpTo(0) { inclusive = true }
+        popUpTo(navController.graph.id) { inclusive = true }
       }
     }
   ) { paddingValues ->
@@ -262,6 +274,7 @@ fun ScholaErpApp(
         }
       }
     }
+    key(currentUser.id, dataMode) {
     NavHost(
       navController = navController,
       startDestination = Screen.Auth.route,
@@ -498,7 +511,8 @@ fun ScholaErpApp(
       composable(Screen.Notifications.route) {
         NotificationsScreen(
           repository = repository,
-          onBack = { navController.popBackStack() }
+          onBack = { navController.popBackStack() },
+          onNavigateTo = { navController.navigate(it) { launchSingleTop = true } }
         )
       }
 
@@ -557,10 +571,14 @@ fun ScholaErpApp(
         ProfileScreen(
           repository = repository,
           onBack = { navController.popBackStack() },
-          onNavigateTo = { navController.navigate(it) }
+          onNavigateTo = { route -> navController.navigate(route) {
+            if (route == Screen.Auth.route) popUpTo(navController.graph.id) { inclusive = true }
+            launchSingleTop = true
+          } }
         )
       }
     }
+    } // account-scoped navigation content
     } // cloud sync status column
   }
 
@@ -604,7 +622,8 @@ fun ScholaErpApp(
   if (showCreateNoticeDialog) {
     CreateNoticeDialog(
       onDismiss = { showCreateNoticeDialog = false },
-      onPublish = { notice -> repository.publishNotice(notice) }
+      onPublish = { notice -> repository.publishNotice(notice) },
+      onSubmitNotice = { repository.publishNoticeConfirmed(it) }
     )
   }
 
@@ -613,7 +632,8 @@ fun ScholaErpApp(
       teacherName = currentUser.name,
       repository = repository,
       onDismiss = { showCreateAssignmentDialog = false },
-      onCreate = { hw -> repository.createAssignment(hw) }
+      onCreate = { hw -> repository.createAssignment(hw) },
+      onSubmitAssignment = { repository.createAssignmentConfirmed(it) }
     )
   }
 
@@ -664,20 +684,19 @@ fun ScholaErpApp(
 @Composable
 private fun LoadingScreen(onReady: () -> Unit) {
   LaunchedEffect(Unit) {
-    delay(500)
     onReady()
   }
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen),
+      .background(MaterialTheme.colorScheme.background),
     contentAlignment = Alignment.Center
   ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       CircularProgressIndicator(
         modifier = Modifier.size(44.dp),
-        color = ScholaTerracotta,
-        trackColor = ScholaOnyxBorder,
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.outlineVariant,
         strokeWidth = 4.dp
       )
       Spacer(modifier = Modifier.height(Spacing.s3))
@@ -685,7 +704,7 @@ private fun LoadingScreen(onReady: () -> Unit) {
         text = "Preparing your dashboard…",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Medium,
-        color = ScholaTextSecondary
+        color = MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
   }

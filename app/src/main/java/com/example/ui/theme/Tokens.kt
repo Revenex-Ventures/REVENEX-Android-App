@@ -39,7 +39,7 @@ object Spacing {
   val screenPaddingTablet = 24.dp
   val screenPaddingDesktop = 32.dp
   val cardPadding = 16.dp
-  val cardPaddingLarge = 20.dp
+  val cardPaddingLarge = 16.dp
 }
 
 // Corner Radii Scale (Premium — large rounded modules, pill controls)
@@ -49,8 +49,8 @@ object Radius {
   val md = 12.dp
   val lg = 14.dp
   val xl = 18.dp
-  val hero = 24.dp      // Feature Hero Cards
-  val tile = 20.dp      // Compact Stat Tiles
+  val hero = 16.dp      // Feature Hero Cards
+  val tile = 14.dp      // Compact Stat Tiles
   val input = 14.dp     // Outlined text fields
   val pill = 999.dp     // Pill badges / buttons
 }
@@ -88,16 +88,16 @@ object TypeTokens {
 // Animation & Motion Tokens
 object Motion {
   const val fast = 150
-  const val normal = 250
-  const val slow = 400
+  const val normal = 180
+  const val slow = 240
 
   fun <T> springSmooth() = spring<T>(
-    dampingRatio = Spring.DampingRatioLowBouncy,
+    dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMediumLow
   )
 
   fun <T> springBouncy() = spring<T>(
-    dampingRatio = Spring.DampingRatioMediumBouncy,
+    dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessLow
   )
 
@@ -109,6 +109,8 @@ object Motion {
 
 // Role Accent Configuration (soft academic pastel family)
 object RoleAccent {
+  // Role identity wells remain dark in both palettes.
+  val onAccent = Color.White
   val Admin = ScholaSlateNavy
   val Teacher = PastelLavenderText
   val Student = PastelSageText

@@ -49,18 +49,14 @@ import com.example.ui.components.WorkflowQuickPill
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.GlassBgTransparent
 import com.example.ui.theme.ScholaGold
-import com.example.ui.theme.ScholaGoldContainer
-import com.example.ui.theme.ScholaSlateContainer
+
 import com.example.ui.theme.ScholaSlateNavy
-import com.example.ui.theme.ScholaTerracotta
-import com.example.ui.theme.ScholaTerracottaContainer
+
+import com.example.ui.theme.SemanticColors
 import com.example.ui.theme.Spacing
-import com.example.ui.theme.StatusDangerBg
-import com.example.ui.theme.StatusDangerText
-import com.example.ui.theme.StatusInfoBg
-import com.example.ui.theme.StatusInfoText
-import com.example.ui.theme.StatusSuccessBg
-import com.example.ui.theme.StatusSuccessText
+
+
+
 import java.util.Locale
 
 private data class AdminModule(
@@ -96,20 +92,20 @@ fun AdminDashboardScreen(
   val pendingInvoices = invoices.count { it.pendingAmount > 0L }
   val overdueInvoices = invoices.count { it.status.name == "OVERDUE" }
   val modules = listOf(
-    AdminModule("Admissions", "Student records and enrolment", Icons.Default.Groups, Screen.Students.route, ScholaTerracotta, ScholaTerracottaContainer),
-    AdminModule("Faculty", "Staff directory and workloads", Icons.Default.School, Screen.Teachers.route, ScholaSlateNavy, ScholaSlateContainer),
-    AdminModule("Academic setup", "Periods, classes and timetables", Icons.Default.CalendarMonth, Screen.Timetable.route, ScholaGold, ScholaGoldContainer),
-    AdminModule("Attendance", "Registers and exception review", Icons.Default.FactCheck, Screen.Attendance.route, StatusSuccessText, StatusSuccessBg),
-    AdminModule("Finance", "Dues, receipts and reconciliation", Icons.Default.AccountBalanceWallet, Screen.Fees.route, StatusInfoText, StatusInfoBg),
-    AdminModule("Communication", "Notices and recipient delivery", Icons.Default.Campaign, Screen.Notices.route, ScholaTerracotta, ScholaTerracottaContainer),
-    AdminModule("Assets", "Library, transport and inventory", Icons.Default.Inventory, Screen.Inventory.route, ScholaSlateNavy, ScholaSlateContainer),
-    AdminModule("Reports", "Operational review and exports", Icons.Default.Analytics, Screen.Reports.route, ScholaGold, ScholaGoldContainer)
+    AdminModule("Admissions", "Student records and enrolment", Icons.Default.Groups, Screen.Students.route, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer),
+    AdminModule("Faculty", "Staff directory and workloads", Icons.Default.School, Screen.Teachers.route, ScholaSlateNavy, MaterialTheme.colorScheme.secondaryContainer),
+    AdminModule("Academic setup", "Periods, classes and timetables", Icons.Default.CalendarMonth, Screen.Timetable.route, ScholaGold, SemanticColors.warningContainer),
+    AdminModule("Attendance", "Registers and exception review", Icons.Default.FactCheck, Screen.Attendance.route, SemanticColors.onSuccess, SemanticColors.successContainer),
+    AdminModule("Finance", "Dues, receipts and reconciliation", Icons.Default.AccountBalanceWallet, Screen.Fees.route, MaterialTheme.colorScheme.onPrimaryContainer, MaterialTheme.colorScheme.primaryContainer),
+    AdminModule("Communication", "Notices and recipient delivery", Icons.Default.Campaign, Screen.Notices.route, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer),
+    AdminModule("Assets", "Library, transport and inventory", Icons.Default.Inventory, Screen.Inventory.route, ScholaSlateNavy, MaterialTheme.colorScheme.secondaryContainer),
+    AdminModule("Reports", "Operational review and exports", Icons.Default.Analytics, Screen.Reports.route, ScholaGold, SemanticColors.warningContainer)
   )
 
   LazyColumn(
     modifier = Modifier
       .fillMaxWidth()
-      .background(GlassBgTransparent)
+      .background(MaterialTheme.colorScheme.background)
       .testTag("admin_dashboard_list"),
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s4)
@@ -125,9 +121,9 @@ fun AdminDashboardScreen(
           secondaryMetricLabel = "Invoices needing follow-up",
           actionButtonText = "Open module directory",
           onActionClick = { onNavigateTo(Screen.OperationsHub.route) },
-          badgeBgColor = ScholaTerracottaContainer,
-          badgeTextColor = ScholaTerracotta,
-          heroHighlightColor = ScholaTerracotta
+          badgeBgColor = MaterialTheme.colorScheme.primaryContainer,
+          badgeTextColor = MaterialTheme.colorScheme.primary,
+          heroHighlightColor = MaterialTheme.colorScheme.primary
         )
       }
     }
@@ -156,7 +152,7 @@ fun AdminDashboardScreen(
               statCounter = teachers.size.toString(),
               icon = Icons.Default.School,
               iconTint = ScholaSlateNavy,
-              iconContainerColor = ScholaSlateContainer,
+              iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
               deltaText = "Directory",
               modifier = Modifier.weight(1f),
               onClick = { onNavigateTo(Screen.Teachers.route) }
@@ -166,7 +162,7 @@ fun AdminDashboardScreen(
               statCounter = timetable.size.toString(),
               icon = Icons.Default.CalendarMonth,
               iconTint = ScholaGold,
-              iconContainerColor = ScholaGoldContainer,
+              iconContainerColor = SemanticColors.warningContainer,
               deltaText = "Configured",
               modifier = Modifier.weight(1f),
               onClick = { onNavigateTo(Screen.Timetable.route) }
@@ -178,8 +174,8 @@ fun AdminDashboardScreen(
               categoryLabel = "Recorded registers",
               statCounter = classAttendanceMap.size.toString(),
               icon = Icons.Default.FactCheck,
-              iconTint = StatusSuccessText,
-              iconContainerColor = StatusSuccessBg,
+              iconTint = SemanticColors.onSuccess,
+              iconContainerColor = SemanticColors.successContainer,
               deltaText = "Recorded",
               modifier = Modifier.weight(1f),
               onClick = { onNavigateTo(Screen.Attendance.route) }
@@ -188,8 +184,8 @@ fun AdminDashboardScreen(
               categoryLabel = "Overdue accounts",
               statCounter = overdueInvoices.toString(),
               icon = Icons.Default.WarningAmber,
-              iconTint = if (overdueInvoices == 0) StatusSuccessText else StatusDangerText,
-              iconContainerColor = if (overdueInvoices == 0) StatusSuccessBg else StatusDangerBg,
+              iconTint = if (overdueInvoices == 0) SemanticColors.onSuccess else SemanticColors.onDanger,
+              iconContainerColor = if (overdueInvoices == 0) SemanticColors.successContainer else SemanticColors.dangerContainer,
               deltaText = if (overdueInvoices == 0) "Clear" else "Needs review",
               isPositiveDelta = overdueInvoices == 0,
               modifier = Modifier.weight(1f),

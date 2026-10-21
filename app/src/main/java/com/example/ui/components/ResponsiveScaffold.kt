@@ -87,7 +87,7 @@ fun ScholaResponsiveScaffold(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen)
+      .background(MaterialTheme.colorScheme.background)
       .windowInsetsPadding(WindowInsets.safeDrawing)
       .imePadding()
   ) {
@@ -250,7 +250,7 @@ private fun TabletNavigationRail(
     modifier = Modifier
       .width(80.dp)
       .fillMaxHeight(),
-    color = ScholaOnyx,
+    color = MaterialTheme.colorScheme.surfaceVariant,
     tonalElevation = Elev.e2
   ) {
     Column(
@@ -269,13 +269,13 @@ Box(
             modifier = Modifier
               .size(44.dp)
               .clip(RoundedCornerShape(Radius.md))
-              .background(ScholaTerracotta),
+              .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.AccountBalance,
               contentDescription = "REVENEX",
-              tint = ScholaSlateNavyDark,
+              tint = MaterialTheme.colorScheme.onPrimary,
               modifier = Modifier.size(24.dp)
             )
           }
@@ -288,12 +288,12 @@ Box(
           modifier = Modifier
             .size(42.dp)
             .clip(CircleShape)
-            .background(ScholaOnyxSurface)
+            .background(MaterialTheme.colorScheme.surface)
         ) {
           Icon(
             imageVector = Icons.Default.Search,
             contentDescription = "Command Palette",
-            tint = ScholaGoldLight,
+            tint = SemanticColors.onWarning,
             modifier = Modifier.size(20.dp)
           )
         }
@@ -307,7 +307,7 @@ Box(
             modifier = Modifier
               .width(76.dp).heightIn(min = 64.dp)
               .clip(RoundedCornerShape(Radius.md))
-              .background(if (isSelected) ScholaTerracottaDark else Color.Transparent)
+              .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
               .clickable { onItemSelected(item.route) }
               .padding(4.dp),
             contentAlignment = Alignment.Center
@@ -316,12 +316,12 @@ Box(
               Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                 contentDescription = item.label,
-                tint = if (isSelected) Color.White else ScholaOnyxMuted,
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(22.dp)
               )
               Text(
                 text = item.label,
-                color = if (isSelected) Color.White else ScholaOnyxMuted,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
               )
@@ -341,7 +341,7 @@ Box(
       ) {
         Text(
           text = currentUser.name.take(2).uppercase(Locale.getDefault()),
-          color = ScholaTextPrimary,
+          color = RoleAccent.onAccent,
           fontWeight = FontWeight.Bold,
           fontSize = 12.sp
         )
@@ -367,7 +367,7 @@ private fun DesktopNavigationDrawer(
     modifier = Modifier
       .width(260.dp)
       .fillMaxHeight(),
-    color = ScholaOnyx,
+    color = MaterialTheme.colorScheme.surfaceVariant,
     tonalElevation = Elev.e3
   ) {
     Column(
@@ -390,13 +390,13 @@ Box(
               modifier = Modifier
                 .size(42.dp)
                 .clip(RoundedCornerShape(Radius.md))
-                .background(ScholaTerracotta),
+                .background(MaterialTheme.colorScheme.primary),
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.AccountBalance,
                 contentDescription = "REVENEX crest",
-                tint = ScholaSlateNavyDark,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(24.dp)
               )
             }
@@ -404,13 +404,13 @@ Box(
           Column {
             Text(
               text = "REVENEX",
-              color = ScholaOnyxText,
+              color = MaterialTheme.colorScheme.onSurface,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold
             )
             Text(
               text = "School ERP demonstration",
-              color = ScholaOnyxMuted,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
               style = MaterialTheme.typography.bodySmall,
               fontSize = 10.sp
             )
@@ -420,11 +420,11 @@ Box(
         // ⌘K Search Pill Trigger
         Surface(
           shape = RoundedCornerShape(Radius.lg),
-          color = ScholaOnyxSurface,
+          color = MaterialTheme.colorScheme.surface,
           modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Radius.lg))
-            .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.lg))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))
             .clickable(onClick = onOpenCommandPalette)
         ) {
           Row(
@@ -433,15 +433,15 @@ Box(
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.Search, contentDescription = null, tint = ScholaOnyxMuted, modifier = Modifier.size(16.dp))
+              Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.width(Spacing.s2))
-              Text("Omni Command...", color = ScholaOnyxMuted, fontSize = 12.sp)
+              Text("Omni Command...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             Surface(
               shape = RoundedCornerShape(Radius.sm),
               color = ScholaSlateNavyDark
             ) {
-              Text("⌘K", color = ScholaTerracottaLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+              Text("⌘K", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
             }
           }
         }
@@ -450,7 +450,7 @@ Box(
 
         Text(
           text = "CORE WORKSPACES",
-          color = ScholaOnyxMuted,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
           style = MaterialTheme.typography.labelSmall,
           letterSpacing = TypeTokens.trackingMicroLabel,
           fontSize = 12.sp,
@@ -462,7 +462,7 @@ Box(
           val isSelected = currentRoute == item.route
           Surface(
             shape = RoundedCornerShape(Radius.md),
-            color = if (isSelected) ScholaTerracotta else Color.Transparent,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(Radius.md))
@@ -475,13 +475,13 @@ Box(
               Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                 contentDescription = item.label,
-                tint = if (isSelected) Color.White else ScholaOnyxMuted,
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(Spacing.s3))
               Text(
                 text = item.label,
-                color = if (isSelected) Color.White else ScholaOnyxText,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
               )
@@ -494,11 +494,11 @@ Box(
       // User Profile Footer
       Surface(
         shape = RoundedCornerShape(Radius.lg),
-        color = ScholaOnyxSurface,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.lg))
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.lg))
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))
       ) {
         Row(
           modifier = Modifier.padding(Spacing.s3),
@@ -518,7 +518,7 @@ Box(
             ) {
               Text(
                 text = currentUser.name.take(2).uppercase(Locale.getDefault()),
-                color = ScholaTextPrimary,
+                color = RoleAccent.onAccent,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp
               )
@@ -527,7 +527,7 @@ Box(
             Column {
               Text(
                 text = currentUser.name,
-                color = ScholaOnyxText,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -535,14 +535,14 @@ Box(
               )
               Text(
                 text = currentUser.role.displayName,
-                color = ScholaOnyxMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 maxLines = 1
               )
             }
           }
           IconButton(onClick = onLogout, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = StatusDangerText, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = SemanticColors.onDanger, modifier = Modifier.size(16.dp))
           }
         }
       }

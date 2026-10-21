@@ -70,23 +70,25 @@ fun AuthScreen(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaSlateNavyDark)
+      .background(MaterialTheme.colorScheme.background)
   ) {
     Column(
       modifier = Modifier
+        .widthIn(max = 560.dp)
         .fillMaxSize()
         .statusBarsPadding()
         .navigationBarsPadding()
         .imePadding()
         .verticalScroll(rememberScrollState())
-        .padding(horizontal = 20.dp, vertical = 16.dp),
+        .padding(horizontal = Spacing.lg16, vertical = Spacing.lg16)
+        .align(Alignment.Center),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center
     ) {
       // Header Brand Crest
       RevenexLogoCrest(
-        modifier = Modifier.size(70.dp),
-        tint = RevenexGoldLight
+        modifier = Modifier.size(48.dp),
+        tint = MaterialTheme.colorScheme.primary
       )
 
       Spacer(modifier = Modifier.height(12.dp))
@@ -95,14 +97,14 @@ fun AuthScreen(
         text = "REVENEX SCHOOL ERP",
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.Bold,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.onSurface,
         letterSpacing = 1.sp
       )
 
       Text(
         text = "One Digital Operating System For The Entire School",
         style = MaterialTheme.typography.bodySmall,
-        color = Color.White.copy(alpha = 0.8f),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
         textAlign = TextAlign.Center
       )
 
@@ -111,7 +113,7 @@ fun AuthScreen(
       // Mode Switcher Banner (Demo vs Production)
       Surface(
         shape = RoundedCornerShape(12.dp),
-        color = Color.White.copy(alpha = 0.15f),
+        color = MaterialTheme.colorScheme.secondaryContainer,
         modifier = Modifier.fillMaxWidth()
       ) {
         Row(
@@ -123,14 +125,14 @@ fun AuthScreen(
             Icon(
               imageVector = if (dataMode == DataMode.DEMO) Icons.Default.Science else Icons.Default.CloudSync,
               contentDescription = null,
-              tint = RevenexGoldLight,
+              tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = dataMode.label,
               style = MaterialTheme.typography.labelMedium,
-              color = Color.White,
+              color = MaterialTheme.colorScheme.onSurface,
               fontWeight = FontWeight.Bold
             )
           }
@@ -144,14 +146,14 @@ fun AuthScreen(
             },
             label = {
               Text(
-                text = if (dataMode == DataMode.DEMO) "Use Supabase Demo" else "Switch to Demo Mode",
+                text = if (dataMode == DataMode.DEMO) "Use Supabase" else "Local demo",
                 fontSize = 12.sp
               )
             },
             colors = FilterChipDefaults.filterChipColors(
-              labelColor = Color.White,
-              selectedContainerColor = RevenexGold,
-              selectedLabelColor = Color.White
+              labelColor = MaterialTheme.colorScheme.onSurface,
+              selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+              selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
           )
         }
@@ -285,7 +287,7 @@ fun AuthScreen(
       if (dataMode == DataMode.PRODUCTION) {
         Surface(
           shape = RoundedCornerShape(12.dp),
-          color = Color.White.copy(alpha = 0.10f),
+          color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
           modifier = Modifier.fillMaxWidth()
         ) {
           Row(
@@ -295,7 +297,7 @@ fun AuthScreen(
             Icon(
               imageVector = Icons.Default.Info,
               contentDescription = null,
-              tint = RevenexGoldLight,
+              tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -303,7 +305,7 @@ fun AuthScreen(
               text = "Students: Use your Admission Number as the Student ID. " +
                 "Date of Birth in DD/MM/YYYY format. Contact admin if you don't have these.",
               style = MaterialTheme.typography.bodySmall,
-              color = Color.White.copy(alpha = 0.85f),
+              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
               lineHeight = 16.sp
             )
           }
@@ -315,7 +317,7 @@ fun AuthScreen(
       Text(
         text = "Revenex School ERP • Demonstration build",
         style = MaterialTheme.typography.labelSmall,
-        color = Color.White.copy(alpha = 0.65f),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
         textAlign = TextAlign.Center
       )
     }
@@ -368,7 +370,7 @@ private fun DemoModeLoginContent(
       val isSelected = selectedRole == role
       Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) RevenexPrimaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(12.dp))
@@ -387,7 +389,7 @@ private fun DemoModeLoginContent(
               else -> Icons.Default.FamilyRestroom
             },
             contentDescription = null,
-            tint = if (isSelected) RevenexBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
           )
           Spacer(modifier = Modifier.width(10.dp))
@@ -401,7 +403,7 @@ private fun DemoModeLoginContent(
               },
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.Bold,
-              color = if (isSelected) RevenexBlue else MaterialTheme.colorScheme.onSurface
+              color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
             )
             Text(
               text = when (role) {
@@ -419,7 +421,7 @@ private fun DemoModeLoginContent(
             Icon(
               imageVector = Icons.Default.CheckCircle,
               contentDescription = "Selected",
-              tint = RevenexBlue,
+              tint = MaterialTheme.colorScheme.onPrimaryContainer,
               modifier = Modifier.size(18.dp)
             )
           }
@@ -451,7 +453,7 @@ private fun DemoModeLoginContent(
         .height(50.dp)
         .testTag("submit_login_button"),
       shape = RoundedCornerShape(14.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
+      colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
     ) {
       Icon(Icons.Default.Login, contentDescription = null)
       Spacer(modifier = Modifier.width(8.dp))
@@ -514,7 +516,7 @@ private fun ProductionModeLoginContent(
       val isActive = loginTab == tab
       Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (isActive) RevenexBlue else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier
           .weight(1f)
           .clip(RoundedCornerShape(12.dp))
@@ -532,7 +534,7 @@ private fun ProductionModeLoginContent(
               LoginTab.STUDENT -> Icons.Default.FamilyRestroom
             },
             contentDescription = null,
-            tint = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp)
           )
           Spacer(modifier = Modifier.height(3.dp))
@@ -540,7 +542,7 @@ private fun ProductionModeLoginContent(
             text = tab.label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
           )
         }
       }
@@ -610,12 +612,12 @@ private fun ProductionModeLoginContent(
               .height(50.dp)
               .testTag("btn_student_signin"),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
           ) {
             if (isLoggingIn) {
               CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                color = ScholaSlateNavyDark,
+                color = MaterialTheme.colorScheme.onPrimary,
                 strokeWidth = 2.dp
               )
               Spacer(modifier = Modifier.width(8.dp))
@@ -680,12 +682,12 @@ private fun ProductionModeLoginContent(
               .height(50.dp)
               .testTag("btn_principal_signin"),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
           ) {
             if (isLoggingIn) {
               CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 strokeWidth = 2.dp
               )
               Spacer(modifier = Modifier.width(8.dp))
@@ -750,12 +752,12 @@ private fun ProductionModeLoginContent(
               .height(50.dp)
               .testTag("btn_teacher_signin"),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
           ) {
             if (isLoggingIn) {
               CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 strokeWidth = 2.dp
               )
               Spacer(modifier = Modifier.width(8.dp))
