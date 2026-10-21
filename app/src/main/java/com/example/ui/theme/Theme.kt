@@ -8,6 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.ui.graphics.Color
 
 private val ScholaLightColorScheme = lightColorScheme(
@@ -97,7 +99,7 @@ fun ScholaTheme(
   val view = LocalView.current
   SideEffect {
     if (android.os.Build.VERSION.SDK_INT >= 29) view.isForceDarkAllowed = false
-    val activity = view.context as? Activity
+    val activity = view.context.findActivity()
     if (activity != null) {
       WindowCompat.getInsetsController(activity.window, view).apply {
         isAppearanceLightStatusBars = !dark
@@ -120,6 +122,12 @@ fun ScholaTheme(
     content = content
   )
   }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+  is Activity -> this
+  is ContextWrapper -> if (baseContext !== this) baseContext.findActivity() else null
+  else -> null
 }
 
 // Backward-compatible alias
