@@ -79,10 +79,11 @@ honestly. No authorization depends on switching a UI role.
 
 ## Evidence ledger
 
-Latest completed run: 79 Android tests passed; build passed; lint 0 errors/68 warnings.
-The final incremental run adds three appearance/form captures; its exact totals are
-recorded in REDESIGN_VERIFICATION.md after completion. 105 PostgreSQL/RLS checks
-and 31 Edge Function tests passed locally. Release/Git-history secret scan passed.
+Clean CI run 39593259267: 82 Android tests passed, none failed/skipped; build
+passed; lint 0 errors/70 warnings. Follow-up visual-copy/system-bar refinements
+run the same checks on PR #11. 105 PostgreSQL/RLS checks and 31 Edge Function
+tests passed locally. Release/Git-history secret scan passed. See
+REDESIGN_VERIFICATION.md for artifact provenance and verification limits.
 
 Rendered evidence: all five role dashboards in light/dark; phone 393dp, narrow
 320dp with 1.5x font, 800dp tablet; 23 secondary screen entry states in both palettes.
@@ -124,3 +125,5 @@ Official references guiding implementation:
 - Cloud result generation cannot invent grades or official certificates.
 - Migration 202610210009_result_notifications.sql adds linked-recipient notices on
   publication only. No RLS policy is changed, and no existing data is reset.
+
+Final visual review also corrected parent fee-status contrast, shortened phone Roll call navigation, removed unverified live-sync wording, and resolved ContextWrapper activities for system-bar appearance. At 320dp with 1.5x font, some bottom-navigation labels and dense identity metrics still wrap; this configuration needs further usability refinement.
