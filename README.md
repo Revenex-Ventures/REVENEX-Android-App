@@ -1,3 +1,5 @@
+> Current integration status: [pipeline, hosted endpoint checks and page readiness](docs/INTEGRATION_READINESS.md). Supabase Auth responds, but hosted payment/AI endpoints return 404; cloud payments are not active.
+
 > UI redesign: warm-white/ink/teal, coordinated light/dark palettes, persisted Light/Dark/System appearance, compact role navigation and confirmed form/inbox states. See the [screen/flow checklist](docs/REVENEX_REDESIGN_CHECKLIST.md) and [verification evidence](docs/REDESIGN_VERIFICATION.md). Local checks are distinguished from hosted acceptance; no hosted Supabase data was reset.
 
 > Server AI and delivery update: [security architecture, activation and CI/CD](docs/SERVER_AI_AND_CICD.md). The supplied assistant prompt is server-only; Android sends text through Auth, and the backend derives every permission from school data. Live AI is unavailable until server secrets and migration 8 are configured. GitHub Actions builds the APK and gates optional Supabase function deployment on tests/lint/security checks.
@@ -47,10 +49,10 @@ Use a dedicated synthetic demo project. Configure only the URL and **publishable
   * **Level 2**: Class-wise attendance breakdown (Class 10-A, 10-B, 9-A, etc.) dynamically calculated from actual database records.
   * **Level 3**: Student-wise percentages inside the selected class, with clickable overlays showing detailed chronological attendance logs.
 
-### 📝 3. Faculty Marks & Evaluations Desk
-* **Marks Entry registry**: Teachers select class, exam term, and subject to record marks for every student, with input limits strictly validated (`obtained <= max`).
-* **Checked Papers Upload**: Allows teachers to upload scans or photos of a student's evaluated examination paper. Students/parents can open it directly from their marks sheet.
-* **Answer Key Attachment**: Class-wide answers and solution booklets can be uploaded by the teacher and downloaded/viewed by all enrolled students.
+### 📝 3. Results and evaluations
+* Existing results/report views respect published-data permissions.
+* Staff marks-entry/publication backend methods exist, but no reachable Android editor/publication control is implemented. Do not demo this as a completed entry workflow.
+* Hosted attachment delivery and publication notifications require setup and acceptance tests.
 
 ### 💳 4. Demo Fee Ledger
 * Fee records are read from Supabase and mapped into the existing ledger UI.

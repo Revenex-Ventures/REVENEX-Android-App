@@ -1,4 +1,6 @@
-# Razorpay test payments with the original black/orange app
+> Latest hosted status (2026-10-23): Auth health 200; payment relation and function 404. Checkout is not active. See [integration readiness](../docs/INTEGRATION_READINESS.md). Historical verification below describes earlier builds; current redesign CI passed 82 Android tests.
+
+# Razorpay test payments — current Revenex app
 
 This adds Razorpay **test mode only** to the existing Supabase demo. The Android app never receives a Razorpay secret or a Supabase service-role key. Local demo remains independent of payment services. No Firebase Functions are used.
 
