@@ -227,7 +227,7 @@ fun AdminDashboardScreen(
               Column(modifier = Modifier.weight(1f)) {
                 Text("Role grants are server controlled", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(
-                  "Firebase claims and backend authorization decide access. Every operational change should be recorded in the audit trail.",
+                  "Supabase policies and backend authorization decide access. Every operational change should be recorded in the audit trail.",
                   style = MaterialTheme.typography.bodySmall,
                   color = ScholaSlateNavy.copy(alpha = 0.72f)
                 )

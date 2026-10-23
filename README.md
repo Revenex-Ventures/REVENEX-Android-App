@@ -14,7 +14,7 @@ Current readiness, known gaps, test evidence and the implementation roadmap are 
 
 ## Current demo backend migration
 
-The default local demo remains available. **Supabase Demo** adds email/password login, PostgreSQL data with RLS, private file storage and a database notification inbox with live subscriptions. The Supabase path has no Firebase startup, billing or FCM dependency. Razorpay test checkout is optional and requires the separate server setup below. Legacy SDK code remains for comparison; it has not been deleted.
+The default local demo remains available. **Supabase Demo** adds email/password login, PostgreSQL data with RLS, private file storage and a database notification inbox with live subscriptions. The Supabase path has no Firebase startup, billing or FCM dependency. Razorpay test checkout is optional and requires the separate server setup below. Firebase SDKs, legacy Android adapters, FCM service and the old Firebase Functions backend have been removed.
 
 - [What changed, previous architecture, actual checks and remaining limitations](docs/PROJECT_CHANGES_AND_STATUS.md)
 - [Supabase setup, SQL migrations, account provisioning and verification](supabase/README.md)
@@ -40,7 +40,7 @@ Use a dedicated synthetic demo project. Configure only the URL and **publishable
 * Local demo: choose a sample role.
 * Supabase demo: email/password, with role, school and session loaded from protected profiles. Roles cannot be chosen by the cloud client.
 * Sessions are memory-only; process restart requires sign-in. Auth can refresh while running.
-* Legacy Firebase login source is retained but unreachable from demo mode.
+* Authentication uses Supabase only; local demo uses synthetic personas.
 
 ### 📊 2. Principal Dashboard & Attendance Hub
 * **Real-time snapshot**: Quick overview of student counts, faculty attendance rate, and collected fees.

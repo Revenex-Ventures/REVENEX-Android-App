@@ -113,7 +113,7 @@ Then use two devices/emulators:
 - Auth sessions stay in memory and can refresh while the app is running; process restart requires sign-in. No offline write queue is provided.
 - Live flows currently load the demo dataset into memory without pagination. Test reconnect/access changes explicitly; this design is for the small demo, not production scale. Re-sign in after changing roles/class membership from the dashboard.
 - Some existing UI headings describe the earlier demo cycle. Loaded record collections and financial balances in cloud mode come from Supabase; unsupported GPA/rank values are labelled unavailable.
-- The Firebase and Razorpay SDK source/dependencies are retained for comparison. App Google Services/.env plugins are not applied, Firebase auto-init provider is removed, messaging service is disabled and demo checkout is guarded.
+- Firebase SDKs, adapters, FCM service, deployment configuration, rules and legacy Functions package have been removed. Supabase and local demo remain; optional Razorpay checkout still requires server activation.
 - A failed file upload can leave an unused metadata row; an uploaded file whose subsequent assignment save fails can be an orphan. Review/delete these through the project operator; no broad client delete policy is granted.
 - Cloud RLS, file service behavior and Realtime must still be verified against your hosted project. A successful Android build or local PostgreSQL suite alone does not establish that.
 

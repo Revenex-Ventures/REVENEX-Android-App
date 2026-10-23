@@ -4,15 +4,12 @@ import android.util.Log
 import com.example.data.datasource.AppEnvironment
 import com.example.data.datasource.DataMode
 import com.example.data.datasource.ErpDataSource
-import com.example.data.datasource.FirebaseDataSource
-import com.example.data.datasource.FirebaseStorageManager
+import com.example.data.datasource.DocumentFiles
 import com.example.data.datasource.LocalDemoDataSource
 import com.example.data.datasource.SupabaseDataSource
 import com.example.data.datasource.BackendSyncState
 import com.example.data.datasource.SupabaseFileStore
 import com.example.data.model.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.text.SimpleDateFormat
@@ -39,7 +36,6 @@ class ErpDataRepository private constructor() {
   })
 
   val demoDataSource = LocalDemoDataSource()
-  val firebaseDataSource by lazy { FirebaseDataSource() }
   val supabaseDataSource by lazy { SupabaseDataSource() }
   private val _backendState = MutableStateFlow(BackendSyncState())
   val backendState: StateFlow<BackendSyncState> = _backendState.asStateFlow()
@@ -279,7 +275,6 @@ class ErpDataRepository private constructor() {
     get() = when (_dataMode.value) {
       DataMode.DEMO -> demoDataSource
       DataMode.SUPABASE_DEMO -> supabaseDataSource
-      DataMode.PRODUCTION -> firebaseDataSource
     }
 
   /**
@@ -368,7 +363,6 @@ class ErpDataRepository private constructor() {
   }
 
   fun setDataMode(mode: DataMode) {
-    require(mode != DataMode.PRODUCTION) { "Legacy Firebase mode is disabled for this demo build." }
     if (_dataMode.value == DataMode.SUPABASE_DEMO && mode != DataMode.SUPABASE_DEMO) {
       repositoryScope.launch { supabaseDataSource.logout() }
     }
@@ -420,190 +414,6 @@ class ErpDataRepository private constructor() {
         if (e is CancellationException) throw e
         onResult(false, e.message ?: "Supabase sign-in failed.")
       }
-    }
-  }
-
-  fun loginWithFirebase(
-    email: String,
-    pass: String,
-    onResult: (Boolean, String?) -> Unit
-  ) {
-    if (_dataMode.value != DataMode.PRODUCTION) {
-      onResult(false, "Firebase sign-in is disabled in demo mode.")
-      return
-    }
-    try {
-      val auth = FirebaseAuth.getInstance()
-      auth.signInWithEmailAndPassword(email, pass)
-        .addOnCompleteListener { task ->
-          if (task.isSuccessful) {
-            val user = auth.currentUser
-            user?.getIdToken(true)?.addOnCompleteListener { tokenTask ->
-              if (tokenTask.isSuccessful) {
-                val tokenResult = tokenTask.result
-                val claims = tokenResult?.claims ?: emptyMap()
-                val roleStr = claims["role"] as? String ?: "STUDENT"
-                val schoolId = claims["schoolId"] as? String ?: "revenex_school_001"
-                val role = try { UserRole.valueOf(roleStr) } catch(e: Exception) { UserRole.STUDENT }
-
-                val db = FirebaseFirestore.getInstance()
-                val schoolRef = db.collection("schools").document(schoolId)
-
-                when (role) {
-                  UserRole.PRINCIPAL, UserRole.ADMIN -> {
-                    schoolRef.collection("users").whereEqualTo("email", email).get()
-                      .addOnSuccessListener { snapshot ->
-                        if (snapshot != null && !snapshot.isEmpty) {
-                          val doc = snapshot.documents[0]
-                          val name = doc.getString("name") ?: role.displayName
-                          val profile = UserProfile(
-                            id = doc.id,
-                            name = name,
-                            email = email,
-                            role = role,
-                            designation = doc.getString("designation") ?: role.displayName,
-                            phone = doc.getString("phone") ?: "",
-                            avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
-                            schoolId = schoolId
-                          )
-                          switchRole(role)
-                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
-                          onResult(true, null)
-                        } else {
-                          val profile = UserProfile(
-                            id = user.uid,
-                            name = if (role == UserRole.ADMIN) "School Administrator" else "Dr. Arvind Sharma",
-                            email = email,
-                            role = role,
-                            designation = role.displayName,
-                            phone = "+91 98220 12345",
-                            avatarInitials = if (role == UserRole.ADMIN) "SA" else "AS",
-                            schoolId = schoolId
-                          )
-                          switchRole(role)
-                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
-                          onResult(true, null)
-                        }
-                      }
-                      .addOnFailureListener {
-                        auth.signOut()
-                        onResult(false, "Failed to load Principal profile: ${it.message}")
-                      }
-                  }
-                  UserRole.TEACHER -> {
-                    val employeeId = claims["employeeId"] as? String ?: ""
-                    schoolRef.collection("teachers").whereEqualTo("employeeId", employeeId).get()
-                      .addOnSuccessListener { snapshot ->
-                        if (snapshot != null && !snapshot.isEmpty) {
-                          val doc = snapshot.documents[0]
-                          val name = doc.getString("name") ?: "Teacher"
-                          val profile = UserProfile(
-                            id = doc.id,
-                            name = name,
-                            email = email,
-                            role = UserRole.TEACHER,
-                            designation = doc.getString("designation") ?: "Math Faculty",
-                            phone = doc.getString("phone") ?: "",
-                            avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
-                            associatedClass = (doc.get("assignedClasses") as? List<String>)?.firstOrNull() ?: "10-A",
-                            schoolId = schoolId
-                          )
-                          switchRole(role)
-                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
-                          onResult(true, null)
-                        } else {
-                          auth.signOut()
-                          onResult(false, "Teacher profile not found in directory.")
-                        }
-                      }
-                      .addOnFailureListener {
-                        auth.signOut()
-                        onResult(false, "Failed to load Teacher details: ${it.message}")
-                      }
-                  }
-                  UserRole.STUDENT -> {
-                    val studentId = claims["studentId"] as? String ?: ""
-                    schoolRef.collection("students").document(studentId).get()
-                      .addOnSuccessListener { doc ->
-                        if (doc != null && doc.exists()) {
-                          val name = doc.getString("name") ?: "Student"
-                          val profile = UserProfile(
-                            id = doc.id,
-                            name = name,
-                            email = email,
-                            role = UserRole.STUDENT,
-                            designation = "Student",
-                            phone = doc.getString("parentPhone") ?: "",
-                            avatarInitials = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
-                            associatedClass = "${doc.getString("classGrade")}-${doc.getString("division")}",
-                            associatedStudentId = doc.id,
-                            schoolId = schoolId
-                          )
-                          switchRole(role)
-                          setSelectedStudentId(doc.id)
-                          repositoryScope.launch { activeSource.setCurrentUser(profile) }
-                          onResult(true, null)
-                        } else {
-                          auth.signOut()
-                          onResult(false, "Student record not found in directory.")
-                        }
-                      }
-                      .addOnFailureListener {
-                        auth.signOut()
-                        onResult(false, "Failed to load Student details: ${it.message}")
-                      }
-                  }
-                  UserRole.PARENT -> {
-                    val studentIds = (claims["studentIds"] as? List<String>) ?: emptyList()
-                    val firstChildId = studentIds.firstOrNull() ?: ""
-                    if (firstChildId.isNotBlank()) {
-                      schoolRef.collection("students").document(firstChildId).get()
-                        .addOnSuccessListener { doc ->
-                          if (doc != null && doc.exists()) {
-                            val parentName = doc.getString("parentName") ?: "Parent"
-                            val profile = UserProfile(
-                              id = user.uid,
-                              name = parentName,
-                              email = email,
-                              role = UserRole.PARENT,
-                              designation = "Parent",
-                              phone = doc.getString("parentPhone") ?: "",
-                              avatarInitials = parentName.split(" ").mapNotNull { it.firstOrNull()?.toString() }.joinToString("").take(2).uppercase(),
-                              associatedStudentId = firstChildId,
-                              associatedChildNames = studentIds,
-                              schoolId = schoolId
-                            )
-                            switchRole(role)
-                            setSelectedStudentId(firstChildId)
-                            repositoryScope.launch { activeSource.setCurrentUser(profile) }
-                            onResult(true, null)
-                          } else {
-                            auth.signOut()
-                            onResult(false, "Linked student details not found.")
-                          }
-                        }
-                        .addOnFailureListener {
-                          auth.signOut()
-                          onResult(false, "Failed to load parent sibling details: ${it.message}")
-                        }
-                    } else {
-                      auth.signOut()
-                      onResult(false, "No children linked to this parent account.")
-                    }
-                  }
-                }
-              } else {
-                auth.signOut()
-                onResult(false, "Failed to parse security claims token: ${tokenTask.exception?.message}")
-              }
-            }
-          } else {
-            onResult(false, task.exception?.localizedMessage ?: "Authentication failed")
-          }
-        }
-    } catch (e: Exception) {
-      Log.w(tag, "Firebase auth error: ${e.message}")
-      onResult(false, "Firebase is not configured properly.")
     }
   }
 
@@ -878,33 +688,17 @@ class ErpDataRepository private constructor() {
   }
 
   // ------------------------------------------------------------------------
-  // Real file upload (Firebase Storage) — honest persistence, never faked.
-  // Demo mode returns a local metadata marker; production uploads the bytes
-  // and returns the resolved download URL. Throws when upload is impossible.
-  // ------------------------------------------------------------------------
-
+  // Uploads require an authenticated Supabase session.
   suspend fun uploadAttachment(
     context: android.content.Context,
     folder: String,
     sourceUri: android.net.Uri,
     displayName: String?,
     mimeType: String
-  ): FirebaseStorageManager.UploadResult {
+  ): DocumentFiles.UploadResult {
     if (_dataMode.value == DataMode.SUPABASE_DEMO) {
       return SupabaseFileStore.upload(context, sourceUri, displayName, mimeType, _currentUser.value, supabaseDataSource.sessionId())
     }
-    if (_dataMode.value == DataMode.PRODUCTION && FirebaseStorageManager.isConfigured()) {
-      return FirebaseStorageManager.uploadFile(
-        context = context,
-        schoolId = "revenex_school_001",
-        folder = folder,
-        sourceUri = sourceUri,
-        displayName = displayName,
-        mimeType = mimeType
-      )
-    }
-    // Demo/offline mode: no false claim of a real upload. Surface clearly that this
-    // build records metadata only (Firebase config unavailable at runtime).
     throw IllegalStateException(
       "Local demo does not upload files. Sign in to Supabase demo to store a document."
     )

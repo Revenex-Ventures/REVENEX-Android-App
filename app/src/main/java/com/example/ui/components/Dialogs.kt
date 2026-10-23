@@ -28,7 +28,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import android.webkit.MimeTypeMap
-import com.example.data.datasource.FirebaseStorageManager
+import com.example.data.datasource.DocumentFiles
 import com.example.data.model.*
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.theme.*
@@ -868,7 +868,7 @@ fun CreateAssignmentDialog(
     attachmentError = null
     if (uri != null) {
       val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
-      if (!FirebaseStorageManager.isAllowedDocumentType(mime)) {
+      if (!DocumentFiles.isAllowedDocumentType(mime)) {
         attachmentError = "Only PDF, DOC or DOCX files are allowed as attachments."
         selectedFileName = ""
         selectedFileMime = ""
