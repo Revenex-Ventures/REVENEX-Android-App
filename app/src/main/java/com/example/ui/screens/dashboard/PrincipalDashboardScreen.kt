@@ -285,7 +285,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 300) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(horizontalPadding = 0.dp, 
+          SectionHeader(horizontalPadding = 0.dp,
             title = "Cohort Attendance Analytics",
             actionText = "Full Matrix",
             onActionClick = { onNavigateTo(Screen.Attendance.route) }
@@ -309,7 +309,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 350) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(horizontalPadding = 0.dp, 
+          SectionHeader(horizontalPadding = 0.dp,
             title = "Real-Time Institutional Audit Stream",
             actionText = "Audit Hub",
             onActionClick = { onNavigateTo(Screen.Notices.route) }
