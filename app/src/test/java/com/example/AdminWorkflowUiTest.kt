@@ -103,7 +103,7 @@ class AdminWorkflowUiTest {
     compose.onNodeWithTag("command_palette_search_field").performTextInput("Enrol")
     compose.onNodeWithText("Enrol student").assertDoesNotExist()
     compose.onNodeWithTag("command_palette_search_field").performTextClearance()
-    compose.onNodeWithTag("command_palette_search_field").performTextInput("Fee accounts")
+    compose.onNodeWithTag("command_palette_search_field").performTextInput("Fee")
     compose.onNodeWithText("Fee accounts").performClick()
     assertEquals(Screen.Fees.route, destination)
   }
