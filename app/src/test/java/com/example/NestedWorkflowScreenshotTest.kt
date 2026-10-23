@@ -17,6 +17,7 @@ import com.example.ui.screens.dashboard.StudentDashboardScreen
 import com.example.ui.theme.ScholaTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +32,10 @@ import java.io.File
 class NestedWorkflowScreenshotTest {
   @get:Rule val compose = createComposeRule()
   private fun capture(name: String) {
+    val resources = org.robolectric.RuntimeEnvironment.getApplication().resources
+    val viewportHeight = resources.configuration.screenHeightDp * resources.displayMetrics.density
+    val renderedHeight = compose.onRoot().fetchSemanticsNode().size.height
+    assertTrue("Dialog exceeds viewport: $renderedHeight > $viewportHeight", renderedHeight <= viewportHeight)
     File("build/reports/redesign/nested").mkdirs()
     compose.onRoot().captureRoboImage("build/reports/redesign/nested/$name.png")
   }
