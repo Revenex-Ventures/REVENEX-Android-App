@@ -333,8 +333,3 @@ private fun DemoModeLoginContent(
   }
 }
 
-// ========================================================================
-// Production Mode Login Content
-// ========================================================================
-
-@OptIn(ExperimentalMaterial3Api::class)
