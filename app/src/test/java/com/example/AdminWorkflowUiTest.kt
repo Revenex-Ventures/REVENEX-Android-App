@@ -51,6 +51,8 @@ class AdminWorkflowUiTest {
     compose.onNodeWithTag("marks_subject").performScrollTo().performTextInput("Mathematics")
     compose.onNodeWithTag("marks_obtained").performScrollTo().performTextInput("72")
     compose.onNodeWithTag("save_draft_mark").performScrollTo().assertIsEnabled().performClick()
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+    capture("marks_save_state_light")
     compose.waitUntil { repository.reportCards.value.any { it.term == "UI verification term" } }
     assertFalse(repository.reportCards.value.first { it.term == "UI verification term" }.published)
     capture("marks_draft_light")
@@ -58,6 +60,7 @@ class AdminWorkflowUiTest {
     compose.onNodeWithText("Publish results?").assertExists()
     capture("marks_review_light")
     compose.onNodeWithText("Publish").performClick()
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil { repository.reportCards.value.first { it.term == "UI verification term" }.published }
     compose.onNodeWithTag("save_draft_mark").performScrollTo().assertIsNotEnabled()
     compose.onNodeWithText("View report cards & student details").performScrollTo().performClick()

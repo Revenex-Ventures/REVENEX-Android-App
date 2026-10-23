@@ -219,5 +219,9 @@ await check('admin leave decision persists and notifies once',async()=>{
  assert.equal((await as('parent',"select * from notifications where category='LEAVE'")).length,before+1);
  await denied('admin',"select decide_leave('decision_fixture','REJECTED','Changed')");
 });
+await check('operator rollback acceptance script validates without retaining test rows',async()=>{
+ await db.exec(await readFile(new URL('../verify_staff_workflows_rollback.sql',import.meta.url),'utf8'));
+ assert.equal((await db.query("select count(*)::int as n from marks where term='Rollback verification 20261024'")).rows[0].n,0);
+});
 console.log(`${passed} PostgreSQL schema/RLS checks passed. Auth/Storage service/Realtime transport require hosted verification.`);
 await db.close();

@@ -92,7 +92,7 @@ fun AdminDashboardScreen(
           onClick = { onNavigateTo(Screen.Fees.route) })
         AdminWorkRow("Leave requests", "$pendingLeave awaiting a decision", Icons.Default.EventBusy,
           onClick = { onNavigateTo(Screen.Leaves.route) })
-        AdminWorkRow("Attendance review", if (todayRegisters.isEmpty()) "No registers recorded today" else "$exceptions absent or late entries Â· ${todayRegisters.size} registers today",
+        AdminWorkRow("Attendance review", if (todayRegisters.isEmpty()) "No registers recorded today" else "$exceptions absent or late entries · ${todayRegisters.size} registers today",
           Icons.Default.FactCheck, onClick = { onNavigateTo(Screen.PrincipalAttendance.route) })
       }
     }
@@ -121,11 +121,11 @@ fun AdminDashboardScreen(
         auditLogs.take(3).forEach { log ->
           Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
             Text(log.actionSummary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            Text("${log.actorName} Â· ${log.timestamp}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${log.actorName} · ${log.timestamp}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             HorizontalDivider(Modifier.padding(top = Spacing.sm8), color = MaterialTheme.colorScheme.outlineVariant)
           }
         }
-        TextButton(onClick = { onNavigateTo(Screen.Notices.route) }) { Text("Notices & circulars Â· ${notices.size}") }
+        TextButton(onClick = { onNavigateTo(Screen.Notices.route) }) { Text("Notices & circulars · ${notices.size}") }
       }
     }
   }
