@@ -134,7 +134,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         checkout.open(this@MainActivity,options)
       } catch(e:Exception) {
         if(e is CancellationException)throw e
-        paymentFailure("Test checkout is unavailable. Check Supabase payment deployment and server secrets, then retry.")
+        paymentFailure(if (e is com.example.data.datasource.PaymentServiceException) e.message.orEmpty() else "Test checkout could not open. Check payment status before retrying.")
       }
     }
   }
