@@ -55,7 +55,7 @@ fun ScholaTopAppBar(
       navigationIcon?.invoke()
       Column(Modifier.weight(1f).padding(start = Spacing.sm8)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(currentRole.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(currentRole.displayName + if (currentUserName.isNotBlank()) " · " + currentUserName.substringBefore(" ") else "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
       IconButton(onClick = onSearchClick, modifier = Modifier.testTag("command_palette_trigger_pill")) {
         Icon(Icons.Default.Search, "Search school records")

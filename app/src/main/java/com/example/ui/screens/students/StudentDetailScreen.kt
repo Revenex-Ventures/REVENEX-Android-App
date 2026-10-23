@@ -52,7 +52,7 @@ fun StudentDetailScreen(
       TopAppBar(
         title = {
           Text(
-            text = "Scholar 360 Profile",
+            text = "Student profile",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
           )
@@ -245,21 +245,21 @@ fun Student360DetailPane(
         // OVERVIEW: Parent credentials & Demographics
         item {
           AppCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Parent / Guardian Credentials", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text("Contact & guardian", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(Spacing.s2))
             InfoRow("Guardian Name", student.parentName)
             InfoRow("Emergency Phone", student.parentPhone)
             InfoRow("Verified Email", student.parentEmail)
-            InfoRow("Residential Address", student.address.ifBlank { "Lake View Residency, Pune" })
+            InfoRow("Residential Address", student.address.ifBlank { "Not provided" })
           }
         }
         item {
           AppCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Demographics & Medical Record", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text("Personal & admission details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(Spacing.s2))
             InfoRow("Gender / DOB", "${student.gender} • ${student.dob}")
             InfoRow("Blood Group", student.bloodGroup)
-            InfoRow("Admission Date", student.admissionDate.ifBlank { "10 Jun 2022" })
+            InfoRow("Admission Date", student.admissionDate.ifBlank { "Not provided" })
           }
         }
       }
@@ -311,9 +311,9 @@ fun Student360DetailPane(
             if (cloudDemo && studentInvoice == null) {
               Text("No fee record is available to this account.", style = MaterialTheme.typography.bodyMedium)
             } else {
-              InfoRow("Total Demanded", "$${total / 100L}")
-              InfoRow("Paid Realized", "$${paid / 100L}")
-              InfoRow("Outstanding Due", "$${due / 100L}")
+              InfoRow("Total Demanded", "₹${total / 100L}")
+              InfoRow("Paid Realized", "₹${paid / 100L}")
+              InfoRow("Outstanding Due", "₹${due / 100L}")
 
             }
             if (cloudDemo) Text("Use Fees for Razorpay test checkout.", style = MaterialTheme.typography.bodySmall)
@@ -365,13 +365,9 @@ fun Student360DetailPane(
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .padding(vertical = 4.dp),
-    horizontalArrangement = Arrangement.SpaceBetween
-  ) {
-    Text(label, modifier = Modifier.weight(0.4f).padding(end = Spacing.sm8), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Text(value, modifier = Modifier.weight(0.6f), textAlign = androidx.compose.ui.text.style.TextAlign.End, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+  Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(value.ifBlank { "Not provided" }, style = MaterialTheme.typography.bodyMedium,
+      fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
   }
 }

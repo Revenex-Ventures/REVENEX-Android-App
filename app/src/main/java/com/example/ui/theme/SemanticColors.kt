@@ -7,6 +7,10 @@ import androidx.compose.ui.graphics.luminance
 
 /** Functional palettes: readable pairs, deliberately coordinated for each appearance. */
 object SemanticColors {
+  val blueContainer: Color @Composable get() = if (dark) Color(0xFF293447) else Color(0xFFE6EFFA)
+  val onBlue: Color @Composable get() = if (dark) Color(0xFFC8DBF3) else Color(0xFF344E70)
+  val butterContainer: Color @Composable get() = if (dark) Color(0xFF453B24) else Color(0xFFF7EDBF)
+  val onButter: Color @Composable get() = if (dark) Color(0xFFF1DEA1) else Color(0xFF64501D)
   private val dark: Boolean @Composable get() = MaterialTheme.colorScheme.background.luminance() < 0.3f
   val successContainer: Color @Composable get() = if (dark) Color(0xFF214838) else Color(0xFFDDF1E5)
   val onSuccess: Color @Composable get() = if (dark) Color(0xFFA9E1BD) else Color(0xFF245C3C)

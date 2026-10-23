@@ -316,7 +316,7 @@ fun NotificationsScreen(
     ) {
       item {
         AppCard(modifier = Modifier.fillMaxWidth()) {
-          Text("In-app school inbox",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+          Text("${notifications.count { !it.isRead }} unread · School inbox",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
           Text("Updates sync while the Supabase demo is open. Device push notifications are not enabled in this demo.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
@@ -376,7 +376,7 @@ fun NotificationsScreen(
                   Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
                 }
               }
-              Text(if (opening == notif.id) "Opening…" else if (!notif.isRead) "Unread" else "Read", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+              Text("${notif.category.name.lowercase().replaceFirstChar { it.uppercase() }} · ${if (opening == notif.id) "Opening…" else if (!notif.isRead) "Unread" else "Read"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
               Text(notif.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               Spacer(modifier = Modifier.height(2.dp))
               Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
