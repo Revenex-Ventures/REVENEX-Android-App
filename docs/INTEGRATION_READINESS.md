@@ -37,3 +37,7 @@ Remaining page/workflow gaps: staff marks entry/publication has no reachable edi
 ## Rechecks in this audit
 
 `node supabase/tests/rls.test.mjs`: 105 passed. `node --test supabase/tests/assistant-edge.test.mjs supabase/tests/razorpay-edge.test.mjs`: 31 passed. `python scripts/check_secrets.py --history`: passed. Python checker compilation and `git diff --check`: passed. No Android source changed in this follow-up; the green run above covers the current application code.
+
+## Firebase retirement
+
+Firebase BOM/Auth/Firestore/Storage/Messaging/AI/App Check SDKs, Google Services plugin catalog entries, the disabled FCM service, legacy login/storage/data adapters, Firebase rules/configuration and the unused Functions package were removed. Only DEMO and SUPABASE_DEMO remain. Shared upload metadata/MIME validation now lives in DocumentFiles. CI verifies the resolved debug runtime contains no com.google.firebase artifacts; an Android test checks Firebase components/classes are absent. The three retired FCM-service tests were removed with that service; Supabase workflows and their tests remain. Historical documents and secret-scanner signatures may still mention Firebase; these are not runtime dependencies. No remote Firebase project or existing Supabase data was deleted.
