@@ -134,6 +134,7 @@ class AdminWorkflowUiTest {
     compose.onNodeWithText(assignment.instructions).assertDoesNotExist()
     compose.onNodeWithTag("assignment_details_${assignment.id}").performScrollTo().performClick()
     compose.onNodeWithText(assignment.instructions).assertExists()
-    compose.onNodeWithText("Mark submitted").assertExists()
+    val submissionLabel = if (assignment.isCompletedByStudent) "Undo submission" else "Mark submitted"
+    assertTrue(compose.onAllNodesWithText(submissionLabel).fetchSemanticsNodes().isNotEmpty())
   }
 }
