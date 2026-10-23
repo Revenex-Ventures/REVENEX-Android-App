@@ -83,7 +83,7 @@ fun AttendanceScreen(
     ) { DatePicker(state = picker) }
   }
   val savedRecord = classAttendanceMap.values.lastOrNull { record ->
-    record.date == selectedDate && record.sessionSlot == selectedSessionSlot &&
+    attendanceDateMatches(record.date, selectedDate) && record.sessionSlot == selectedSessionSlot &&
       classStudents.firstOrNull()?.let { it.classGrade == record.classGrade && it.division == record.division } == true
   }
   val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord, selectedDate, canEdit) {

@@ -23,6 +23,7 @@ import com.example.ui.components.CompactStatTile
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.WorkflowQuickPill
 import com.example.ui.navigation.Screen
+import com.example.ui.screens.attendance.attendanceDateMatches
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -45,7 +46,7 @@ fun AdminDashboardScreen(
   val auditLogs by repository.auditLogs.collectAsState()
   val registers by repository.classAttendance.collectAsState()
   val today = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
-  val todayRegisters = registers.values.filter { it.date == today }
+  val todayRegisters = registers.values.filter { attendanceDateMatches(it.date, today) }
   val unpaid = invoices.count { it.pendingAmount > 0L }
   val pendingLeave = leaves.count { it.status == LeaveStatus.PENDING }
   val exceptions = todayRegisters.sumOf { it.absentCount + it.lateCount }
