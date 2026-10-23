@@ -118,14 +118,25 @@ fun FeatureHeroCard(
   heroHighlightColor: Color = MaterialTheme.colorScheme.primary,
   secondaryMetricLabel: String = "DAILY ATTENDANCE RATE"
 ) {
-  Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.lg),
-    color = MaterialTheme.colorScheme.primaryContainer) {
+  Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.hero),
+    color = MaterialTheme.colorScheme.secondaryContainer) {
     Column(Modifier.padding(Spacing.lg16), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-      Text(cycleTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
-      Text(categoryBadge, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
-      Text("$primaryStatistic · $statisticLabel", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
-      Text("$secondaryMetricLabel: $secondaryKeyMetric", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-      TextButton(onClick = onActionClick) { Text(actionButtonText) }
+      Text(cycleTitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+      Text(categoryBadge, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+        Column(Modifier.weight(1f)) {
+          Text(primaryStatistic, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+          Text(statisticLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        }
+        Column(Modifier.weight(1f)) {
+          Text(secondaryKeyMetric, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+          Text(secondaryMetricLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        }
+      }
+      TextButton(onClick = onActionClick, contentPadding = PaddingValues(0.dp)) {
+        Text(actionButtonText); Spacer(Modifier.width(Spacing.sm8)); Icon(Icons.Default.ArrowForward, null)
+      }
     }
   }
 }
@@ -148,11 +159,17 @@ fun CompactStatTile(
   Surface(modifier = modifier.then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
     shape = RoundedCornerShape(Radius.lg), color = MaterialTheme.colorScheme.surface,
     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-    Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-      Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+    Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        Surface(color = iconContainerColor, shape = RoundedCornerShape(Radius.sm)) {
+          Icon(icon, contentDescription = null, tint = iconTint,
+            modifier = Modifier.padding(Spacing.sm8).size(20.dp))
+        }
+        Text(statCounter, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+          modifier = Modifier.weight(1f))
+      }
       Text(categoryLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      Text(statCounter, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-      deltaText?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+      deltaText?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
   }
 }
@@ -172,7 +189,7 @@ fun ScholaFloatingDock(
     windowInsets = WindowInsets(0, 0, 0, 0)) {
     items.forEach { item ->
       val selected = currentRoute == item.route
-      NavigationBarItem(selected = selected, onClick = { onItemSelected(item.route) },
+      NavigationBarItem(colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary), selected = selected, onClick = { onItemSelected(item.route) },
         icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = null) },
         label = { Text(if (item.label == "Attendance") "Roll call" else item.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) })
     }

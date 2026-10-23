@@ -333,18 +333,21 @@ fun HomeworkScreen(
     } else {
       items(assignments, key = { it.id }) { hw ->
         AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column(modifier = Modifier.weight(1f)) {
-              Text(hw.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-              Text("${hw.subject} · Class ${hw.classGrade}-${hw.division} · Due ${hw.dueDate}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+            Surface(color = SemanticColors.lavenderContainer, shape = RoundedCornerShape(Radius.pill)) {
+              Text(hw.subject, modifier = Modifier.padding(horizontal = Spacing.md12, vertical = Spacing.sm8),
+                style = MaterialTheme.typography.labelMedium, color = SemanticColors.onLavender)
             }
+            Spacer(Modifier.weight(1f))
             ScholaPillBadge(status = hw.submissionStatus)
+          }
+          Text(hw.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+          Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Text("Due ${hw.dueDate} · Class ${hw.classGrade}-${hw.division}",
+              style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
           if(hw.attachmentUrl.isNotBlank()) SchoolDocumentButton(hw.attachmentUrl,hw.attachmentName.ifBlank { "Open attachment" })
           if(currentUser.role==UserRole.STUDENT) {

@@ -49,8 +49,8 @@ object Radius {
   val md = 12.dp
   val lg = 14.dp
   val xl = 18.dp
-  val hero = 16.dp      // Feature Hero Cards
-  val tile = 14.dp      // Compact Stat Tiles
+  val hero = 20.dp      // Feature Hero Cards
+  val tile = 18.dp      // Compact Stat Tiles
   val input = 14.dp     // Outlined text fields
   val pill = 999.dp     // Pill badges / buttons
 }

@@ -95,7 +95,7 @@ fun FeeManagementScreen(
                 letterSpacing = TypeTokens.trackingMicroLabel
               )
               Text(
-                text = "Fee collection",
+                text = "Balances & invoices",
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -137,15 +137,15 @@ fun FeeManagementScreen(
           ) {
             Column {
               Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalBilled / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+              Text("₹${totalBilled / 100L}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
               Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalCollected / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onSuccess)
+              Text("₹${totalCollected / 100L}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onSuccess)
             }
             Column(horizontalAlignment = Alignment.End) {
               Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalReceivables / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
+              Text("₹${totalReceivables / 100L}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
             }
           }
         }
@@ -182,7 +182,7 @@ fun FeeManagementScreen(
 
     // 3. LEDGER INVOICE CARDS
     item {
-      SectionHeader(title = "Fee accounts (${filteredInvoices.size})")
+      SectionHeader(title = "Invoices · $selectedFilter (${filteredInvoices.size})")
     }
 
     if (filteredInvoices.isEmpty()) {

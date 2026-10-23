@@ -57,6 +57,7 @@ fun AttendanceScreen(
   val sessionSlots = listOf("Morning Roll Call", "STEM Lab", "Senior Practicum")
 
   var showSuccessNotification by remember { mutableStateOf(false) }
+  var saveError by remember { mutableStateOf<String?>(null) }
 
   val classStudents = remember(students, selectedCohort) {
     students.filter { "Grade ${it.classGrade}-${it.division}" == selectedCohort }
@@ -95,6 +96,7 @@ fun AttendanceScreen(
           .navigationBarsPadding()
       ) {
         Column(modifier = Modifier.padding(Spacing.s4)) {
+          saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
           if (showSuccessNotification) {
             Surface(
               shape = RoundedCornerShape(Radius.md),
@@ -123,6 +125,7 @@ fun AttendanceScreen(
             text = if (saving) "Saving attendance…" else "Save attendance · $presentCount present, $absentCount absent",
             onClick = {
               showSuccessNotification = false
+              saveError = null
               val list = classStudents.map { st ->
                 StudentAttendance(
                   studentId = st.id,
@@ -140,7 +143,7 @@ fun AttendanceScreen(
                 division = div,
                 sessionSlot = selectedSessionSlot,
                 studentList = list,
-                onResult = { saved -> saving = false; showSuccessNotification = saved }
+                onResult = { saved -> saving = false; showSuccessNotification = saved; saveError = if (saved) null else "Attendance was not confirmed. Check your connection and retry." }
               )
             },
             enabled = !saving && classStudents.isNotEmpty() && currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER),
@@ -180,7 +183,7 @@ fun AttendanceScreen(
             ) {
               Column {
                 Text(
-                  text = "ROLL CALL MATRIX",
+                  text = "ATTENDANCE · $today",
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
                   style = MaterialTheme.typography.labelSmall,
                   letterSpacing = TypeTokens.trackingMicroLabel
@@ -197,7 +200,7 @@ fun AttendanceScreen(
                 color = SemanticColors.warningContainer
               ) {
                 Text(
-                  text = "Register",
+                  text = if (savedRecord != null) "Saved register" else "Today",
                   color = SemanticColors.onWarning,
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
