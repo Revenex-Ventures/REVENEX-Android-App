@@ -1,6 +1,6 @@
 # Ivory/orange redesign — implementation ledger
 
-Latest evidence: `IVORY_DELIVERY_VERIFICATION.md`. CI 39963704791 passed source b604edd with 81 Android tests, lint zero errors/69 warnings and rendered captures. Hosted migrations 6–9 and payment function have now been applied/deployed; replacement server credentials and real checkout acceptance remain pending. Earlier 404 observations below are historical.
+Latest evidence: `IVORY_DELIVERY_VERIFICATION.md`. CI 39963704791 passed source b604edd with 81 Android tests, lint zero errors/69 warnings and rendered captures. Hosted migrations 6–9 and payment function have now been applied/deployed; operator saved the three correctly named server secrets. Unsigned user/webhook probes reject with 401/400; real checkout acceptance remains pending. Earlier 404 observations below are historical.
 
 Primary reference: ivory/orange education triptych → canvas, pills, rounded navigation/settings. Android dashboard → compact metric rows and task hierarchy. Task app → subject/deadline/status assignment cards. Shifty → shortcut grouping and day selection. Four images reviewed; a separate flight-booking reference was not attached. No promotional/brand content copied.
 

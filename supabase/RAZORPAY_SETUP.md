@@ -1,4 +1,4 @@
-> Latest hosted status (2026-10-23): migrations 6–9 applied; payment function deployed; Auth health 200; payment relation and unsigned function requests rejected (401). No custom server secrets existed at inspection, so checkout/capture is not yet verified. See [current delivery evidence](../docs/IVORY_DELIVERY_VERIFICATION.md). Current redesign CI passed 81 Android tests; historical build details below are retained for context. Do not rerun already-applied migrations.
+> Latest hosted status (2026-10-23): migrations 6–9 applied; payment function deployed; operator saved all three correctly named payment secrets. Auth health 200; payment relation and unsigned user requests rejected (401); unsigned webhook rejected (400 invalid signature). Credential pairing, checkout/capture and real webhook delivery remain unverified. See [current delivery evidence](../docs/IVORY_DELIVERY_VERIFICATION.md). Current redesign CI passed 81 Android tests; historical build details below are retained for context. Do not rerun already-applied migrations.
 
 # Razorpay test payments — current Revenex app
 
