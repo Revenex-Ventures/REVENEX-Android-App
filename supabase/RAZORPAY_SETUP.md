@@ -1,4 +1,4 @@
-> Latest hosted status (2026-10-23): Auth health 200; payment relation and function 404. Checkout is not active. See [integration readiness](../docs/INTEGRATION_READINESS.md). Historical verification below describes earlier builds; current redesign CI passed 82 Android tests.
+> Latest hosted status (2026-10-23): migrations 6–9 applied; payment function deployed; Auth health 200; payment relation and unsigned function requests rejected (401). No custom server secrets existed at inspection, so checkout/capture is not yet verified. See [current delivery evidence](../docs/IVORY_DELIVERY_VERIFICATION.md). Current redesign CI passed 81 Android tests; historical build details below are retained for context. Do not rerun already-applied migrations.
 
 # Razorpay test payments — current Revenex app
 

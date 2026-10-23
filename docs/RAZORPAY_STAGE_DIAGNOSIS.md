@@ -1,5 +1,9 @@
 # Current Razorpay test integration trace
 
+## Hosted update — 2026-10-23
+
+The original 404 cause below is now repaired: existing migrations 6–9 were applied transactionally without reseeding, and `razorpay-payments` was deployed with both repository source files. Payment relation now rejects anonymous access (401); unsigned function POST returns the handler's 401 sign-in message. Legacy gateway JWT verification was disabled with the user's explicit approval; handler Auth and webhook HMAC checks remain. No custom server secrets existed at inspection. Replacement test credentials must be entered directly by the operator in Supabase Secrets. Real checkout, capture and webhook delivery remain unverified. See `IVORY_DELIVERY_VERIFICATION.md` for exact evidence and remaining work. The table below records the initial diagnosis, not the final deployment state.
+
 | Stage | Evidence / status |
 |---|---|
 | Pay button / guard | Fees calls onPayRazorpay → MainActivity.startRazorpayPayment. Local demo blocked intentionally; authenticated Supabase path enabled. |
