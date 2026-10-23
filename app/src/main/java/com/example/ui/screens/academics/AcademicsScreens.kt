@@ -68,37 +68,12 @@ fun TimetableScreen(
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
-    // 1. HERO SURFACE (Dark Onyx, 22dp corners)
     item {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.hero))
-          .background(MaterialTheme.colorScheme.surfaceVariant)
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
-          .padding(Spacing.cardPaddingLarge)
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Text(
-            text = "ACADEMICS",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
-            letterSpacing = TypeTokens.trackingMicroLabel
-          )
-          Text(
-            text = if (selectedSubTab == 0) "Class timetable" else "Scholar Gradebook & GPA",
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          Text(
-            text = "Classes, rooms and teaching periods",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 12.sp
-          )
-        }
-      }
+      WorkspaceHeading(
+        if (selectedSubTab == 0) "Class timetable" else "Assessment scores",
+        if (selectedSubTab == 0) "Choose a day to see teaching periods, rooms and subjects."
+        else "Read-only scores available to your account. Drafts are restricted by school permissions."
+      )
     }
 
     // 2. SEGMENTED SUB-TAB SWITCHER ("Timetable & Slots" â†” "Gradebook & GPA")
@@ -117,7 +92,7 @@ fun TimetableScreen(
             .padding(4.dp),
           horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-          listOf("Timetable & Slots", "Gradebook & GPA").forEachIndexed { index, title ->
+          listOf("Timetable", "Scores").forEachIndexed { index, title ->
             val isSelected = selectedSubTab == index
             Box(
               modifier = Modifier
@@ -125,7 +100,7 @@ fun TimetableScreen(
                 .clip(RoundedCornerShape(Radius.pill))
                 .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                 .clickable { selectedSubTab = index }
-                .padding(vertical = 10.dp),
+                .heightIn(min = 48.dp).padding(vertical = Spacing.sm8),
               contentAlignment = Alignment.Center
             ) {
               Text(
@@ -239,6 +214,9 @@ fun TimetableScreen(
         SectionHeader(title = "Accessible assessment scores (${gradebookEntries.size})")
       }
 
+      if (gradebookEntries.isEmpty()) item {
+        EmptyStateView(title = "No assessment scores", message = "No accessible scores are loaded. Published results will appear when your school makes them available.")
+      }
       items(gradebookEntries, key = { it.id }) { entry ->
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Row(
@@ -383,9 +361,12 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     item {
-      Text("Academic Study Materials", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+      WorkspaceHeading("Study materials", "Subject resources and reference documents shared with your account.")
     }
 
+    if (materials.isEmpty()) item {
+      EmptyStateView(title = "No materials shared", message = "Your class documents will appear here when a teacher shares them.")
+    }
     items(materials, key = { it.id }) { mat ->
       AppCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -420,9 +401,12 @@ fun ExamsScreen(repository: ErpDataRepository) {
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
     item {
-      Text("Examination Schedules", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+      WorkspaceHeading("Examinations", "Dates, rooms and assessment details for your available schedules.")
     }
 
+    if (schedules.isEmpty()) item {
+      EmptyStateView(title = "No examinations scheduled", message = "No exam schedule is available for this account yet.")
+    }
     schedules.forEach { sched ->
       item {
         SectionHeader(title = "${sched.title} (${sched.term})")
@@ -434,7 +418,7 @@ fun ExamsScreen(repository: ErpDataRepository) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Column {
+            Column(Modifier.weight(1f)) {
               Text(subj.subjectName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
               Text("Room: ${subj.room} · Max Marks: ${subj.maxMarks}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

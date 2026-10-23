@@ -51,7 +51,8 @@ class RevenexRedesignScreenshotTest {
             UserRole.ADMIN -> AdminDashboardScreen(repository,{},{},{},{})
             UserRole.TEACHER -> TeacherDashboardScreen(repository,{},{},{})
             UserRole.STUDENT -> StudentDashboardScreen(repository,{})
-            UserRole.PARENT -> ParentDashboardScreen(repository,{}, {_,_->},{})
+            // Production NavHost routes parents to this shared family dashboard.
+            UserRole.PARENT -> StudentDashboardScreen(repository,{})
           }
         }
       }

@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,6 +39,37 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+
+@Composable
+private fun FormHeading(title: String, subtitle: String, enabled: Boolean = true, onDismiss: () -> Unit) {
+  Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+      Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+      Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    IconButton(enabled = enabled, onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+  }
+}
+
+@Composable
+private fun ResponsiveFormFields(
+  first: @Composable (Modifier) -> Unit,
+  second: @Composable (Modifier) -> Unit,
+  third: (@Composable (Modifier) -> Unit)? = null
+) {
+  val largeText = LocalDensity.current.fontScale > 1.2f
+  BoxWithConstraints(Modifier.fillMaxWidth()) {
+    if (maxWidth < 360.dp || largeText) {
+      Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        first(Modifier.fillMaxWidth()); second(Modifier.fillMaxWidth()); third?.invoke(Modifier.fillMaxWidth())
+      }
+    } else {
+      Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        first(Modifier.weight(1f)); second(Modifier.weight(1f)); third?.invoke(Modifier.weight(1f))
+      }
+    }
+  }
+}
 
 @Composable
 fun AddStudentDialog(
@@ -72,10 +105,10 @@ fun AddStudentDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
+        .padding(vertical = Spacing.sm8),
+      shape = RoundedCornerShape(Radius.hero),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
@@ -84,27 +117,7 @@ fun AddStudentDialog(
           .padding(20.dp)
           .verticalScroll(rememberScrollState())
       ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column {
-            Text(
-              text = "New Student Admission",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Fill all required fields (*) to complete admission",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-          IconButton(onClick = onDismiss, enabled = !saving) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
+        FormHeading("New student", "Identity, class and guardian details. Required fields are marked *.", enabled = !saving, onDismiss = onDismiss)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -122,59 +135,63 @@ fun AddStudentDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = studentId,
-            onValueChange = { studentId = it; validationError = null },
-            label = { Text("Student ID *") },
-            placeholder = { Text("stu_1011") },
-            modifier = Modifier.weight(1.2f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = admissionNo,
-            onValueChange = { admissionNo = it; validationError = null },
-            label = { Text("Admission No *") },
-            placeholder = { Text("REV-2026-1001") },
-            modifier = Modifier.weight(1.8f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = studentId,
+              onValueChange = { studentId = it; validationError = null },
+              label = { Text("Student ID *") },
+              placeholder = { Text("stu_1011") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = admissionNo,
+              onValueChange = { admissionNo = it; validationError = null },
+              label = { Text("Admission No *") },
+              placeholder = { Text("REV-2026-1001") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = classGrade,
-            onValueChange = { classGrade = it; validationError = null },
-            label = { Text("Class * (1-12)") },
-            placeholder = { Text("10") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = division,
-            onValueChange = { division = it },
-            label = { Text("Division") },
-            placeholder = { Text("A") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = rollNo,
-            onValueChange = { rollNo = it },
-            label = { Text("Roll No") },
-            placeholder = { Text("16") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = classGrade,
+              onValueChange = { classGrade = it; validationError = null },
+              label = { Text("Class * (1-12)") },
+              placeholder = { Text("10") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = division,
+              onValueChange = { division = it },
+              label = { Text("Division") },
+              placeholder = { Text("A") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          third = { fieldModifier ->
+            OutlinedTextField(
+              value = rollNo,
+              onValueChange = { rollNo = it },
+              label = { Text("Roll No") },
+              placeholder = { Text("16") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -190,26 +207,27 @@ fun AddStudentDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = gender,
-            onValueChange = { gender = it },
-            label = { Text("Gender") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = bloodGroup,
-            onValueChange = { bloodGroup = it },
-            label = { Text("Blood Group") },
-            placeholder = { Text("O+") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = gender,
+              onValueChange = { gender = it },
+              label = { Text("Gender") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = bloodGroup,
+              onValueChange = { bloodGroup = it },
+              label = { Text("Blood Group") },
+              placeholder = { Text("O+") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -419,10 +437,10 @@ fun AddTeacherDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
+        .padding(vertical = Spacing.sm8),
+      shape = RoundedCornerShape(Radius.hero),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
@@ -431,27 +449,7 @@ fun AddTeacherDialog(
           .padding(20.dp)
           .verticalScroll(rememberScrollState())
       ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column {
-            Text(
-              text = "Add Faculty Member",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Fill faculty information to register staff profile",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-          IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
+        FormHeading("Add faculty member", "Contact information and teaching assignment.", enabled = true, onDismiss = onDismiss)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -469,27 +467,28 @@ fun AddTeacherDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = employeeId,
-            onValueChange = { employeeId = it; validationError = null },
-            label = { Text("Employee ID *") },
-            placeholder = { Text("EMP-201") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = department,
-            onValueChange = { department = it },
-            label = { Text("Department") },
-            placeholder = { Text("Science") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = employeeId,
+              onValueChange = { employeeId = it; validationError = null },
+              label = { Text("Employee ID *") },
+              placeholder = { Text("EMP-201") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = department,
+              onValueChange = { department = it },
+              label = { Text("Department") },
+              placeholder = { Text("Science") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -505,49 +504,51 @@ fun AddTeacherDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = designation,
-            onValueChange = { designation = it },
-            label = { Text("Designation") },
-            placeholder = { Text("Head of Dept") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = qualification,
-            onValueChange = { qualification = it },
-            label = { Text("Qualification") },
-            placeholder = { Text("Ph.D, M.Ed") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = designation,
+              onValueChange = { designation = it },
+              label = { Text("Designation") },
+              placeholder = { Text("Head of Dept") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = qualification,
+              onValueChange = { qualification = it },
+              label = { Text("Qualification") },
+              placeholder = { Text("Ph.D, M.Ed") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = gender,
-            onValueChange = { gender = it },
-            label = { Text("Gender") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = subject,
-            onValueChange = { subject = it },
-            label = { Text("Primary Subject(s)") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = gender,
+              onValueChange = { gender = it },
+              label = { Text("Gender") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = subject,
+              onValueChange = { subject = it },
+              label = { Text("Primary Subject(s)") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -701,10 +702,10 @@ fun CreateNoticeDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
+        .padding(vertical = Spacing.sm8),
+      shape = RoundedCornerShape(Radius.hero),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
@@ -713,20 +714,7 @@ fun CreateNoticeDialog(
           .padding(20.dp)
           .verticalScroll(rememberScrollState())
       ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "Publish Notice / Circular",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          IconButton(enabled = !saving, onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
+        FormHeading("Publish a notice", "Write a clear school announcement and choose its category.", enabled = !saving, onDismiss = onDismiss)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -748,7 +736,7 @@ fun CreateNoticeDialog(
           label = { Text("Detailed Notice Content *") },
           modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .heightIn(min = 120.dp)
             .testTag("input_notice_content"),
           maxLines = 6
         )
@@ -761,11 +749,12 @@ fun CreateNoticeDialog(
           fontWeight = FontWeight.Bold
         )
         Row(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
           horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
           listOf(NoticeCategory.CIRCULAR, NoticeCategory.EVENT, NoticeCategory.EXAM, NoticeCategory.HOLIDAY).forEach { cat ->
             FilterChip(
+              modifier = Modifier.heightIn(min = 48.dp),
               selected = category == cat,
               onClick = { category = cat },
               label = { Text(cat.label, fontSize = 12.sp) }
@@ -847,7 +836,7 @@ fun CreateAssignmentDialog(
   var subject by remember { mutableStateOf("Mathematics") }
   var classGrade by remember { mutableStateOf("10") }
   var division by remember { mutableStateOf("A") }
-  var dueDate by remember { mutableStateOf("05 Sep 2026") }
+  var dueDate by remember { mutableStateOf(SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date())) }
   var instructions by remember { mutableStateOf("") }
   var maxPoints by remember { mutableStateOf("20") }
   val context = LocalContext.current
@@ -901,10 +890,10 @@ fun CreateAssignmentDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
+        .padding(vertical = Spacing.sm8),
+      shape = RoundedCornerShape(Radius.hero),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
@@ -913,20 +902,7 @@ fun CreateAssignmentDialog(
           .padding(20.dp)
           .verticalScroll(rememberScrollState())
       ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "Create Homework Assignment",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          IconButton(enabled = !isUploading, onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
+        FormHeading("New assignment", "Set the subject, class, deadline and optional reference document.", enabled = !isUploading, onDismiss = onDismiss)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -940,25 +916,26 @@ fun CreateAssignmentDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = subject,
-            onValueChange = { subject = it },
-            label = { Text("Subject") },
-            modifier = Modifier.weight(1.5f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = dueDate,
-            onValueChange = { dueDate = it },
-            label = { Text("Due Date") },
-            modifier = Modifier.weight(1.5f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = subject,
+              onValueChange = { subject = it },
+              label = { Text("Subject") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = dueDate,
+              onValueChange = { dueDate = it },
+              label = { Text("Due Date") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -968,38 +945,41 @@ fun CreateAssignmentDialog(
           label = { Text("Detailed Instructions & Guidelines *") },
           modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp),
+            .heightIn(min = 100.dp),
           maxLines = 4
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = classGrade,
-            onValueChange = { classGrade = it.filter { c -> c.isDigit() } },
-            label = { Text("Class *") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = division,
-            onValueChange = { division = it.uppercase(Locale.US).take(2) },
-            label = { Text("Division *") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = maxPoints,
-            onValueChange = { maxPoints = it.filter { c -> c.isDigit() }.take(2) },
-            label = { Text("Max Marks") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = classGrade,
+              onValueChange = { classGrade = it.filter { c -> c.isDigit() } },
+              label = { Text("Class *") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = division,
+              onValueChange = { division = it.uppercase(Locale.US).take(2) },
+              label = { Text("Division *") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          third = { fieldModifier ->
+            OutlinedTextField(
+              value = maxPoints,
+              onValueChange = { maxPoints = it.filter { c -> c.isDigit() }.take(2) },
+              label = { Text("Max Marks") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -1136,10 +1116,10 @@ fun ApplyLeaveDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
+        .padding(vertical = Spacing.sm8),
+      shape = RoundedCornerShape(Radius.hero),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
@@ -1148,20 +1128,7 @@ fun ApplyLeaveDialog(
           .padding(20.dp)
           .verticalScroll(rememberScrollState())
       ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "Apply for Leave",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
+        FormHeading("Request leave", "Choose the dates and explain your request.", enabled = true, onDismiss = onDismiss)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1185,25 +1152,26 @@ fun ApplyLeaveDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = startDate,
-            onValueChange = { startDate = it },
-            label = { Text("From Date") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = endDate,
-            onValueChange = { endDate = it },
-            label = { Text("To Date") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = startDate,
+              onValueChange = { startDate = it },
+              label = { Text("From Date") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = endDate,
+              onValueChange = { endDate = it },
+              label = { Text("To Date") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
 
         if (dateError != null) {
           Spacer(modifier = Modifier.height(10.dp))
@@ -1222,7 +1190,7 @@ fun ApplyLeaveDialog(
           label = { Text("Reason for Absence *") },
           modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp),
+            .heightIn(min = 100.dp),
           maxLines = 4
         )
 
@@ -1282,10 +1250,10 @@ fun FeePaymentDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
+        .padding(vertical = Spacing.sm8),
+      shape = RoundedCornerShape(Radius.hero),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
       Column(
@@ -1310,7 +1278,7 @@ fun FeePaymentDialog(
           ) {
             Column {
               Text(
-                text = "Pay School Fees",
+                text = "Review test payment",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
               )
@@ -1330,7 +1298,7 @@ fun FeePaymentDialog(
           // Razorpay Test Mode Banner
           Surface(
             shape = RoundedCornerShape(8.dp),
-            color = Color(0xFFFFF3CD),
+            color = SemanticColors.warningContainer,
             modifier = Modifier.fillMaxWidth()
           ) {
             Row(
@@ -1340,7 +1308,7 @@ fun FeePaymentDialog(
               Icon(
                 imageVector = Icons.Default.Science,
                 contentDescription = null,
-                tint = Color(0xFF856404),
+                tint = SemanticColors.onWarning,
                 modifier = Modifier.size(16.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
@@ -1348,7 +1316,7 @@ fun FeePaymentDialog(
                 text = "Razorpay Test Mode — No real money will be charged",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF856404)
+                color = SemanticColors.onWarning
               )
             }
           }
@@ -1365,7 +1333,7 @@ fun FeePaymentDialog(
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
             ) {
-              Column {
+              Column(Modifier.weight(1f)) {
                 Text(
                   text = "Total Payable Amount",
                   style = MaterialTheme.typography.labelMedium,
@@ -1380,13 +1348,13 @@ fun FeePaymentDialog(
               }
               Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = Color.White.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.surface
               ) {
                 Text(
-                  text = "Verified receipt",
+                  text = "TEST · INR",
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
-                  color = RevenexBlue,
+                  color = MaterialTheme.colorScheme.onSurface,
                   modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
               }
@@ -1408,7 +1376,7 @@ fun FeePaymentDialog(
               CircularProgressIndicator(modifier = Modifier.size(36.dp))
               Spacer(modifier = Modifier.height(8.dp))
               Text(
-                text = "Securing transaction via Razorpay (Test Mode)...",
+                text = statusMessage.ifBlank { "Preparing secure test checkout…" },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -1420,7 +1388,7 @@ fun FeePaymentDialog(
               },
               modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .heightIn(min = 50.dp)
                 .testTag("submit_fee_payment_button"),
               shape = RoundedCornerShape(14.dp),
               colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
@@ -1493,7 +1461,7 @@ fun FeePaymentDialog(
               onClick = onDismiss,
               modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .heightIn(min = 48.dp),
               shape = RoundedCornerShape(14.dp),
               colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
             ) {
@@ -1517,12 +1485,15 @@ fun ReceiptRow(label: String, value: String) {
     Text(
       text = label,
       style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.weight(0.4f)
     )
     Text(
       text = value,
       style = MaterialTheme.typography.bodySmall,
-      fontWeight = FontWeight.Bold
+      fontWeight = FontWeight.Bold,
+      modifier = Modifier.weight(0.6f),
+      textAlign = androidx.compose.ui.text.style.TextAlign.End
     )
   }
 }

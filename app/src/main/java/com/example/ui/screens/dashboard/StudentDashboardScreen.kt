@@ -162,6 +162,19 @@ fun StudentDashboardScreen(
 
     // 1. HERO STUDENT IDENTITY & ATTENDANCE RING
     item {
+      OutlinedButton(
+        onClick = { onNavigateTo(Screen.Fees.route) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screenPadding, vertical = Spacing.sm8)
+          .testTag("family_fee_accounts"),
+        shape = RoundedCornerShape(Radius.input)
+      ) {
+        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null)
+        Spacer(Modifier.width(Spacing.sm8))
+        Text("Fee accounts · invoices & receipts", modifier = Modifier.weight(1f))
+        Icon(Icons.Default.ChevronRight, contentDescription = null)
+      }
+    }
+    item {
       AnimatedAttendanceHero(
         attendanceValue = currentStudent.attendancePercent.toFloat(),
         label = "Academic Attendance",

@@ -248,10 +248,9 @@ fun FeeManagementScreen(
 
           Spacer(modifier = Modifier.height(Spacing.s3))
 
-          Row(
+          Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm8)
           ) {
             Text(
               text = "₹${invoice.paidAmount / 100L} paid of ₹${invoice.totalAmount / 100L}",
@@ -262,16 +261,16 @@ fun FeeManagementScreen(
 
             if (invoice.pendingAmount > 0 && dataMode==com.example.data.datasource.DataMode.SUPABASE_DEMO) {
               Column(horizontalAlignment = Alignment.End) {
-                AppButton(text="Razorpay Test", onClick={ onPayRazorpay(invoice.id, invoice.studentName, invoice.pendingAmount) })
+                AppButton(text="Pay", onClick={ onPayRazorpay(invoice.id, invoice.studentName, invoice.pendingAmount) })
                 TextButton(onClick={ onCheckRazorpay(invoice.id) }) { Text("Check payment status") }
               }
             } else if (invoice.pendingAmount > 0) {
               AppButton(
-                text = "Razorpay Test (₹${invoice.pendingAmount / 100L})",
+                text = "Pay",
                 onClick = { onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 fontSize = 12.sp,
-                minHeight = 38.dp
+                minHeight = 48.dp
               )
             } else {
               Column(horizontalAlignment = Alignment.End) {

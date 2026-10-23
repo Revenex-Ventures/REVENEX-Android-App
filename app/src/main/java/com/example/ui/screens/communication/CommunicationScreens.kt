@@ -60,47 +60,16 @@ fun NoticesScreen(
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
-    // 1. HERO SURFACE (Dark Onyx, 22dp corners)
     item {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.hero))
-          .background(MaterialTheme.colorScheme.surfaceVariant)
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
-          .padding(Spacing.cardPaddingLarge)
+      WorkspaceHeading(
+        if (selectedSubTab == 0) "School activity" else "Notices & circulars",
+        if (selectedSubTab == 0) "Recorded actions from your school workspace." else "Announcements, events and important school updates."
       ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "COMMUNICATION & GOVERNANCE",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = TypeTokens.trackingMicroLabel
-              )
-              Text(
-                text = if (selectedSubTab == 0) "System Audit Trail" else "Parent Broadcasts & Circulars",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-              )
-            }
-            if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
-              Button(
-                onClick = onShowCreateNotice,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-              ) {
-                Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Compose", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-              }
-            }
+        if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+          FilledTonalButton(onClick = onShowCreateNotice) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(Modifier.width(Spacing.sm8))
+            Text("Compose notice")
           }
         }
       }
@@ -131,7 +100,7 @@ fun NoticesScreen(
                 .clip(RoundedCornerShape(Radius.pill))
                 .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                 .clickable { selectedSubTab = index }
-                .padding(vertical = 10.dp),
+                .heightIn(min = 48.dp).padding(vertical = Spacing.sm8),
               contentAlignment = Alignment.Center
             ) {
               Text(
@@ -170,7 +139,7 @@ fun NoticesScreen(
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = Spacing.sm8)
               )
             }
           }
@@ -252,6 +221,9 @@ fun NoticesScreen(
         SectionHeader(title = "Published Official Circulars (${notices.size})")
       }
 
+      if (notices.isEmpty()) item {
+        EmptyStateView(title = "No school notices", message = "Published announcements will appear here.")
+      }
       items(notices, key = { it.id }) { notice ->
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Row(

@@ -89,6 +89,15 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
+      val paymentMode by repository.dataMode.collectAsState()
+      val paymentUser by repository.currentUser.collectAsState()
+      LaunchedEffect(paymentMode, paymentUser.id) {
+        if (paymentMode == DataMode.SUPABASE_DEMO && paymentUser.id.isNotBlank() && paymentUser.role != UserRole.TEACHER) {
+          // Warm checkout resources while the signed-in user reviews the school app.
+          // Optional preload failure must not fabricate an order or block local demo.
+          runCatching { Checkout.preload(applicationContext) }
+        }
+      }
       ScholaTheme {
         ScholaErpApp(
           isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
@@ -128,7 +137,6 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
           put("theme.color",java.lang.String.format(java.util.Locale.US,"#%06X",ScholaTerracotta.toArgb() and 0xFFFFFF))
           put("prefill",JSONObject().apply { put("email",repository.currentUser.value.email) })
         }
-        Checkout.preload(applicationContext)
         val checkout=Checkout();checkout.setKeyID(order.key_id)
         paymentStatusMessage="Complete the test payment in secure checkout."
         checkout.open(this@MainActivity,options)
@@ -469,7 +477,19 @@ fun ScholaErpApp(
               if (amt == 0L) onCheckPayment(feeId)
             }
           },
-          onCheckRazorpay = onCheckPayment
+          onCheckRazorpay = { feeId ->
+            // Reconciliation can finish after checkout has closed. Reopen its
+            // receipt surface instead of updating an invisible modal + toast only.
+            val invoice = repository.invoices.value.firstOrNull { it.id == feeId }
+            if (invoice != null) {
+              onResetPayment()
+              paymentModalFeeId = feeId
+              paymentModalStudentName = invoice.studentName
+              paymentModalAmount = 0L
+              showFeePaymentModal = true
+              onCheckPayment(feeId)
+            }
+          }
         )
       }
 

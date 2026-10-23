@@ -151,6 +151,15 @@ fun WorkflowQuickPill(
 // 3. SECTION HEADER
 // ============================================================================
 @Composable
+fun WorkspaceHeading(title: String, description: String, action: (@Composable () -> Unit)? = null) {
+  Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    action?.invoke()
+  }
+}
+
+@Composable
 fun SectionHeader(
   title: String,
   modifier: Modifier = Modifier,
@@ -168,7 +177,8 @@ fun SectionHeader(
       text = title,
       style = MaterialTheme.typography.titleMedium,
       fontWeight = FontWeight.Bold,
-      color = MaterialTheme.colorScheme.onSurface
+      color = MaterialTheme.colorScheme.onSurface,
+      modifier = Modifier.weight(1f)
     )
     if (actionText != null && onActionClick != null) {
       TextButton(
