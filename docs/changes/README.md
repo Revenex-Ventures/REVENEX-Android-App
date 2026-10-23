@@ -1,3 +1,5 @@
+> This is the previous delivery summary. For the subsequent implemented UI/receipt fixes, exact latest APK source and actual checks, read [CURRENT_DELIVERY.md](../CURRENT_DELIVERY.md) and [SOURCE_RECONCILIATION.md](../SOURCE_RECONCILIATION.md). Historical 81/82-test statements below are not the latest result.
+
 # Revenex — changes from the assigned work
 
 Updated: 23 October 2026. This is an implementation/status summary, not a claim of production readiness. Current application source was tested at `b604edd`; subsequent commits update documentation and hosted setup evidence.

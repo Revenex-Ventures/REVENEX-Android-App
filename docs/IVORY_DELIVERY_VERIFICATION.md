@@ -1,3 +1,5 @@
+> Previous ivory delivery record. Superseded for the latest implementation/APK by [CURRENT_DELIVERY.md](CURRENT_DELIVERY.md). Retained as historical evidence; do not reuse its test count or APK hash for newer source.
+
 # Revenex ivory/orange delivery — 2026-10-23
 
 ## Delivered application

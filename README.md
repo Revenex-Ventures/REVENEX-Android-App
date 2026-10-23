@@ -1,3 +1,5 @@
+> Current implementation and APK: [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). Read [source reconciliation](docs/SOURCE_RECONCILIATION.md), [current screen/state checklist](docs/CURRENT_SCREEN_CHECKLIST.md) and [device payment acceptance](docs/DEVICE_PAYMENT_ACCEPTANCE.md) before older reports. This pass implements UI and receipt fixes beyond the prior b604edd build.
+
 > Latest changes (23 October 2026): [before/after summary, assigned work and remaining tasks](docs/changes/README.md). Supabase payment schema and Edge Function are now deployed, and the three server-secret names are configured. Signed-in checkout, capture and webhook delivery still require end-to-end verification; AI remains undeployed. Older endpoint audits are historical.
 
 > Current UI: warm ivory/white, charcoal and orange, with coordinated dark colors and persisted Light/Dark/System appearance (default Light). Compact dashboards, assignment cards, dated attendance, fee/receipt presentation, profiles, inbox and adaptive navigation use the shared design system. See the [current implementation checklist](docs/IVORY_REDESIGN_CHECKLIST.md) and [actual verification results](docs/IVORY_DELIVERY_VERIFICATION.md). Earlier teal and black/orange reports describe previous builds. Existing hosted school data was preserved.
@@ -96,9 +98,9 @@ Demo builds use checked-in public defaults from `secrets.defaults.properties` an
 
 ## Current checks and artifact
 
-The tested Android source is `b604edd`. [CI run 39963704791](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39963704791) passed the Android build, 81 tests, lint (0 errors / 69 warnings), Firebase dependency removal and APK secret-boundary checks. Local PostgreSQL/RLS checks: 105 passed. Mocked payment handler checks: 15 passed. These results do not prove a hosted payment transaction or complete physical-device acceptance.
+The latest tested application source is c29ecd226524ff608a6b944b18ad33660174eef0. [CI run 39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed **85 Android tests**, lint (0 errors / 69 warnings), Firebase removal and APK boundary gates, 105 PostgreSQL checks and 31 server handler tests. Historical 81/82 counts belong to earlier builds.
 
-Downloaded tested debug APK in this workspace: `app/build/revenex-ivory-release/app-debug.apk`. Fresh Gradle builds use `app/build/outputs/apk/debug/app-debug.apk`. Screenshot and SHA-256 evidence are listed in [the delivery report](docs/IVORY_DELIVERY_VERIFICATION.md).
+Downloaded latest APK: `app/build/final-delivery/apk/app-debug.apk`. Exact hash, final light/dark galleries and remaining device/payment blockers are in [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). A standard new local Gradle build still uses `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 📈 Next verification steps
 

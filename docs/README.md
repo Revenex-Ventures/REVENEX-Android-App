@@ -4,7 +4,7 @@ Project documentation and verification records. All documents here are written f
 
 ## Latest assigned work and actual outcome — 23 October 2026
 
-Start with [changes/README.md](changes/README.md) for the previous/current comparison, implemented screen changes, Supabase/Razorpay repairs, test results and unfinished work. This supersedes older teal/black-orange summaries and historical payment 404 observations for current status.
+Start with [CURRENT_DELIVERY.md](CURRENT_DELIVERY.md), [SOURCE_RECONCILIATION.md](SOURCE_RECONCILIATION.md) and [CURRENT_SCREEN_CHECKLIST.md](CURRENT_SCREEN_CHECKLIST.md). See [changes/README.md](changes/README.md) for the previous/current comparison, implemented screen changes, Supabase/Razorpay repairs, test results and unfinished work. This supersedes older teal/black-orange summaries and historical payment 404 observations for current status.
 
 - [IVORY_DELIVERY_VERIFICATION.md](IVORY_DELIVERY_VERIFICATION.md): tested APK, source commit, CI, actual rendered coverage and device/hosted limitations.
 - [IVORY_REDESIGN_CHECKLIST.md](IVORY_REDESIGN_CHECKLIST.md): current visual implementation ledger; full nested-state acceptance is not complete.

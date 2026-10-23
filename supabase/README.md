@@ -85,7 +85,7 @@ Choose **Auto Confirm User** when creating these synthetic demo users so no emai
 ## Verification & Troubleshooting
 
 - **Test Suite**: Run `npm ci --ignore-scripts --prefix supabase/tests`, then `npm test --prefix supabase/tests` to run the PostgreSQL/RLS checks against PGlite (105 passed in the redesign verification). This engine supplies test doubles for Supabase Auth/Storage schemas; it does not verify those hosted services or websocket delivery.
-- **Android verification**: Final `assembleDebug`, all 82 unit tests, and `lintDebug` passed (zero lint errors, 70 warnings). An isolated API 34 emulator verified installation, local administrator access and inbox read interaction (badge 2 to 1). See `docs/PROJECT_CHANGES_AND_STATUS.md` for exact evidence and hosted limitations.
+- **Historical Android verification (earlier build, not current ivory)**: Earlier `assembleDebug`, all 82 unit tests, and `lintDebug` passed (zero lint errors, 70 warnings). An isolated API 34 emulator verified installation, local administrator access and inbox read interaction (badge 2 to 1). See `docs/PROJECT_CHANGES_AND_STATUS.md` for exact evidence and hosted limitations.
 - **Unconfigured State**: If `supabase.local.properties` is missing or contains dummy keys, the app clearly alerts you that configuration is required, while preserving full functionality in **Local Demo** mode.
 - **Session Caches**: Cloud source data is cleared on sign-in/logout and repository collectors clear their cloud caches. This is covered by focused Android tests when they pass; see the status notes for the current result.
 
@@ -98,7 +98,7 @@ Then use two devices/emulators:
 
 1. Sign in as teacher on device A and parent on device B. Create an assignment for 10-A; confirm it appears on B without reopening the page and that B receives its own inbox row.
 2. Save a roll call, switch its session slot, save again and verify both records remain after sign-out/sign-in. Simulate network loss: no success banner should appear for an unconfirmed write; retry after reconnecting.
-3. Save draft marks. Student/parent must not see drafts. Publish the report; recheck access. Change term and verify distinct marks.
+3. Operator/API check: save draft marks, verify student/parent cannot read them, then publish and recheck. Change term and verify distinct marks. There is no reachable Android staff marks-entry/publication editor; do not present this as a completed in-app workflow.
 4. Attach a small PDF to a teacher assignment. Parent/student in that class should open it; a different school/session/account must be denied. Wait/re-sign links; durable references should continue working. Files are limited to 10 MB and PDF/PNG/JPEG/DOCX.
 5. Mark a parent notification read. Student's copy must remain unread. Verify inbox persists after signing in again.
 6. View fees. Without payment deployment, checkout must fail honestly and no fee balance may change. When enabled, test checkout must credit only after server-verified capture. No Android push permission, FCM token or Firebase configuration is needed.
@@ -109,7 +109,7 @@ Then use two devices/emulators:
 - Local demo remains the default. Supabase is opt-in and is not a production migration or an import of Firebase data.
 - SQL contains all nine requested roles. Android currently supports its existing principal/admin/teacher/student/parent dashboards; other roles fail sign-in clearly until dedicated routing is implemented. The seed provisions four separate accounts.
 - Enrollment is supported through the principal/admin form and migration 7; Auth account provisioning and parent links remain operator-managed. Library circulation and leave approval UI writes are not enabled; data reads come from PostgreSQL and unsupported actions fail rather than mutating local samples.
-- Android cannot directly credit fees. Optional Razorpay TEST checkout and server AI code exist, but their hosted endpoints returned 404 in the latest public check. Device push is not configured. See RAZORPAY_SETUP.md and ../docs/INTEGRATION_READINESS.md.
+- Android cannot directly credit fees. Razorpay TEST schema/function and correctly named secrets are now configured; unsigned user/webhook probes reject with 401/400. Captured checkout and webhook delivery remain unverified. AI remains undeployed. Device push is not configured. See RAZORPAY_SETUP.md and ../docs/SOURCE_RECONCILIATION.md.
 - Auth sessions stay in memory and can refresh while the app is running; process restart requires sign-in. No offline write queue is provided.
 - Live flows currently load the demo dataset into memory without pagination. Test reconnect/access changes explicitly; this design is for the small demo, not production scale. Re-sign in after changing roles/class membership from the dashboard.
 - Some existing UI headings describe the earlier demo cycle. Loaded record collections and financial balances in cloud mode come from Supabase; unsupported GPA/rank values are labelled unavailable.

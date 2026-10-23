@@ -1,10 +1,18 @@
 # Integration and page readiness — 2026-10-23
 
-## Pipeline
+## Current evidence
 
-Final redesign code passed run [39595174465](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39595174465): Android build, 82 tests (0 failures/skips), lint (0 errors, 70 warnings), APK boundary scan and server checks. Documentation revision de179ce also passed Android and server checks in run [39926187657](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39926187657). Deployment is separately gated to main, ENABLE_SUPABASE_DEPLOY=true and the supabase-demo environment. A successful build is not a deployment.
+Read [SOURCE_RECONCILIATION.md](SOURCE_RECONCILIATION.md) first. The starting source for the next implementation pass is b55a57c; the prior ivory APK was tested at b604edd with **81** Android tests (XML verified), lint 0 errors/69 warnings. New checks will be recorded separately.
 
-## Read-only hosted check
+Payment schema/RPCs and migrations 6–9 were applied without reseeding; the payment function is deployed. All three exact secret names are configured by the operator. Unsigned user POST returns handler 401; unsigned webhook returns 400 invalid signature. AI remains undeployed. Real capture/webhook/device verification remains pending.
+
+Realtime subscriptions **and** 30-second reconciliation are implemented together. Marks data methods exist; the reachable Scores view is read-only and there is no staff marks editor. Parents route to the shared student/family Home, not the separate unused parent dashboard component.
+
+## Historical pipeline evidence
+
+Earlier redesign code passed run [39595174465](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39595174465): Android build, 82 tests (0 failures/skips), lint (0 errors, 70 warnings), APK boundary scan and server checks. Documentation revision de179ce also passed Android and server checks in run [39926187657](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39926187657). Deployment is separately gated to main, ENABLE_SUPABASE_DEPLOY=true and the supabase-demo environment. A successful build is not a deployment.
+
+## Historical pre-repair hosted check
 
 Checked the locally configured demo project, without login, database writes, payment creation or model requests:
 
@@ -19,14 +27,9 @@ Checked the locally configured demo project, without login, database writes, pay
 
 Reproduce with `python scripts/check_integration_health.py`. It reads ignored public configuration and writes only endpoint status codes to `app/build/reports/integration-health.json`. 401 alone never proves a function is correctly configured.
 
-## Activation blockers
+## Remaining activation/acceptance work
 
-1. Operator must inspect applied migrations and apply missing numbered migrations 1–9 once, in order. Do not rerun seeds or reset existing school data. Payment/enrollment need 6–7; server AI needs 8; result notifications need 9.
-2. Deploy razorpay-payments and revenex-ai to the intended project using an authenticated Supabase operator/CI environment. No Supabase CLI or repository deployment secret was available in this check. Environment-scoped credentials were not inspected.
-3. Configure Razorpay TEST credentials and webhook secret directly in Supabase server secrets, following [payment setup](../supabase/RAZORPAY_SETUP.md). Never reuse chat-exposed secrets; replace them directly at the provider and configure their replacements server-side. No private value belongs in Android or Git.
-4. Complete authenticated two-account checks and a test checkout: server-confirmed capture, receipt, fee balance, pending-list removal, independent inbox read state, duplicate webhook/callback protection and failure handling. These are not established by the local tests.
-
-No real payment was attempted. Razorpay merchant/account status cannot be determined from the app publishable key.
+Do not reset or reseed the database or blindly rerun deployed migrations. SQL Editor changes do not automatically populate CLI migration history. Complete the signed-in test payment and real cross-account checks. AI deployment/model configuration remains separate; device push is not configured. Payment configuration presence and unsigned rejection do not establish valid provider credentials or successful capture.
 
 ## Pages
 
