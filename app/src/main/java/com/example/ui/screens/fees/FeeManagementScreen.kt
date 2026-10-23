@@ -274,6 +274,10 @@ fun FeeManagementScreen(
                 minHeight = 38.dp
               )
             } else {
+              Column(horizontalAlignment = Alignment.End) {
+              if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) {
+                TextButton(onClick = { onPayRazorpay(invoice.id, invoice.studentName, 0L) }) { Text("View receipt / status") }
+              }
               Surface(
                 shape = RoundedCornerShape(Radius.pill),
                 color = SemanticColors.successContainer
@@ -286,6 +290,7 @@ fun FeeManagementScreen(
                   Spacer(modifier = Modifier.width(4.dp))
                   Text("Settled in Full", color = SemanticColors.onSuccess, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
+              }
               }
             }
           }

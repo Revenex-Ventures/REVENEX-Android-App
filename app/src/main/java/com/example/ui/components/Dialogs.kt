@@ -379,7 +379,7 @@ fun AddStudentDialog(
             .height(50.dp)
             .testTag("submit_add_student_button"),
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
           enabled = !saving && name.isNotBlank() && parentName.isNotBlank() && classGrade.isNotBlank()
         ) {
           Icon(Icons.Default.PersonAdd, contentDescription = null)
@@ -665,7 +665,7 @@ fun AddTeacherDialog(
             .height(50.dp)
             .testTag("submit_add_teacher_button"),
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
           enabled = name.isNotBlank() && employeeId.isNotBlank()
         ) {
           Icon(Icons.Default.School, contentDescription = null)
@@ -1294,7 +1294,15 @@ fun FeePaymentDialog(
           .verticalScroll(rememberScrollState())
           .padding(20.dp)
       ) {
-        if (!paymentCompleted) {
+        if (!paymentCompleted && amountDue <= 0L) {
+          Text("Receipt & payment status", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+          Text(studentName, style = MaterialTheme.typography.bodyMedium)
+          Text(if (isProcessing) "Checking the school's verified payment record…" else statusMessage.ifBlank { "No verified receipt is loaded. Check status to retrieve your account's payment record." },
+            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = Spacing.md12))
+          if (isProcessing) LinearProgressIndicator(Modifier.fillMaxWidth())
+          onCheckStatus?.let { check -> TextButton(onClick = check, enabled = !isProcessing) { Text("Check payment status") } }
+          TextButton(onClick = onDismiss, enabled = !isProcessing) { Text("Close") }
+        } else if (!paymentCompleted) {
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1415,7 +1423,7 @@ fun FeePaymentDialog(
                 .height(50.dp)
                 .testTag("submit_fee_payment_button"),
               shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
+              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
             ) {
               Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.width(8.dp))
@@ -1487,7 +1495,7 @@ fun FeePaymentDialog(
                 .fillMaxWidth()
                 .height(48.dp),
               shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
+              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
             ) {
               Text("Done & View Updated Ledger", fontWeight = FontWeight.Bold)
             }

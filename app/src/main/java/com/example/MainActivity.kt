@@ -466,6 +466,7 @@ fun ScholaErpApp(
             } else {
               onResetPayment();paymentModalFeeId=feeId;paymentModalStudentName=name;paymentModalAmount=amt
               showFeePaymentModal=true
+              if (amt == 0L) onCheckPayment(feeId)
             }
           },
           onCheckRazorpay = onCheckPayment
