@@ -1,8 +1,8 @@
-> Current integration status: [pipeline, hosted endpoint checks and page readiness](docs/INTEGRATION_READINESS.md). Supabase Auth responds, but hosted payment/AI endpoints return 404; cloud payments are not active.
+> Latest changes (23 October 2026): [before/after summary, assigned work and remaining tasks](docs/changes/README.md). Supabase payment schema and Edge Function are now deployed, and the three server-secret names are configured. Signed-in checkout, capture and webhook delivery still require end-to-end verification; AI remains undeployed. Older endpoint audits are historical.
 
-> UI redesign: warm-white/ink/teal, coordinated light/dark palettes, persisted Light/Dark/System appearance, compact role navigation and confirmed form/inbox states. See the [screen/flow checklist](docs/REVENEX_REDESIGN_CHECKLIST.md) and [verification evidence](docs/REDESIGN_VERIFICATION.md). Local checks are distinguished from hosted acceptance; no hosted Supabase data was reset.
+> Current UI: warm ivory/white, charcoal and orange, with coordinated dark colors and persisted Light/Dark/System appearance (default Light). Compact dashboards, assignment cards, dated attendance, fee/receipt presentation, profiles, inbox and adaptive navigation use the shared design system. See the [current implementation checklist](docs/IVORY_REDESIGN_CHECKLIST.md) and [actual verification results](docs/IVORY_DELIVERY_VERIFICATION.md). Earlier teal and black/orange reports describe previous builds. Existing hosted school data was preserved.
 
-> Server AI and delivery update: [security architecture, activation and CI/CD](docs/SERVER_AI_AND_CICD.md). The supplied assistant prompt is server-only; Android sends text through Auth, and the backend derives every permission from school data. Live AI is unavailable until server secrets and migration 8 are configured. GitHub Actions builds the APK and gates optional Supabase function deployment on tests/lint/security checks.
+> Server AI and delivery: [security architecture, activation and CI/CD](docs/SERVER_AI_AND_CICD.md). The assistant prompt remains server-only, with backend-derived permissions. Migration 8 is now applied; the AI function/model configuration is still not deployed or verified. GitHub Actions builds and tests Android and server code; automatic deployment remains gated. The payment function was deployed manually after verification.
 
 # REVENEX SCHOOL ERP — ENTERPRISE EDITION
 
@@ -90,15 +90,21 @@ Build a fresh, updated debug APK reflecting current code changes:
 ```
 *Expected output after a successful build*: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Demo builds use checked-in public defaults from `secrets.defaults.properties` and Android's standard debug signing configuration. Configure the local Android SDK through `ANDROID_HOME` or ignored `local.properties`. Live Firebase services additionally require your project's ignored `app/google-services.json`. Keep all gateway and webhook secrets on the backend.
+Demo builds use checked-in public defaults from `secrets.defaults.properties` and Android's standard debug signing configuration. Configure the local Android SDK through `ANDROID_HOME` or ignored `local.properties`. Cloud demo services require project configuration in ignored `supabase.local.properties` (see `supabase.local.properties.example`). Keep all gateway and webhook secrets on the backend.
 
 ---
 
+## Current checks and artifact
+
+The tested Android source is `b604edd`. [CI run 39963704791](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39963704791) passed the Android build, 81 tests, lint (0 errors / 69 warnings), Firebase dependency removal and APK secret-boundary checks. Local PostgreSQL/RLS checks: 105 passed. Mocked payment handler checks: 15 passed. These results do not prove a hosted payment transaction or complete physical-device acceptance.
+
+Downloaded tested debug APK in this workspace: `app/build/revenex-ivory-release/app-debug.apk`. Fresh Gradle builds use `app/build/outputs/apk/debug/app-debug.apk`. Screenshot and SHA-256 evidence are listed in [the delivery report](docs/IVORY_DELIVERY_VERIFICATION.md).
+
 ## 📈 Next verification steps
 
-1. Apply the Supabase demo migrations, provision the four synthetic Auth accounts, then run the seed.
-2. Run the local hidden-password hosted verification script and the two-device workflow checklist from `supabase/README.md`.
-3. Verify live updates, private file access, offline errors and every supported role before replacing the local demo as the default.
-4. Design future secure server operations with Edge Functions after the demo is verified. Payments and device push are deferred.
+1. Existing hosted setup: four demo profiles are provisioned; the teacher Auth account is confirmed; missing migrations 6–9 have been applied. Do not rerun the seed or reset this database. SQL Editor application does not populate CLI migration history automatically.
+2. Complete a signed-in synthetic student/parent Razorpay test checkout, confirm captured receipt/balance, principal and payer inbox entries, cancellation/failure behavior and webhook replay. See [payment setup](supabase/RAZORPAY_SETUP.md).
+3. Run the hosted and two-device workflow checklist from [Supabase setup](supabase/README.md): assignments, draft/published marks, recipient-isolated read state, reconnect and account switching. Verify private files and honest offline errors.
+4. Finish nested dialog/form/keyboard, large-font, rotation and accessibility checks on actual devices. Device push remains unconfigured; the database inbox is not background push. Live payments and production accounting remain outside the verified demo scope.
 
-Firebase rule deployment and FCM setup are not part of the demo path.
+Firebase backend and SDKs have been retired; Supabase handles all cloud persistence, authentication, and security boundaries.
