@@ -9,13 +9,13 @@ Local PostgreSQL fixtures do not certify hosted Supabase Auth or Realtime transp
 
 ## Latest completed checks
 
-- Clean GitHub Actions run [39593259267](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39593259267) passed for redesign commit `10af549`: Android build, **82 tests, 0 failures/errors, 0 skipped**, lint **0 errors, 70 warnings**, APK boundary scan and server checks. Downloaded XML reports independently confirm these totals.
+- Clean GitHub Actions run [39595174465](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39595174465) passed for redesign commit `b5d1ea3`: Android build, **82 tests, 0 failures/errors, 0 skipped**, lint **0 errors, 70 warnings**, APK boundary scan and server checks. Downloaded XML reports independently confirm these totals.
 - PostgreSQL/PGlite schema and RLS fixtures: **105 passed**.
 - AI/payment Edge Function security tests: **31 passed**.
 - Working tree and Git history credential scan: passed.
 - Theme text-pair contrast test: at least 4.5:1 in both palettes.
 - CI deployment was skipped as intended on the review branch. No hosted database was reset or migrated.
-- A final copy refinement shortens phone navigation Attendance to Roll call and avoids unverified live-sync wording; its follow-up CI is tracked on the same PR.
+- The final verified revision includes shorter Roll call navigation, accessible parent fee status, honest sync wording and ContextWrapper-aware system-bar appearance.
 
 ## Commands
 
@@ -81,7 +81,7 @@ emulator without uninstalling the app. Screenshots are in
 ## Review artifacts and sources
 
 - Draft PR: https://github.com/Revenex-Ventures/REVENEX-Android-App/pull/11
-- Tested APK: `app/build/ci-redesign-apk/app-debug.apk` (downloaded from the green CI run above).
-- CI XML, lint and rendered images: `app/build/ci-redesign-reports/`.
+- Tested APK: `app/build/final-redesign-apk/app-debug.apk` (downloaded from the green CI run above).
+- CI XML, lint and rendered images: `app/build/final-redesign-reports/`.
 - The final CI images were inspected for phone navigation, attendance controls, student details, role contrast and narrow text wrapping. These are Robolectric Compose renders, distinct from the emulator checks above.
 - Official guidance used: [Compose Material 3](https://developer.android.com/develop/ui/compose/designsystems/material3), [Compose accessibility defaults](https://developer.android.com/develop/ui/compose/accessibility/api-defaults), [Android dark theme](https://developer.android.com/develop/ui/views/theming/darktheme), and [Supabase Kotlin streams](https://supabase.com/docs/reference/kotlin/stream).
