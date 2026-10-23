@@ -1,50 +1,44 @@
-# Current implementation delivery — 23 October 2026
+# Current implementation delivery — 24 October 2026
 
-Starting source: b55a57cae82ee8690011789729bf6cbdf3b5a927. Current implementation/test source: **c29ecd226524ff608a6b944b18ad33660174eef0**. Existing unrelated uncommitted README edits are preserved. See [source reconciliation](SOURCE_RECONCILIATION.md) for historical contradictions.
+Application/test source: **c79f4ae51e12b5e954b09f15f1afd7a2108d3a1c**, branch `codex/revenex-reference-redesign`, draft PR #11. [Successful CI 40017483953](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/40017483953). The actual PR merge artifact is `b11e20782fdeec7c4c7c1bb947cbca0c9a919015`. Later documentation-only commits do not change this APK's source.
 
-## Implemented, not just documented
+## Tested APK and reports
 
-- Added a direct Fee accounts action to the production shared student/parent Home; corrected parent screenshot fixtures to render that actual route.
-- Invoice buttons now say **Pay**, as requested. Test-mode disclosure stays in review; actual checkout still requires signed-in Supabase access and a server order.
-- Fixed Fees → Check payment status updating an invisible receipt modal. It now opens a lookup dialog before server reconciliation. A confirmed server result can replace lookup with the receipt; lookup cannot initiate a charge.
-- Moved optional Razorpay resource preload earlier for signed-in cloud payment-capable users, following the provider's Android sample. Local demo remains independent; no SDK/version change or performance guarantee.
-- Shared compact form headings, nine responsive field groups, accessible notice categories, growing multiline fields, semantic payment surfaces and wrapping receipt rows. Long dialogs now have explicit viewport-height bounds with safe-drawing/IME padding and scrolling.
-- Focused timetable/Scores and notice/audit headings; shorter accessible tabs; explicit empty scores/materials/exams/notices. Staff Scores remains read-only; no fabricated marks editor/publication workflow.
-- New nested render/interaction tests cover payment review, pending/error, fixture-confirmed receipt, notice/assignment/leave/faculty forms, a narrow 1.5-font notice flow and family payment navigation. Screenshot batching now waits for the intended state; tests guard dialog viewport overflow.
+- Exact APK: `D:/VS Code/Revenex Android/app/build/admin-upgrade-delivery/apk/app-debug.apk`.
+- Size: **25,913,832 bytes**.
+- SHA-256: **8A342532C1C5796B799D4B846C9DAF51D4EF1BC08ECD7439D6B757F7434139A0**.
+- This is the downloaded CI debug artifact, without re-signing or patching. DEX checks confirmed the new workspaces, marks/publication, faculty setup and family attendance markers. Debug signing may conflict with another installed build; preserve user data rather than uninstalling just to bypass a conflict.
+- Parsed **26 JUnit suites: 97 tests, 0 failures, 0 errors, 0 skipped**. Lint **0 errors / 69 warnings**.
+- Server CI: **111 PostgreSQL/PGlite permission/workflow checks**, **31 AI/payment handler tests**, Deno entrypoint/type/lint, dependency audit and credential/history scans passed. Handler payment dependencies are mocked; no paid model call or captured payment is implied.
+- Firebase dependency and APK private-configuration/server-prompt boundary gates passed. Automatic deployment was **skipped** by its branch/environment gate; migration 10 was applied manually as recorded below.
+- **90 rendered PNGs** in `app/build/admin-upgrade-delivery/verification/reports/redesign/`. Final light/dark nine-experience galleries, full-size admin/assignment screens, narrow large-font directory and representative staff review/family empty states were inspected. These are actual Compose/Robolectric renders with synthetic local data, not device captures.
+- Galleries: `app/build/admin-upgrade-delivery/light-experiences.png`, `dark-experiences.png`; actual previous/current comparisons: `before-after-light.png`, `before-after-dark.png`. Admin phone/tablet, marks forms and narrow states are in the matching verification folder. The previous images in comparisons are from the c29ecd2 delivery, not the user's physical phone.
 
-The [screen/state checklist](CURRENT_SCREEN_CHECKLIST.md) covers reachable groups and distinguishes composition work, shared treatment and remaining device checks. The four supplied references guided the hierarchy and component choices; no new framework/library was introduced.
+CI command:
+```sh
+./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Proborazzi.test.record=true assembleDebug testDebugUnitTest lintDebug verifyNoFirebaseDependencies --console=plain
+```
+Local commands also run: focused directory tests and Kotlin compile passed; `npm test --prefix supabase/tests` passed 111; `node --test supabase/tests/assistant-edge.test.mjs supabase/tests/razorpay-edge.test.mjs` passed 31. A later slow local Android render run was interrupted and is not counted as a pass.
 
-## Verification
 
-The intermediate implementation at 0824287 passed CI 39980412425: 85 Android tests, zero failures/errors/skips; lint 0 errors/69 warnings; 82 rendered images; server security/policy and APK boundary checks passed. It was superseded after inspection found dialog-height overflow. Final viewport-bounded build results are appended below after completion; do not use the intermediate APK as the final artifact. The first viewport-test run failed on an ambiguous single-root test lookup (activity plus dialog); it was corrected to assert bounds on every root without removing the guard.
+Read [implemented changes and hosted evidence](ADMIN_UPGRADE_DELIVERY.md), [every reachable route/state checklist](CURRENT_SCREEN_CHECKLIST.md), [admin module matrix](ADMIN_REFERENCE_MATRIX.md), and [device payment steps](DEVICE_PAYMENT_ACCEPTANCE.md).
 
-Five focused local tests passed on an interim working tree. That local subset does not establish final-commit acceptance. Final screenshots are Robolectric/Compose renders using synthetic fixtures, not physical-device screenshots or actual captured-payment evidence. Native keyboard, TalkBack, rotation, gesture navigation, all nested report/certificate states and true device appearance restart remain unverified.
+The app now includes the reference-led admin work queue, categorized searchable directory, shared role-aware command palette, compact family dashboard, searchable attendance with no fabricated family drafts, filtered assignments and inbox, fee balance/history, a reachable staff marks editor/publication flow and server-confirmed administrator leave decisions. Existing reports, attachments, admission, navigation, appearance and Supabase connections remain. Cloud faculty setup and library circulation explain their actual limits.
 
-## Final passing build and artifact
+Migration 10 is deployed; all public tables retain RLS. Hosted rollback-only database acceptance passed private drafts, linked-family publication, replay safety and independent inbox reads. Temporary marks and notification counts were both zero afterwards. This does not replace Android/Auth/Realtime acceptance.
 
-CI [39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed the final source **c29ecd226524ff608a6b944b18ad33660174eef0**. Downloaded XML confirms **85 tests, 0 failures/errors/skips**, lint **0 errors / 69 warnings**. Server security/policy (105 PostgreSQL checks and 31 AI/payment handler tests), dependency and APK secret-boundary gates passed; automated deployment was skipped by its configured gate.
+Payment audit: **one order, zero paid orders, zero receipts**. The payment service rejects unsigned callers; the historical 404 is repaired. No captured TEST payment, real webhook replay or device receipt/balance/principal-inbox acceptance has been established. No callback alone credits fees.
 
-Latest APK (exact local path): `D:/VS Code/Revenex Android/app/build/final-delivery/apk/app-debug.apk`.
-Bytes: **25,831,912**.
-SHA-256: **5511E6CBD30C816D926F033CA9B2B54E672ABAA32830E5187ECB46D43FDB70A8**.
-Confirmed the actual APK contains the new family fee navigation and payment-review UI markers. This is the downloaded tested CI APK, not a newly signed substitute.
+No Android device was connected during this pass. Physical keyboard/gesture/rotation/TalkBack and appearance process-restart/System changes remain device acceptance. In-app notifications are distinct from unconfigured device push. Hosted AI remains undeployed. See the admin matrix for unsupported product modules rather than treating directory breadth as completed workflows.
 
-Final evidence: `app/build/final-delivery/verification/` contains the JUnit/lint reports and **82 rendered PNGs**. Nine required experiences (principal, teacher, student, parent, attendance, assignments, fees, inbox, settings) were inspected in final light/dark galleries. Final assignment, narrow 1.5-font notice and receipt fixtures were also inspected full-size; dialog captures fit their 786×1704 or 640×1280 viewport, and bounds assertions pass. Gallery files: `app/build/final-delivery/light-experiences.png` and `dark-experiences.png`. These are rendered Compose evidence, not physical-device screenshots. Receipt fixtures remain explicitly synthetic.
+## Hosted proof and next device step
 
-## Hosted payment findings (read-only audit)
+Hosted evidence files: `app/build/reports/admin-upgrade/migration10-success.png`, `staff-rpcs-ready.png`, `hosted-staff-acceptance.png`, `rollback-clean.png`, `payment-counts.png`. Migration 10 installed the three staff RPCs; the rollback script passed and both temporary-row counts were zero afterwards. No previous migration, seed or school record was reset.
 
-The previously missing payment schema/function are deployed, exact secret names are configured and unsigned user/webhook requests reject with 401/400. Read-only hosted audit found one provider-bound created order and zero paid orders/receipts. The user reports slow method loading inside Razorpay and no receipt. No captured settlement has been established. This is later than the historical 404 failure; order creation exists, while checkout completion/provider capture/server verification remain the next acceptance boundary.
+On the device: Supabase Demo → sign in with the existing synthetic student/parent → Home **Fee accounts** → Pending → **Pay** → review TEST mode → complete the provider's official mock Success flow → return in the same account → **Check payment status**. Verify receipt/balance/Paid history, then principal inbox. Provider webhook capture/replay and cancellation/failure acceptance still require device/operator interaction. No device was attached for this run.
 
-Receipt fixture screenshots prove only presentation. Local database/provider-mock tests cover invalid signatures, pending/failure/capture and duplicate-safe settlement; hosted callback plus webhook replay is still unverified. No fee has been marked paid based on a callback or user report. No reset, reseed, migration replay or permission weakening occurred in this pass.
+Optional hosted administrator login needs an operator-created Auth identity and a protected ADMIN profile for the existing school/session; the Android client does not provision or promote accounts. Local Demo has a distinct School Administrator entry.
 
-Read [device payment acceptance](DEVICE_PAYMENT_ACCEPTANCE.md). The next device action is to complete an official **test** Success flow, return to Revenex and use Check payment status; then confirm receipt/balance and principal/family inbox persistence. Real webhook delivery/replay requires operator inspection in the provider test dashboard. The [read-only SQL audit](../supabase/payment_acceptance_readonly.sql) exposes aggregate counts only.
+## Repository handoff
 
-## Remaining blockers
-
-- No captured test transaction, receipt, balance update, principal notification or hosted duplicate replay has been observed end to end.
-- Android staff marks entry/publication is still missing; backend methods/policies are not a reachable editor.
-- True two-account Android assignment/inbox/read-isolation/reconnect/logout flow needs device acceptance. Realtime subscriptions and 30-second reconciliation coexist in source; neither is proof of measured device delivery.
-- Hosted AI remains undeployed; device push is unconfigured. Unsupported faculty/profile/operator mutations, library/leave/certificate workflows and production payment/accounting scope remain as documented.
-- Debug signing may conflict with another installed build. Preserve user data; production signing and distribution are separate work.
-
-Sources: [Razorpay official preload sample](https://github.com/razorpay/razorpay-android-sample-app/blob/master/app/src/main/java/com/razorpay/sampleapp/java/PaymentActivity.java), [official test payment details](https://github.com/razorpay/markdown-docs/blob/master/payments/payments/test-card-details.md), current source and actual CI/XML/render/SQL evidence.
+The final implementation is pushed to the existing draft PR; no main merge was performed. Unrelated local README edits were preserved. Windows retained a lock from a hung staging process; its process was interrupted and an isolated Git index (`.git/revenex-delivery-index`) was used. The normal index is synchronized to committed work after backing it up; no working files were reset. If the OS still holds `.git/index.lock`, close/restart the host before normal staging rather than deleting an active process's lock. The temporary index remains a safe task-specific staging fallback.

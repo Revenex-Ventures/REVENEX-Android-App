@@ -1,3 +1,5 @@
+> Current application upgrade: read [ADMIN_UPGRADE_DELIVERY.md](../docs/ADMIN_UPGRADE_DELIVERY.md) and [CURRENT_DELIVERY.md](../docs/CURRENT_DELIVERY.md) for the implemented admin/family layouts, staff marks/publication, reviewed leave decisions, exact tested APK and current evidence. The 23 October counts below are historical.
+
 # app/
 
 The main Android application module for the REVENEX School ERP.

@@ -1,3 +1,5 @@
+> Current 24 October upgrade: [implementation and evidence](ADMIN_UPGRADE_DELIVERY.md), [exact APK/build results](CURRENT_DELIVERY.md), [admin module matrix](ADMIN_REFERENCE_MATRIX.md), and [screen checklist](CURRENT_SCREEN_CHECKLIST.md). Staff marks/publication and administrator leave decisions are now implemented through migration 10. Older sections below describe historical deliveries.
+
 # docs/
 
 Project documentation and verification records. All documents here are written for developers, operators, and contributors.

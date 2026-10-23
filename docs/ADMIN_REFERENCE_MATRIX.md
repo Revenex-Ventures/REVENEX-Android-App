@@ -16,9 +16,9 @@ Attendance reference controls: Attendance, Machine Attendance, Holiday Record, W
 |---|---|---|
 | Navigation | Searchable role-filtered directory in six groups; inbox, scoped search, profile, ordinary destinations and context actions | UI visibility is not authorization; backend policies remain authoritative |
 | Admin home | Scoped students/faculty, outstanding invoices, pending leave, today's recorded registers, activity, working shortcuts | No invented admission queue or predicted attendance percentage |
-| Admissions / people | Existing enrolment RPC, duplicate validation, student directory/detail, class allocation on admission | Auth provisioning and guardian relinking require trusted operator workflow; cloud faculty writes unsupported |
-| Academics | Existing timetable, assignments/submissions, resources, examinations and report views | No timetable allocation editor, scholarship, class-test bank or question-bank workflow |
-| Marks | Existing RLS and source read/write/publication methods | Staff editor/publication remains to be implemented and verified; family draft protection must remain |
+| Admissions / people | Existing enrolment RPC, duplicate validation, student directory/detail, class allocation on admission; cloud faculty setup now explains operator provisioning before opening an unsupported local form | Auth provisioning and guardian relinking require trusted operator workflow; cloud faculty writes unsupported |
+| Academics | Existing timetable, filtered assignments/submissions, resources, examinations, staff marks workspace and report views | No timetable allocation editor, scholarship, class-test bank or question-bank workflow |
+| Marks | Existing RLS and source read/write/publication methods | Results now exposes private save/review/publication/unpublication; migration 10 and hosted rollback-only permission/replay/read-isolation acceptance passed. Android end-to-end/Auth/Realtime transport still needs device acceptance |
 | Attendance | Class/date/session register, bulk actions, confirmed save, loaded historical review and overview | Historical correction, staff register, configurable holidays and device ingestion not implemented |
 | Fees | Invoice balance/list, TEST checkout, server capture/signature validation, status lookup and receipt UI | Real test capture/receipt acceptance pending; no structures, next-year fee configuration, concessions, expenses/vouchers or offline collection workflow |
 | Communication | Notices, persistent recipient inbox, read state; Realtime plus 30-second reconciliation | Real two-device cross-account delivery/reconnect still needs acceptance; no background push/SMS/email configured |
@@ -30,10 +30,10 @@ Attendance reference controls: Attendance, Machine Attendance, Holiday Record, W
 
 ## Verification ledger for this increment
 
-- [ ] Focused directory role/search tests.
-- [ ] New admin/directory rendered light/dark, phone/tablet/large text interaction.
-- [ ] All Android build/test/lint gates and backend regression tests.
-- [ ] Latest APK path, source commit and SHA-256 recorded in delivery notes.
+- [x] Focused directory role/search tests; full final Android suite: 97 passed.
+- [x] Admin and directory rendered in both palettes, 800dp tablet and 320dp/1.5-font interaction; final images inspected.
+- [x] CI 40017483953: build/tests/lint/security passed; 111 database checks and 31 handler tests passed.
+- [x] Exact c79f4ae APK path, SHA-256 and merge artifact recorded in CURRENT_DELIVERY.md.
 - [ ] Hosted captured TEST payment, persisted receipt/balance/inbox and duplicate replay.
 
 Older delivery artifacts and their test counts remain historical evidence. They do not verify this increment.

@@ -1,3 +1,5 @@
+> 24 October audit: one synthetic order, zero paid orders, zero receipts. The app now has a balance summary and recorded payment history; a client success screen is still insufficient evidence of capture. No Android device is currently connected. The steps below require the payer's device interaction.
+
 # Device Razorpay TEST checkout and receipt verification
 
 No real payment details, private keys, OTPs, tokens or passwords should be sent in chat. Use an existing synthetic Supabase parent/student account and an existing outstanding demo invoice. Do not reset/reseed or alter paid fees to repeat a test.
@@ -15,7 +17,7 @@ No real payment details, private keys, OTPs, tokens or passwords should be sent 
 1. Install the latest verified APK listed in the delivery report; retain data if signatures match. Sign in via **Supabase Demo** with the synthetic student or parent account.
 2. Home → **Fee accounts · invoices & receipts**. Older APK: Resources/Notes → Fee Accounts. Choose **Pending** and note the invoice balance locally.
 3. Tap **Pay**. Confirm the review identifies TEST mode and the expected invoice amount. Payment-method details are handled by Razorpay, not Revenex.
-4. Use only the provider's [official test details](https://github.com/razorpay/markdown-docs/blob/master/payments/payments/test-card-details.md). Complete the mock Success flow yourself. Do not use real card/UPI credentials. Available test methods depend on the provider's test checkout.
+4. Use the provider's current [Android test-integration instructions](https://razorpay.com/docs/payments/payment-gateway/android-integration/standard/integration-steps/). If Netbanking is listed, choose a listed test bank and complete the mock **Success** page yourself; test mode does not send you to the real bank login. Use only official test details for other supported methods. Do not use real card/UPI credentials. Method availability remains provider-controlled.
 5. Return to Revenex in the **same account that started checkout**. Wait for server verification. Only a captured/verified server response may display the receipt. If pending/interrupted, use **Check payment status**; do not immediately start another charge. The current status lookup filters orders by the signed-in payer; switching to another linked family account does not transfer that order.
 6. Confirm a receipt number, payment ID and amount are displayed. Confirm the balance changes and the invoice moves from Pending to Paid. Reopen Paid → View receipt/status, then sign out/in and confirm persistence.
 7. Sign in as principal: check the matching student's payment inbox entry. Parent/student copies should have independent read states. Report only sanitized status/error text if something fails.
