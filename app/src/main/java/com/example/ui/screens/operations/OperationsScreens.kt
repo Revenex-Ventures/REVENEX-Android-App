@@ -66,7 +66,7 @@ fun OperationsHubScreen(
     HubModule("Results", "Available student reports", Icons.Default.Assessment, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.ReportCard.route, allRoles),
     HubModule("Settings & profile", "Appearance, security and account", Icons.Default.Settings, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, Screen.Profile.route, allRoles),
     HubModule("My faculty profile", "Personal and professional details", Icons.Default.Person, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.TeacherProfile.route, setOf(UserRole.TEACHER)),
-    HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Students.route, adminOnly),
+    HubModule("Student Directory", "Admissions and student details", Icons.Default.Groups, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Students.route, adminOnly),
     HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Teachers.route, adminOnly),
     HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Attendance.route, allRoles),
     HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.PARENT, UserRole.STUDENT)),
@@ -139,38 +139,17 @@ fun OperationsHubScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = CardDefaults.outlinedCardBorder()
           ) {
-            Column(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(44.dp)
-                  .background(mod.bgColor, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = mod.icon,
-                  contentDescription = null,
-                  tint = mod.iconTint,
-                  modifier = Modifier.size(24.dp)
-                )
+            Row(Modifier.fillMaxWidth().padding(Spacing.md12),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+              Box(Modifier.size(40.dp).background(mod.bgColor, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {
+                Icon(mod.icon, null, tint = mod.iconTint, modifier = Modifier.size(22.dp))
               }
-              Spacer(modifier = Modifier.height(12.dp))
-              Text(
-                text = mod.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-              )
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                text = mod.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                maxLines = 2
-              )
+              Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+                Text(mod.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(mod.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
           }
         }
