@@ -488,7 +488,7 @@ fun SimpleProgressRing(
 ) {
   val animProgress = remember { Animatable(0f) }
   LaunchedEffect(progress) {
-    animProgress.animateTo(progress.coerceIn(0f, 1f), tween(800, easing = FastOutSlowInEasing))
+    animProgress.snapTo(progress.coerceIn(0f, 1f))
   }
   CircularProgressIndicator(
     progress = { animProgress.value },

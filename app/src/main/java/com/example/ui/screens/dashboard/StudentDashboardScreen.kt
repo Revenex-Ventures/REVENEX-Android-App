@@ -389,12 +389,15 @@ private data class HeroStat(
 
 @Composable
 private fun HeroStatStrip(stats: List<HeroStat>) {
-  Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+  Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
     stats.forEach { stat ->
-      Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() }, color = MaterialTheme.colorScheme.onSurface.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall)
-        Text(stat.value, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        stat.badgeText?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall) }
+      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() },
+          modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodySmall)
+        Text(stat.value, color = MaterialTheme.colorScheme.onSurface,
+          style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
       }
     }
   }

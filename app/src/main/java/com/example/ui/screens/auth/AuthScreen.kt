@@ -79,15 +79,15 @@ fun AuthScreen(
       Spacer(modifier = Modifier.height(12.dp))
 
       Text(
-        text = "REVENEX SCHOOL ERP",
-        style = MaterialTheme.typography.headlineMedium,
+        text = "Welcome to Revenex",
+        style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
         letterSpacing = 1.sp
       )
 
       Text(
-        text = "One Digital Operating System For The Entire School",
+        text = "Your school day, organized.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
         textAlign = TextAlign.Center
@@ -151,12 +151,12 @@ fun AuthScreen(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = Elev.e1)
       ) {
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(20.dp)
+            .padding(Spacing.lg16)
         ) {
           if (dataMode == DataMode.DEMO) {
             // ========== DEMO MODE: Quick Role Selector ==========
