@@ -44,6 +44,7 @@ fun AttendanceScreen(
 ) {
   val students by repository.students.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
+  val canEdit = currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
   val classAttendanceMap by repository.classAttendance.collectAsState()
 
   val cohorts = students.map { "Grade ${it.classGrade}-${it.division}" }.distinct().sorted()
@@ -85,9 +86,9 @@ fun AttendanceScreen(
     record.date == selectedDate && record.sessionSlot == selectedSessionSlot &&
       classStudents.firstOrNull()?.let { it.classGrade == record.classGrade && it.division == record.division } == true
   }
-  val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord, selectedDate) {
+  val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord, selectedDate, canEdit) {
     mutableStateMapOf<String, AttendanceStatus>().apply {
-      classStudents.filter { editingToday || savedRecord != null }.forEach { st ->
+      classStudents.filter { (editingToday && canEdit) || savedRecord != null }.forEach { st ->
         put(st.id, savedRecord?.studentList?.firstOrNull { it.studentId == st.id }?.status ?: AttendanceStatus.PRESENT)
       }
     }
@@ -143,7 +144,7 @@ fun AttendanceScreen(
             }
           }
 
-          AppButton(
+          if (canEdit) AppButton(
             text = if (saving) "Saving attendance…" else "Save attendance · $presentCount present, $absentCount absent",
             onClick = {
               showSuccessNotification = false
@@ -173,7 +174,7 @@ fun AttendanceScreen(
             modifier = Modifier
               .fillMaxWidth()
               .testTag("submit_save_attendance")
-          )
+          ) else Text("Only saved school attendance appears here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
     }
@@ -222,7 +223,7 @@ fun AttendanceScreen(
                 color = SemanticColors.warningContainer
               ) {
                 Text(
-                  text = if (savedRecord != null) "Saved register" else if (editingToday) "Unsaved" else "No record",
+                  text = if (savedRecord != null) "Saved register" else if (editingToday && canEdit) "Unsaved draft" else "No record",
                   color = SemanticColors.onWarning,
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
@@ -324,10 +325,10 @@ fun AttendanceScreen(
           Modifier.padding(top = Spacing.sm8), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
       // 3. STUDENT ROLL CALL CARDS
-      if (!editingToday && savedRecord == null) item {
+      if (savedRecord == null && (!editingToday || !canEdit)) item {
         EmptyStateView(title = "No register loaded", message = "No saved attendance is available for this class, date and session.")
       }
-      items(if (editingToday || savedRecord != null) visibleStudents else emptyList(), key = { it.id }) { student ->
+      items(if ((editingToday && canEdit) || savedRecord != null) visibleStudents else emptyList(), key = { it.id }) { student ->
         val currentStatus = rollCallMap[student.id] ?: AttendanceStatus.PRESENT
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

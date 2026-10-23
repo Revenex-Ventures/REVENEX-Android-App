@@ -14,6 +14,7 @@ import com.example.data.repository.ErpDataRepository
 import com.example.ui.navigation.Screen
 import com.example.ui.components.GlobalCommandPaletteModal
 import com.example.ui.screens.academics.StaffMarksWorkspace
+import com.example.ui.screens.attendance.AttendanceScreen
 import com.example.ui.screens.operations.OperationsHubScreen
 import com.example.ui.theme.ScholaTheme
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -105,5 +106,22 @@ class AdminWorkflowUiTest {
     compose.onNodeWithTag("command_palette_search_field").performTextInput("Fee accounts")
     compose.onNodeWithText("Fee accounts").performClick()
     assertEquals(Screen.Fees.route, destination)
+  }
+
+  @Test fun familyNeverSeesAnUnsavedRegisterAsPresent() {
+    val repository = repository(UserRole.STUDENT)
+    val cohort = repository.students.value.first { student ->
+      repository.classAttendance.value.values.none { it.classGrade == student.classGrade && it.division == student.division }
+    }
+    var dark by mutableStateOf(false)
+    compose.setContent { ScholaTheme(dark) { Surface(Modifier.fillMaxSize()) {
+      AttendanceScreen(repository, cohort.classGrade, cohort.division, {})
+    } } }
+    compose.onNodeWithText("No register loaded").performScrollTo().assertExists()
+    compose.onNodeWithTag("btn_present_${cohort.rollNumber}").assertDoesNotExist()
+    compose.onNodeWithTag("submit_save_attendance").assertDoesNotExist()
+    capture("family_attendance_empty_light")
+    compose.runOnIdle { dark = true }
+    capture("family_attendance_empty_dark")
   }
 }
