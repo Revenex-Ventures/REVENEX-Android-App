@@ -631,7 +631,14 @@ fun ScholaErpApp(
     )
   }
 
-  if (showAddTeacherDialog) {
+  if (showAddTeacherDialog && dataMode == DataMode.SUPABASE_DEMO) {
+    androidx.compose.material3.AlertDialog(
+      onDismissRequest = { showAddTeacherDialog = false },
+      title = { Text("Faculty setup") },
+      text = { Text("Teacher accounts and faculty provisioning are operator-managed in this cloud demo. No record has been created. Use the school operator setup to provision an account and its authorized class links.") },
+      confirmButton = { androidx.compose.material3.TextButton(onClick = { showAddTeacherDialog = false }) { Text("Close") } }
+    )
+  } else if (showAddTeacherDialog) {
     val teachersList by repository.teachers.collectAsState()
     AddTeacherDialog(
       existingEmployeeIds = teachersList.map { it.employeeId },
