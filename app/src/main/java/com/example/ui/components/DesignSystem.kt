@@ -187,13 +187,31 @@ fun ScholaFloatingDock(
   onItemSelected: (String) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  NavigationBar(modifier = modifier.clip(RoundedCornerShape(Radius.lg)).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg)), containerColor = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e0,
-    windowInsets = WindowInsets(0, 0, 0, 0)) {
-    items.forEach { item ->
-      val selected = currentRoute == item.route
-      NavigationBarItem(alwaysShowLabel = LocalDensity.current.fontScale <= 1.3f, colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary), selected = selected, onClick = { onItemSelected(item.route) },
-        icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
-        label = { Text(if (item.label == "Attendance") "Roll call" else item.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) })
+  val largeText = LocalDensity.current.fontScale > 1.3f
+  fun destinationLabel(label: String): String = when (label) {
+    "Attendance" -> "Roll call"
+    "Admissions" -> "Students"
+    "Homework" -> "Tasks"
+    "Resources" -> "Notes"
+    "Timetable" -> "Schedule"
+    else -> label
+  }
+  Column(modifier.clip(RoundedCornerShape(Radius.lg)).background(MaterialTheme.colorScheme.surface)
+    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))) {
+    if (largeText) Text(destinationLabel(items.firstOrNull { it.route == currentRoute }?.label.orEmpty()),
+      style = MaterialTheme.typography.labelLarge,
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md12, vertical = Spacing.xs4))
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e0,
+      windowInsets = WindowInsets(0, 0, 0, 0)) {
+      items.forEach { item ->
+        val selected = currentRoute == item.route
+        NavigationBarItem(colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+          selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
+          selected = selected, onClick = { onItemSelected(item.route) },
+          icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
+          label = if (largeText) null else { { Text(destinationLabel(item.label), style = MaterialTheme.typography.labelSmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) } })
+      }
     }
   }
 }

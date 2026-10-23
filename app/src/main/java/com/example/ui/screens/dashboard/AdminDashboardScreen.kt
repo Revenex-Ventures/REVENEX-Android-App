@@ -50,7 +50,7 @@ import com.example.ui.navigation.Screen
 import com.example.ui.theme.GlassBgTransparent
 import com.example.ui.theme.ScholaGold
 
-import com.example.ui.theme.ScholaSlateNavy
+import com.example.ui.theme.MaterialTheme.colorScheme.onSurface
 
 import com.example.ui.theme.SemanticColors
 import com.example.ui.theme.Spacing
@@ -93,12 +93,12 @@ fun AdminDashboardScreen(
   val overdueInvoices = invoices.count { it.status.name == "OVERDUE" }
   val modules = listOf(
     AdminModule("Admissions", "Student records and enrolment", Icons.Default.Groups, Screen.Students.route, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer),
-    AdminModule("Faculty", "Staff directory and workloads", Icons.Default.School, Screen.Teachers.route, ScholaSlateNavy, MaterialTheme.colorScheme.secondaryContainer),
+    AdminModule("Faculty", "Staff directory and workloads", Icons.Default.School, Screen.Teachers.route, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.secondaryContainer),
     AdminModule("Academic setup", "Periods, classes and timetables", Icons.Default.CalendarMonth, Screen.Timetable.route, ScholaGold, SemanticColors.warningContainer),
     AdminModule("Attendance", "Registers and exception review", Icons.Default.FactCheck, Screen.Attendance.route, SemanticColors.onSuccess, SemanticColors.successContainer),
     AdminModule("Finance", "Dues, receipts and reconciliation", Icons.Default.AccountBalanceWallet, Screen.Fees.route, MaterialTheme.colorScheme.onPrimaryContainer, MaterialTheme.colorScheme.primaryContainer),
     AdminModule("Communication", "Notices and recipient delivery", Icons.Default.Campaign, Screen.Notices.route, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer),
-    AdminModule("Assets", "Library, transport and inventory", Icons.Default.Inventory, Screen.Inventory.route, ScholaSlateNavy, MaterialTheme.colorScheme.secondaryContainer),
+    AdminModule("Assets", "Library, transport and inventory", Icons.Default.Inventory, Screen.Inventory.route, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.secondaryContainer),
     AdminModule("Reports", "Operational review and exports", Icons.Default.Analytics, Screen.Reports.route, ScholaGold, SemanticColors.warningContainer)
   )
 
@@ -151,7 +151,7 @@ fun AdminDashboardScreen(
               categoryLabel = "Faculty profiles",
               statCounter = teachers.size.toString(),
               icon = Icons.Default.School,
-              iconTint = ScholaSlateNavy,
+              iconTint = MaterialTheme.colorScheme.onSurface,
               iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
               deltaText = "Directory",
               modifier = Modifier.weight(1f),
@@ -161,7 +161,7 @@ fun AdminDashboardScreen(
               categoryLabel = "Timetable slots",
               statCounter = timetable.size.toString(),
               icon = Icons.Default.CalendarMonth,
-              iconTint = ScholaGold,
+              iconTint = SemanticColors.onWarning,
               iconContainerColor = SemanticColors.warningContainer,
               deltaText = "Configured",
               modifier = Modifier.weight(1f),
@@ -222,14 +222,14 @@ fun AdminDashboardScreen(
           SectionHeader(title = "Access and change control")
           AppCard(modifier = Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.Security, contentDescription = null, tint = ScholaSlateNavy)
+              Icon(Icons.Default.Security, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
               Spacer(modifier = Modifier.width(Spacing.s3))
               Column(modifier = Modifier.weight(1f)) {
                 Text("Role grants are server controlled", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(
                   "Supabase policies and backend authorization decide access. Every operational change should be recorded in the audit trail.",
                   style = MaterialTheme.typography.bodySmall,
-                  color = ScholaSlateNavy.copy(alpha = 0.72f)
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
                 )
               }
               StatusBadge("Policy enforced")
@@ -252,7 +252,7 @@ fun AdminDashboardScreen(
               AppCard(modifier = Modifier.fillMaxWidth()) {
                 Text(log.actionSummary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(Spacing.xs4))
-                Text(log.actorName, style = MaterialTheme.typography.bodySmall, color = ScholaSlateNavy.copy(alpha = 0.7f))
+                Text(log.actorName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
               }
               Spacer(modifier = Modifier.height(Spacing.s2))
             }
