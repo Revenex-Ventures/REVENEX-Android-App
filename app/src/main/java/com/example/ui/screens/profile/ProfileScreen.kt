@@ -121,7 +121,7 @@ fun ProfileScreen(
           SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8)) {
             Appearance.entries.forEachIndexed { index, option ->
               SegmentedButton(
-                colors = SegmentedButtonDefaults.colors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer, selectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+                colors = SegmentedButtonDefaults.colors(activeContainerColor = MaterialTheme.colorScheme.primaryContainer, activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
                 selected = appearance?.selection == option,
                 onClick = { appearance?.select(option) },
                 shape = SegmentedButtonDefaults.itemShape(index, Appearance.entries.size)
