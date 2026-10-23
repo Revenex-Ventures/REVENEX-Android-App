@@ -173,7 +173,7 @@ fun FeeManagementScreen(
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.Bold,
               color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-              modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+              modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = 6.dp)
             )
           }
         }
@@ -382,7 +382,7 @@ fun ScholaPaymentCollectionDialog(
                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = 6.dp)
               )
             }
           }

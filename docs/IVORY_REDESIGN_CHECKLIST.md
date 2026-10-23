@@ -10,12 +10,16 @@ Implemented in this increment:
 - [x] Attendance dated register identity, persistent confirmed/error save feedback.
 - [x] Fee balance labels and exact rupee totals rather than truncated thousands.
 - [x] Existing Light/Dark/System persistence retained.
-- [ ] Inspect new renders and refine before claiming completion.
-- [ ] Continue composition review: authentication, five dashboards, student/teacher directories/details, profile/settings, reports, timetable, notices/inbox, AI/search, operations, dialogs/forms/sheets and all important states.
-- [ ] Complete Razorpay stage-by-stage diagnosis after UI implementation. Existing 404 deployment blockers are not fixed by UI work.
+- [x] Inspect 5 portal pairs and 23 secondary entry pairs; refine cramped large-font navigation and dark metric/report icon contrast.
+- [x] Review rendered entry states: authentication, five dashboards, student/teacher directories/details, profile/settings, reports, timetable, notices/inbox, AI/search, operations and admission dialog.
+- [ ] Independently exercise every nested form/sheet/error/keyboard state and physical-device accessibility traversal.
+- [x] Trace Razorpay stages and add sanitized client errors; 15 mocked-provider tests pass.
+- [ ] Activate the missing hosted payment relation/function and verify real test checkout (operator authentication/secrets required; no private values requested in chat).
 
 Full reachable route inventory remains in REVENEX_REDESIGN_CHECKLIST.md. A semantic theme pass is not proof of all-screen composition completion.
 
 Second increment implemented: grouped full-width profile contact fields (large-text friendly), honest missing personal data, inbox category/unread metadata, school/user context in shared top bar, compact authentication heading and restrained login elevation, stacked scholar metrics instead of three cramped columns. Existing navigation, dialogs, settings, reports and operations inherit semantic surfaces but still require final rendered review.
 
 Razorpay diagnosis: local demo guard retained; Supabase checkout reaches the order-creation path. Hosted checks on this run: Auth 200, students/fees 401, razorpay_orders 404, razorpay-payments 404. Exact remote blocker is stage 3 (deployment), before provider order creation. No secret inspection or authenticated transaction was possible. Client now maps safe HTTP statuses to actionable errors and never displays private server response text. Local payment-handler suite: 15 passed; actual capture/cancellation/webhook delivery remain unverified. SQL and provider security behavior were preserved.
+
+Rendered evidence: app/build/ivory-reports/reports/redesign (including review contact sheets). CI 39958915171 passed commit 68cc400: 80 Android tests, 0 failures/skips; lint 0 errors/69 warnings. Later visual refinements run the same gates before final artifact delivery. Appearance selection remains persisted Light/Dark/System, default Light. No new framework or dependency was introduced.
