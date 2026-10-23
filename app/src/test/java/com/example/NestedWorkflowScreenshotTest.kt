@@ -34,8 +34,11 @@ class NestedWorkflowScreenshotTest {
   private fun capture(name: String) {
     val resources = org.robolectric.RuntimeEnvironment.getApplication().resources
     val viewportHeight = resources.configuration.screenHeightDp * resources.displayMetrics.density
-    val renderedHeight = compose.onRoot().fetchSemanticsNode().size.height
-    assertTrue("Dialog exceeds viewport: $renderedHeight > $viewportHeight", renderedHeight <= viewportHeight)
+    // Dialogs and their host activity each expose a root; verify both.
+    compose.onAllNodes(isRoot()).fetchSemanticsNodes().forEach { root ->
+      val renderedHeight = root.size.height
+      assertTrue("Dialog exceeds viewport: $renderedHeight > $viewportHeight", renderedHeight <= viewportHeight)
+    }
     File("build/reports/redesign/nested").mkdirs()
     compose.onRoot().captureRoboImage("build/reports/redesign/nested/$name.png")
   }
