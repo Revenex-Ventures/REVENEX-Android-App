@@ -184,5 +184,40 @@ await check('repeated result publication does not duplicate inbox entries',async
  await as('teacher',"update marks set published=true where id='mark1'");
  assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent+1);
 });
+await check('draft RPC rejects family and wrong school',async()=>{
+ await denied('parent',"select save_draft_mark('demo_student','RPC Term','Math',70,100)");
+ await denied('other',"select save_draft_mark('demo_student','RPC Term','Math',70,100)");
+});
+await check('draft save stays private, upserts and validates scores',async()=>{
+ await as('teacher',"select save_draft_mark('demo_student','RPC Term','Math',70,100)");
+ await as('teacher',"select save_draft_mark('demo_student','RPC Term','Math',71,100)");
+ assert.equal((await as('student',"select * from marks where term='RPC Term'")).length,0);
+ assert.equal((await as('teacher',"select obtained from marks where term='RPC Term'"))[0].obtained,71);
+ await denied('teacher',"select save_draft_mark('demo_student','RPC Term','Math',101,100)");
+});
+await check('publication RPC is replay safe and blocks editing published terms',async()=>{
+ await as('teacher',"select set_result_publication('demo_student','RPC Term',true)");
+ const count=(await as('student',"select * from notifications where category='EXAMS'")).length;
+ await as('teacher',"select set_result_publication('demo_student','RPC Term',true)");
+ assert.equal((await as('student',"select * from notifications where category='EXAMS'")).length,count);
+ assert.equal((await as('parent',"select * from marks where term='RPC Term'")).length,1);
+ await denied('teacher',"select save_draft_mark('demo_student','RPC Term','English',70,100)");
+ await as('teacher',"select set_result_publication('demo_student','RPC Term',false)");
+ assert.equal((await as('student',"select * from marks where term='RPC Term'")).length,0);
+});
+await check('leave owners cannot approve themselves',async()=>{
+ await as('parent',`insert into leave_requests(id,school_id,session_id,payload) values('decision_fixture','revenex_demo','demo_2026','{"status":"PENDING"}')`);
+ await assert.rejects(()=>as('parent',`update leave_requests set payload='{"status":"APPROVED"}' where id='decision_fixture'`),e=>e.code==='P0001');
+ await denied('parent',"select decide_leave('decision_fixture','APPROVED','')");
+ await denied('other',"select decide_leave('decision_fixture','APPROVED','')");
+});
+await check('admin leave decision persists and notifies once',async()=>{
+ const before=(await as('parent',"select * from notifications where category='LEAVE'")).length;
+ await as('admin',"select decide_leave('decision_fixture','APPROVED','Approved by school')");
+ await as('admin',"select decide_leave('decision_fixture','APPROVED','Approved by school')");
+ assert.equal((await as('parent',"select payload from leave_requests where id='decision_fixture'"))[0].payload.status,'APPROVED');
+ assert.equal((await as('parent',"select * from notifications where category='LEAVE'")).length,before+1);
+ await denied('admin',"select decide_leave('decision_fixture','REJECTED','Changed')");
+});
 console.log(`${passed} PostgreSQL schema/RLS checks passed. Auth/Storage service/Realtime transport require hosted verification.`);
 await db.close();
