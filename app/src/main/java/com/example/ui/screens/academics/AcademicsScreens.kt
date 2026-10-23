@@ -324,7 +324,8 @@ fun HomeworkScreen(
       item { EmptyStateView(title = "No matching assignments", message = "Change the subject or pending filter to see other work.") }
     } else {
       items(filteredAssignments, key = { it.id }) { hw ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
+        var expanded by remember(hw.id) { mutableStateOf(false) }
+        AppCard(modifier = Modifier.fillMaxWidth().testTag("assignment_details_${hw.id}"), onClick = { expanded = !expanded }) {
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
             Surface(color = SemanticColors.lavenderContainer, shape = RoundedCornerShape(Radius.pill)) {
@@ -334,13 +335,12 @@ fun HomeworkScreen(
             Spacer(Modifier.weight(1f))
             ScholaPillBadge(status = hw.submissionStatus)
           }
-          Text(hw.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-          var expanded by remember(hw.id) { mutableStateOf(false) }
-          if (expanded) Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          TextButton(onClick = { expanded = !expanded }, modifier = Modifier.testTag("assignment_details_${hw.id}")) {
-            Text(if (expanded) "Hide instructions" else "View instructions")
-            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(hw.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+              contentDescription = if (expanded) "Hide instructions" else "View instructions", tint = MaterialTheme.colorScheme.primary)
           }
+          if (expanded) Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
           Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Text("Due ${hw.dueDate} · Class ${hw.classGrade}-${hw.division}",

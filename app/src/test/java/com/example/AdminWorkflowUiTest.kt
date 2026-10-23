@@ -14,6 +14,7 @@ import com.example.data.repository.ErpDataRepository
 import com.example.ui.navigation.Screen
 import com.example.ui.components.GlobalCommandPaletteModal
 import com.example.ui.screens.academics.StaffMarksWorkspace
+import com.example.ui.screens.academics.HomeworkScreen
 import com.example.ui.screens.attendance.AttendanceScreen
 import com.example.ui.screens.operations.OperationsHubScreen
 import com.example.ui.theme.ScholaTheme
@@ -120,8 +121,19 @@ class AdminWorkflowUiTest {
     compose.onNodeWithText("No register loaded").performScrollTo().assertExists()
     compose.onNodeWithTag("btn_present_${cohort.rollNumber}").assertDoesNotExist()
     compose.onNodeWithTag("submit_save_attendance").assertDoesNotExist()
+    compose.onNodeWithText("Mark all present").assertDoesNotExist()
     capture("family_attendance_empty_light")
     compose.runOnIdle { dark = true }
     capture("family_attendance_empty_dark")
+  }
+
+  @Test fun compactAssignmentCardExpandsItsActualInstructions() {
+    val repository = repository(UserRole.STUDENT)
+    val assignment = repository.assignments.value.first { it.instructions.isNotBlank() }
+    compose.setContent { ScholaTheme(false) { Surface(Modifier.fillMaxSize()) { HomeworkScreen(repository, {}) } } }
+    compose.onNodeWithText(assignment.instructions).assertDoesNotExist()
+    compose.onNodeWithTag("assignment_details_${assignment.id}").performScrollTo().performClick()
+    compose.onNodeWithText(assignment.instructions).assertExists()
+    compose.onNodeWithText("Mark submitted").assertExists()
   }
 }

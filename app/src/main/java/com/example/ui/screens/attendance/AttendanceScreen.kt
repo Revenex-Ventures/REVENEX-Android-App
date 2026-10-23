@@ -305,7 +305,7 @@ fun AttendanceScreen(
             item { ScholaPillBadge(status = "$absentCount Absent") }
             item { ScholaPillBadge(status = "$excusedCount Excused") }
           }
-          TextButton(modifier = Modifier.align(Alignment.End), enabled = editingToday && !saving &&
+          if (canEdit) TextButton(modifier = Modifier.align(Alignment.End), enabled = editingToday && !saving &&
             currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER), onClick = {
               classStudents.forEach { rollCallMap[it.id] = AttendanceStatus.PRESENT }
               showSuccessNotification = false
@@ -321,7 +321,7 @@ fun AttendanceScreen(
         OutlinedTextField(studentQuery, { studentQuery = it }, Modifier.fillMaxWidth().testTag("register_search"),
           label = { Text("Search name, roll or admission number") }, singleLine = true,
           leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.input))
-        Text("${visibleStudents.size} of ${classStudents.size} students · Save applies to the entire class",
+        Text(if (canEdit) "${visibleStudents.size} of ${classStudents.size} students · Save applies to the entire class" else "Saved records for the selected date and session",
           Modifier.padding(top = Spacing.sm8), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
       // 3. STUDENT ROLL CALL CARDS
