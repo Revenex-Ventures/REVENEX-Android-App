@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -105,6 +106,7 @@ fun AddStudentDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
         .padding(vertical = Spacing.sm8),
@@ -437,6 +439,7 @@ fun AddTeacherDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
         .padding(vertical = Spacing.sm8),
@@ -702,6 +705,7 @@ fun CreateNoticeDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
         .padding(vertical = Spacing.sm8),
@@ -890,6 +894,7 @@ fun CreateAssignmentDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
         .padding(vertical = Spacing.sm8),
@@ -1116,6 +1121,7 @@ fun ApplyLeaveDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
         .padding(vertical = Spacing.sm8),
@@ -1250,6 +1256,7 @@ fun FeePaymentDialog(
       modifier = Modifier
         .widthIn(max = 600.dp)
         .fillMaxWidth(0.94f)
+        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .imePadding()
         .padding(vertical = Spacing.sm8),
