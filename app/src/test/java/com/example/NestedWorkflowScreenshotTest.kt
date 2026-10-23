@@ -58,6 +58,19 @@ class NestedWorkflowScreenshotTest {
     } } }
     for (palette in listOf(false,true)) names.forEachIndexed { index,name ->
       compose.runOnIdle { state=index; dark=palette }
+      compose.waitForIdle()
+      val expected = when(index) {
+        0 -> "Review test payment"
+        1 -> "Verifying capture with the school payment server…"
+        2 -> "Payment could not be verified. Check status before trying again."
+        3 -> "Payment Received Successfully!"
+        4 -> "Publish a notice"
+        5 -> "New assignment"
+        6 -> "Request leave"
+        else -> "Add faculty member"
+      }
+      compose.onNodeWithText(expected).assertExists()
+      compose.waitForIdle()
       if(index == 0) compose.onNodeWithText("Verified receipt").assertDoesNotExist()
       if(index == 1) compose.onNodeWithTag("submit_fee_payment_button").assertDoesNotExist()
       capture("${name}_${if(palette) "dark" else "light"}")

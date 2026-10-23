@@ -75,6 +75,7 @@ class SecondaryScreensScreenshotTest {
     File("build/reports/redesign/secondary").mkdirs()
     for (appearance in listOf(false,true)) samples.forEachIndexed { index, sample ->
       compose.runOnIdle { selected=index; dark=appearance }
+      compose.waitForIdle()
       compose.onRoot().captureRoboImage("build/reports/redesign/secondary/${sample.name}_${if(appearance) "dark" else "light"}.png")
     }
   }

@@ -1364,7 +1364,7 @@ fun FeePaymentDialog(
           Spacer(modifier = Modifier.height(16.dp))
 
           Text("Choose an available payment method in Razorpay secure checkout.", style=MaterialTheme.typography.bodySmall)
-          if (statusMessage.isNotBlank()) Text(statusMessage, style=MaterialTheme.typography.bodySmall)
+          if (statusMessage.isNotBlank() && !isProcessing) Text(statusMessage, style=MaterialTheme.typography.bodySmall)
           if (!isProcessing && onCheckStatus != null) TextButton(onClick=onCheckStatus) { Text("Check payment status") }
           Spacer(modifier = Modifier.height(20.dp))
 
