@@ -50,7 +50,6 @@ import com.example.ui.navigation.Screen
 import com.example.ui.theme.GlassBgTransparent
 import com.example.ui.theme.ScholaGold
 
-import com.example.ui.theme.MaterialTheme.colorScheme.onSurface
 
 import com.example.ui.theme.SemanticColors
 import com.example.ui.theme.Spacing
