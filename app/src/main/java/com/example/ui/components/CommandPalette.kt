@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.data.model.UserRole
+import com.example.ui.screens.operations.WorkspaceDirectory
 import com.example.data.model.Student
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.navigation.Screen
@@ -47,27 +49,23 @@ fun GlobalCommandPaletteModal(
   onTriggerAction: (String) -> Unit
 ) {
   val students by repository.students.collectAsState()
+  val currentUser by repository.currentUser.collectAsState()
   var query by remember { mutableStateOf("") }
 
   val palette = MaterialTheme.colorScheme
-  val defaultActions = remember(palette) {
-    listOf(
-      PaletteAction("Executive Dashboard", "WORKSPACE", Icons.Default.Dashboard, palette.primary, Screen.Dashboard.route),
-      PaletteAction("Scholars Directory (Student 360)", "WORKSPACE", Icons.Default.People, palette.primary, Screen.Students.route),
-      PaletteAction("Attendance Matrix (Roll Call)", "WORKSPACE", Icons.Default.HowToReg, palette.primary, Screen.Attendance.route),
-      PaletteAction("Bursar & Financial Ledger", "WORKSPACE", Icons.Default.AccountBalanceWallet, palette.primary, Screen.Fees.route),
-      PaletteAction("Academic Timetable & Slots", "WORKSPACE", Icons.Default.CalendarMonth, palette.primary, Screen.Timetable.route),
-      PaletteAction("Student Profile & Reports", "WORKSPACE", Icons.Default.Person, palette.primary, Screen.ReportCard.route),
-      PaletteAction("Official Circulars & Broadcasts", "WORKSPACE", Icons.Default.Campaign, palette.primary, Screen.Notices.route),
-      PaletteAction("Operations & Leave Hub", "WORKSPACE", Icons.Default.Apps, palette.primary, Screen.OperationsHub.route),
-
-      // Quick Actions
-      PaletteAction("Take Morning Roll Call", "ACTION", Icons.Default.FactCheck, palette.primary, Screen.Attendance.route),
-      PaletteAction("Enroll New Scholar", "ACTION", Icons.Default.PersonAdd, palette.primary, onAction = { onTriggerAction("admit_student") }),
-      PaletteAction("Collect Tuition Payment", "ACTION", Icons.Default.Payment, palette.primary, Screen.Fees.route),
-      PaletteAction("Publish Institutional Notice", "ACTION", Icons.Default.EditNote, palette.primary, onAction = { onTriggerAction("create_notice") }),
-      PaletteAction("Assign STEM Homework", "ACTION", Icons.Default.Assignment, palette.primary, onAction = { onTriggerAction("create_assignment") })
-    )
+  val defaultActions = buildList {
+    add(PaletteAction("Home", "WORKSPACE", Icons.Default.Home, palette.primary, Screen.Dashboard.route))
+    WorkspaceDirectory.visible(currentUser.role).forEach { destination ->
+      add(PaletteAction(destination.title, destination.area.label, Icons.Default.Apps, palette.primary, destination.route))
+    }
+    add(PaletteAction("All school workspaces", "WORKSPACE", Icons.Default.Apps, palette.primary, Screen.OperationsHub.route))
+    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+      add(PaletteAction("Enrol student", "ACTION", Icons.Default.PersonAdd, palette.primary, onAction = { onTriggerAction("admit_student") }))
+      add(PaletteAction("Publish notice", "ACTION", Icons.Default.Campaign, palette.primary, onAction = { onTriggerAction("create_notice") }))
+    }
+    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)) {
+      add(PaletteAction("Create assignment", "ACTION", Icons.Default.Assignment, palette.primary, onAction = { onTriggerAction("create_assignment") }))
+    }
   }
 
   val filteredActions = remember(query, defaultActions) {

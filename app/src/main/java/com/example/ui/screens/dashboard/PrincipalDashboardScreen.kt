@@ -92,7 +92,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 100) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(title = "Quick actions")
+          SectionHeader(horizontalPadding = 0.dp, title = "Quick actions")
           LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
@@ -142,7 +142,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 200) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(title = "School at a glance")
+          SectionHeader(horizontalPadding = 0.dp, title = "School at a glance")
 
           // Row 1: Active Scholars & Daily Attendance
           Row(
@@ -285,7 +285,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 300) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(
+          SectionHeader(horizontalPadding = 0.dp, 
             title = "Cohort Attendance Analytics",
             actionText = "Full Matrix",
             onActionClick = { onNavigateTo(Screen.Attendance.route) }
@@ -309,7 +309,7 @@ fun PrincipalDashboardScreen(
     item {
       AnimatedFadeIn(delayMillis = 350) {
         Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(
+          SectionHeader(horizontalPadding = 0.dp, 
             title = "Real-Time Institutional Audit Stream",
             actionText = "Audit Hub",
             onActionClick = { onNavigateTo(Screen.Notices.route) }

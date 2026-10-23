@@ -77,7 +77,7 @@ fun AdminDashboardScreen(
     }
     item {
       Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        SectionHeader("Quick actions")
+        SectionHeader(horizontalPadding = 0.dp, title = "Quick actions")
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
           item { WorkflowQuickPill("Enrol student", Icons.Default.PersonAdd, onShowAddStudent, isHighlighted = true) }
           item { WorkflowQuickPill("Add faculty", Icons.Default.School, onShowAddTeacher) }
@@ -87,7 +87,7 @@ fun AdminDashboardScreen(
     }
     item {
       Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        SectionHeader("Needs attention")
+        SectionHeader(horizontalPadding = 0.dp, title = "Needs attention")
         AdminWorkRow("Unpaid invoices", "$unpaid invoices with an outstanding balance", Icons.Default.AccountBalanceWallet,
           onClick = { onNavigateTo(Screen.Fees.route) })
         AdminWorkRow("Leave requests", "$pendingLeave awaiting a decision", Icons.Default.EventBusy,
@@ -98,7 +98,7 @@ fun AdminDashboardScreen(
     }
     item {
       Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        SectionHeader("Manage the school", actionText = "All modules", onActionClick = { onNavigateTo(Screen.OperationsHub.route) })
+        SectionHeader(horizontalPadding = 0.dp, title = "Manage the school", actionText = "All modules", onActionClick = { onNavigateTo(Screen.OperationsHub.route) })
         val shortcuts = listOf(
           Triple("People & admissions", "Student and faculty records", Screen.Students.route),
           Triple("Academic schedule", "Classes and periods", Screen.Timetable.route),
@@ -116,7 +116,7 @@ fun AdminDashboardScreen(
     }
     item {
       Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        SectionHeader("Recent activity", actionText = "Audit history", onActionClick = { onNavigateTo(Screen.Notices.route) })
+        SectionHeader(horizontalPadding = 0.dp, title = "Recent activity", actionText = "Audit history", onActionClick = { onNavigateTo(Screen.Notices.route) })
         if (auditLogs.isEmpty()) Text("No recorded activity is available.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         auditLogs.take(3).forEach { log ->
           Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {

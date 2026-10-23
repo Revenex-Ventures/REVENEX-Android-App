@@ -211,7 +211,7 @@ fun TimetableScreen(
     } else {
       // TAB 2: GRADEBOOK & GPA
       item {
-        SectionHeader(title = "Accessible assessment scores (${gradebookEntries.size})")
+        SectionHeader(horizontalPadding = 0.dp, title = "Accessible assessment scores (${gradebookEntries.size})")
       }
 
       if (gradebookEntries.isEmpty()) item {
@@ -311,12 +311,12 @@ fun HomeworkScreen(
 
     item {
       LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        item { FilterChip(subjectFilter.isBlank(), { subjectFilter = "" }, { Text("All subjects") }) }
-        items(subjects) { subject -> FilterChip(subjectFilter == subject, { subjectFilter = subject }, { Text(subject) }) }
+        item { SchoolFilterChip(subjectFilter.isBlank(), { subjectFilter = "" }, { Text("All subjects") }) }
+        items(subjects) { subject -> SchoolFilterChip(subjectFilter == subject, { subjectFilter = subject }, { Text(subject) }) }
       }
       Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text("${filteredAssignments.size} assignments", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FilterChip(pendingOnly, { pendingOnly = !pendingOnly }, { Text("Pending only") })
+        SchoolFilterChip(pendingOnly, { pendingOnly = !pendingOnly }, { Text("Pending only") })
       }
     }
     submissionError?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
@@ -428,7 +428,7 @@ fun ExamsScreen(repository: ErpDataRepository) {
     }
     schedules.forEach { sched ->
       item {
-        SectionHeader(title = "${sched.title} (${sched.term})")
+        SectionHeader(horizontalPadding = 0.dp, title = "${sched.title} (${sched.term})")
       }
       items(sched.subjects) { subj ->
         AppCard(modifier = Modifier.fillMaxWidth()) {

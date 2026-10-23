@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.EmptyStateView
+import com.example.ui.components.SchoolFilterChip
 import com.example.ui.theme.Spacing
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -73,7 +74,7 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
         OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Find student or class") }, enabled = !busy, singleLine = true)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
           items(students.filter { it.name.contains(query, true) || it.fullClass.contains(query, true) }, key = { it.id }) { candidate ->
-            FilterChip(student?.id == candidate.id, { selectedId = candidate.id; feedback = null },
+            SchoolFilterChip(student?.id == candidate.id, { selectedId = candidate.id; feedback = null },
               { Text("${candidate.name} · ${candidate.fullClass}") }, enabled = !busy)
           }
         }
@@ -81,10 +82,10 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
       item {
         Text(student!!.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         OutlinedTextField(term, { term = it; feedback = null }, Modifier.fillMaxWidth().testTag("marks_term"),
-          label = { Text("Term / assessment") }, enabled = !busy, singleLine = true)
+          label = { Text("Term / assessment") }, isError = term.length > 80, enabled = !busy, singleLine = true)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
           items(reports.filter { it.studentId == student.id }.map { it.term }.distinct()) { savedTerm ->
-            FilterChip(term == savedTerm, { term = savedTerm; feedback = null }, { Text(savedTerm) }, enabled = !busy)
+            SchoolFilterChip(term == savedTerm, { term = savedTerm; feedback = null }, { Text(savedTerm) }, enabled = !busy)
           }
         }
       }
@@ -97,14 +98,14 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
       }
       item {
         val editable = !busy && report?.published != true
-        OutlinedTextField(subject, { subject = it }, Modifier.fillMaxWidth().testTag("marks_subject"), label = { Text("Subject") }, enabled = editable, singleLine = true)
+        OutlinedTextField(subject, { subject = it }, Modifier.fillMaxWidth().testTag("marks_subject"), label = { Text("Subject") }, isError = subject.length > 120, enabled = editable, singleLine = true)
         Spacer(Modifier.height(Spacing.sm8))
-        OutlinedTextField(obtained, { obtained = it }, Modifier.fillMaxWidth().testTag("marks_obtained"), label = { Text("Marks obtained") }, enabled = editable,
+        OutlinedTextField(obtained, { obtained = it }, Modifier.fillMaxWidth().testTag("marks_obtained"), label = { Text("Marks obtained") }, isError = obtained.isNotBlank() && (score == null || score < 0 || (total != null && score > total)), enabled = editable,
           keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
         Spacer(Modifier.height(Spacing.sm8))
-        OutlinedTextField(maximum, { maximum = it }, Modifier.fillMaxWidth().testTag("marks_maximum"), label = { Text("Maximum marks") }, enabled = editable,
+        OutlinedTextField(maximum, { maximum = it }, Modifier.fillMaxWidth().testTag("marks_maximum"), label = { Text("Maximum marks") }, isError = maximum.isNotBlank() && (total == null || total !in 1..10000), enabled = editable,
           supportingText = { Text("0 ≤ obtained ≤ maximum · Maximum 10,000") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-        Button(modifier = Modifier.fillMaxWidth().testTag("save_draft_mark"), enabled = editable && term.isNotBlank() && subject.isNotBlank() && score != null && total != null && total in 1..10000 && score in 0..total,
+        Button(modifier = Modifier.fillMaxWidth().testTag("save_draft_mark"), enabled = editable && term.trim().length in 1..80 && subject.trim().length in 1..120 && score != null && total != null && total in 1..10000 && score in 0..total,
           onClick = { perform("Draft save confirmed.") { repository.saveMarksConfirmed(student!!.id, term, subject, score!!, total!!) } }) { Text(if (busy) "Saving…" else "Save private draft") }
       }
       if (report != null) item {

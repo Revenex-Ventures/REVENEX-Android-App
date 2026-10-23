@@ -164,12 +164,13 @@ fun SectionHeader(
   title: String,
   modifier: Modifier = Modifier,
   actionText: String? = null,
-  onActionClick: (() -> Unit)? = null
+  onActionClick: (() -> Unit)? = null,
+  horizontalPadding: Dp = Spacing.s4
 ) {
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = Spacing.s4, vertical = Spacing.s2),
+      .padding(horizontal = horizontalPadding, vertical = Spacing.s2),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically
   ) {
@@ -471,4 +472,13 @@ fun SchoolDocumentButton(reference: String, label: String = "Open document") {
     }) { Text(if(opening) "Opening…" else label) }
     if(error) Text("Document could not be opened. Check access and connection, then retry.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
   }
+}
+
+/** Selected filters share the same orange identity as navigation and actions. */
+@Composable
+fun SchoolFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Unit,
+  modifier: Modifier = Modifier, enabled: Boolean = true) {
+  FilterChip(selected = selected, onClick = onClick, label = label, modifier = modifier, enabled = enabled,
+    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+      selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer))
 }

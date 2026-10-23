@@ -129,7 +129,7 @@ fun FeeManagementScreen(
 
     // 3. LEDGER INVOICE CARDS
     item {
-      SectionHeader(title = "Invoices · $selectedFilter (${filteredInvoices.size})")
+      SectionHeader(horizontalPadding = 0.dp, title = "Invoices · $selectedFilter (${filteredInvoices.size})")
     }
 
     if (filteredInvoices.isEmpty()) {
@@ -243,7 +243,7 @@ fun FeeManagementScreen(
         }
       }
     }
-    item { SectionHeader(title = "Payment history") }
+    item { SectionHeader(horizontalPadding = 0.dp, title = "Payment history") }
     val history = feeRecords.flatMap { fee -> fee.transactions.map { fee to it } }
     if (history.isEmpty()) item {
       Text("No recorded payments. A receipt appears only after server-confirmed capture.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import com.example.data.model.LeaveStatus
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
+import com.example.ui.components.SchoolFilterChip
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.StatusBadge
@@ -73,8 +74,8 @@ fun OperationsHubScreen(
     }
     item {
       androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        item { FilterChip(selectedArea == null, { selectedArea = null }, { Text("All") }) }
-        items(availableAreas) { area -> FilterChip(selectedArea == area.name, { selectedArea = area.name }, { Text(area.label) }) }
+        item { SchoolFilterChip(selectedArea == null, { selectedArea = null }, { Text("All") }) }
+        items(availableAreas) { area -> SchoolFilterChip(selectedArea == area.name, { selectedArea = area.name }, { Text(area.label) }) }
       }
     }
     if (query.isBlank() && selectedArea == null) item {
@@ -379,6 +380,7 @@ fun TransportScreen(
       }
     }
 
+    if (routes.isEmpty()) item { EmptyStateView("No accessible transport routes", "Route records appear here when configured and available to your school account.") }
     items(routes, key = { it.id }) { route ->
       Card(
         modifier = Modifier.fillMaxWidth(),
@@ -458,6 +460,7 @@ fun LibraryScreen(
   repository: ErpDataRepository
 ) {
   val books by repository.libraryBooks.collectAsState()
+  val cloudMode = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
 
   LazyColumn(
     modifier = Modifier
@@ -466,6 +469,11 @@ fun LibraryScreen(
     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(10.dp)
   ) {
+    item {
+      Text("School library", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+      Text(if (cloudMode) "Catalogue and availability. Borrower tracking and circulation are not enabled for this cloud demo." else "Local sample catalogue and circulation preview.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (books.isEmpty()) item { EmptyStateView("No books available", "The school catalogue has no accessible records yet.") }
     items(books, key = { it.id }) { book ->
       Card(
         modifier = Modifier.fillMaxWidth(),
@@ -513,7 +521,9 @@ fun LibraryScreen(
             )
           }
 
-          if (book.availableCopies > 0) {
+          if (cloudMode) {
+            Text("Catalogue", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          } else if (book.availableCopies > 0) {
             OutlinedButton(
               onClick = { repository.issueBook(book.id) },
               contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
@@ -547,6 +557,11 @@ fun InventoryScreen(
     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(10.dp)
   ) {
+    item {
+      Text("School inventory", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+      Text("Recorded assets, quantities and locations", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (inventory.isEmpty()) item { EmptyStateView("No assets recorded", "No inventory records are available for this school session.") }
     items(inventory, key = { it.id }) { item ->
       Card(
         modifier = Modifier.fillMaxWidth(),

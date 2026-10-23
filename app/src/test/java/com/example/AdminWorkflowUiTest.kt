@@ -12,6 +12,7 @@ import com.example.data.datasource.DataMode
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.navigation.Screen
+import com.example.ui.components.GlobalCommandPaletteModal
 import com.example.ui.screens.academics.StaffMarksWorkspace
 import com.example.ui.screens.operations.OperationsHubScreen
 import com.example.ui.theme.ScholaTheme
@@ -92,5 +93,17 @@ class AdminWorkflowUiTest {
     capture("directory_tablet_light")
     compose.runOnIdle { dark = true }
     capture("directory_tablet_dark")
+  }
+
+  @Test fun familyCommandPaletteUsesRoleScopedDirectory() {
+    val repository = repository(UserRole.PARENT)
+    var destination = ""
+    compose.setContent { ScholaTheme(false) { GlobalCommandPaletteModal(repository, {}, { destination = it }, {}) } }
+    compose.onNodeWithTag("command_palette_search_field").performTextInput("Enrol")
+    compose.onNodeWithText("Enrol student").assertDoesNotExist()
+    compose.onNodeWithTag("command_palette_search_field").performTextClearance()
+    compose.onNodeWithTag("command_palette_search_field").performTextInput("Fee accounts")
+    compose.onNodeWithText("Fee accounts").performClick()
+    assertEquals(Screen.Fees.route, destination)
   }
 }

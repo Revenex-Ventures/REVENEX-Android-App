@@ -218,7 +218,7 @@ fun NoticesScreen(
     } else {
       // TAB 2: PARENT BROADCASTS
       item {
-        SectionHeader(title = "Published Official Circulars (${notices.size})")
+        SectionHeader(horizontalPadding = 0.dp, title = "Published Official Circulars (${notices.size})")
       }
 
       if (notices.isEmpty()) item {
@@ -305,11 +305,11 @@ fun NotificationsScreen(
       item {
         Text("${notifications.count { !it.isRead }} unread · School inbox", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          item { FilterChip(category == null, { category = null }, { Text("All") }) }
+          item { SchoolFilterChip(category == null, { category = null }, { Text("All") }) }
           items(notifications.map { it.category }.distinct()) { value ->
-            FilterChip(category == value.name, { category = value.name }, { Text(value.name.lowercase().replaceFirstChar { it.uppercase() }) })
+            SchoolFilterChip(category == value.name, { category = value.name }, { Text(value.name.lowercase().replaceFirstChar { it.uppercase() }) })
           }
-          item { FilterChip(unreadOnly, { unreadOnly = !unreadOnly }, { Text("Unread") }) }
+          item { SchoolFilterChip(unreadOnly, { unreadOnly = !unreadOnly }, { Text("Unread") }) }
         }
         Text("In-app updates · Device push is not enabled. Updates open their related workspace; individual record links are not available yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }

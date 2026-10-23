@@ -124,7 +124,7 @@ fun TeacherDetailScreen(
 
       // 3. WEEKLY TIMETABLE SLOTS
       item {
-        SectionHeader(title = "Weekly Lecture Schedule (${teacherClasses.size})")
+        SectionHeader(horizontalPadding = 0.dp, title = "Weekly Lecture Schedule (${teacherClasses.size})")
       }
 
       if (teacherClasses.isEmpty()) {

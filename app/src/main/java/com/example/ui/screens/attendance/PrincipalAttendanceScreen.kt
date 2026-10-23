@@ -218,7 +218,7 @@ fun PrincipalAttendanceScreen(
 
           // LEVEL 2: Class-wise Attendance list header
           item {
-            SectionHeader(title = "Class-wise Performance")
+            SectionHeader(horizontalPadding = 0.dp, title = "Class-wise Performance")
           }
 
           // LEVEL 2: Class List
@@ -345,7 +345,7 @@ fun PrincipalAttendanceScreen(
           }
 
           item {
-            SectionHeader(title = "Student-wise Attendance")
+            SectionHeader(horizontalPadding = 0.dp, title = "Student-wise Attendance")
           }
 
           // LEVEL 3: Student Registry List
