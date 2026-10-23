@@ -305,7 +305,7 @@ fun AttendanceScreen(
           }
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
             listOf(AttendanceStatus.PRESENT to "P", AttendanceStatus.LATE to "L", AttendanceStatus.ABSENT to "A", AttendanceStatus.EXCUSED to "E").forEach { (status,label) ->
-              FilterChip(selected = currentStatus == status,
+              FilterChip(colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer, selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer), selected = currentStatus == status,
                 enabled = !saving && currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER),
                 onClick = { rollCallMap[student.id] = status; showSuccessNotification = false },
                 label = { Text(label) },

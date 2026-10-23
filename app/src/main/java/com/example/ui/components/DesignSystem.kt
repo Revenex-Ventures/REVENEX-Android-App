@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -189,9 +190,9 @@ fun ScholaFloatingDock(
     windowInsets = WindowInsets(0, 0, 0, 0)) {
     items.forEach { item ->
       val selected = currentRoute == item.route
-      NavigationBarItem(colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary), selected = selected, onClick = { onItemSelected(item.route) },
-        icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = null) },
-        label = { Text(if (item.label == "Attendance") "Roll call" else item.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) })
+      NavigationBarItem(alwaysShowLabel = LocalDensity.current.fontScale <= 1.3f, colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary), selected = selected, onClick = { onItemSelected(item.route) },
+        icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
+        label = { Text(if (item.label == "Attendance") "Roll call" else item.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) })
     }
   }
 }
