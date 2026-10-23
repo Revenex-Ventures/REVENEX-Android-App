@@ -40,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.ImageBitmap
@@ -163,7 +164,7 @@ fun CompactStatTile(
     Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
         Surface(color = iconContainerColor, shape = RoundedCornerShape(Radius.sm)) {
-          Icon(icon, contentDescription = null, tint = iconTint,
+          Icon(icon, contentDescription = null, tint = if (MaterialTheme.colorScheme.background.luminance() < 0.3f && iconTint.luminance() < 0.12f) MaterialTheme.colorScheme.onSurface else iconTint,
             modifier = Modifier.padding(Spacing.sm8).size(20.dp))
         }
         Text(statCounter, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,

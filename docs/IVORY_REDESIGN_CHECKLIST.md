@@ -15,3 +15,7 @@ Implemented in this increment:
 - [ ] Complete Razorpay stage-by-stage diagnosis after UI implementation. Existing 404 deployment blockers are not fixed by UI work.
 
 Full reachable route inventory remains in REVENEX_REDESIGN_CHECKLIST.md. A semantic theme pass is not proof of all-screen composition completion.
+
+Second increment implemented: grouped full-width profile contact fields (large-text friendly), honest missing personal data, inbox category/unread metadata, school/user context in shared top bar, compact authentication heading and restrained login elevation, stacked scholar metrics instead of three cramped columns. Existing navigation, dialogs, settings, reports and operations inherit semantic surfaces but still require final rendered review.
+
+Razorpay diagnosis: local demo guard retained; Supabase checkout reaches the order-creation path. Hosted checks on this run: Auth 200, students/fees 401, razorpay_orders 404, razorpay-payments 404. Exact remote blocker is stage 3 (deployment), before provider order creation. No secret inspection or authenticated transaction was possible. Client now maps safe HTTP statuses to actionable errors and never displays private server response text. Local payment-handler suite: 15 passed; actual capture/cancellation/webhook delivery remain unverified. SQL and provider security behavior were preserved.

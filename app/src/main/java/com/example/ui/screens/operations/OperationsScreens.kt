@@ -200,8 +200,8 @@ fun LeaveManagementScreen(
         onClick = onShowApplyLeave,
         icon = { Icon(Icons.Default.EventBusy, contentDescription = null) },
         text = { Text("Apply Leave", fontWeight = FontWeight.Bold) },
-        containerColor = RevenexBlue,
-        contentColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
         modifier = Modifier.testTag("fab_apply_leave")
       )
     }

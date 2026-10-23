@@ -29,7 +29,9 @@ class ThemeContrastTest {
         SemanticColors.successContainer to SemanticColors.onSuccess,
         SemanticColors.warningContainer to SemanticColors.onWarning,
         SemanticColors.lavenderContainer to SemanticColors.onLavender,
-        SemanticColors.peachContainer to SemanticColors.onPeach)
+        SemanticColors.peachContainer to SemanticColors.onPeach,
+        SemanticColors.blueContainer to SemanticColors.onBlue,
+        SemanticColors.butterContainer to SemanticColors.onButter)
     } }
     listOf(false,true).forEach { mode ->
       compose.runOnIdle { dark=mode }

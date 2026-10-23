@@ -75,9 +75,9 @@ fun ReportsAnalyticsScreen(
             IconButton(
               enabled = false,
               onClick = { /* Existing export is unavailable. */ },
-              modifier = Modifier.background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+              modifier = Modifier.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(10.dp))
             ) {
-              Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF export unavailable", tint = Color.White)
+              Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF export unavailable", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
           }
         }
