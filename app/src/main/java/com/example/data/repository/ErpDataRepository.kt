@@ -629,6 +629,7 @@ class ErpDataRepository private constructor() {
   suspend fun createAssignmentConfirmed(assignment: HomeworkAssignment) = activeSource.createAssignment(assignment)
   suspend fun publishNoticeConfirmed(notice: SchoolNotice) = activeSource.publishNotice(notice)
   suspend fun readNotificationConfirmed(id: String) = activeSource.markNotificationAsRead(id)
+  suspend fun readAllNotificationsConfirmed() = activeSource.markAllNotificationsAsRead()
   suspend fun submitAssignmentConfirmed(id: String) = activeSource.toggleAssignmentCompletion(id)
 
   fun createAssignment(assignment: HomeworkAssignment) {
@@ -641,6 +642,28 @@ class ErpDataRepository private constructor() {
     repositoryScope.launch {
       activeSource.toggleAssignmentCompletion(assignmentId)
     }
+  }
+
+  private suspend fun confirmedStaffAction(action: suspend (ErpDataSource) -> Unit) {
+    val actor = currentUser.value
+    val mode = dataMode.value
+    check(actor.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)) { "Staff access required." }
+    action(activeSource)
+    check(currentUser.value.id == actor.id && dataMode.value == mode) { "Account changed. Reload this workspace." }
+  }
+
+  suspend fun saveMarksConfirmed(studentId: String, term: String, subject: String, obtained: Int, maximum: Int) = confirmedStaffAction {
+    require(term.trim().isNotEmpty() && subject.trim().isNotEmpty() && maximum in 1..10000 && obtained in 0..maximum)
+    it.saveStudentMarks(studentId, term.trim(), subject.trim(), obtained, maximum)
+  }
+
+  suspend fun publishResultsConfirmed(studentId: String, term: String, published: Boolean) = confirmedStaffAction {
+    it.publishReportCard(studentId, term, published)
+  }
+
+  suspend fun decideLeaveConfirmed(id: String, status: LeaveStatus, remark: String) = confirmedStaffAction {
+    check(currentUser.value.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN))
+    it.updateLeaveStatus(id, status, remark)
   }
 
   fun saveStudentMarks(

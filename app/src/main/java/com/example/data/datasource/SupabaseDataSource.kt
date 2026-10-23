@@ -330,9 +330,12 @@ class SupabaseDataSource : ErpDataSource {
     }
   }
   override suspend fun saveStudentMarks(studentId:String,term:String,subjectName:String,obtainedMarks:Int,maxMarks:Int) {
-    val st=table("students").first { it.id==studentId }
-    val old=table("marks").firstOrNull { it.student_id==studentId && it.term==term && it.subject==subjectName }
-    write("marks",JsonObject(boundary(old?.id ?: UUID.randomUUID().toString(),st.section_id,studentId)+mapOf("term" to JsonPrimitive(term),"subject" to JsonPrimitive(subjectName),"obtained" to JsonPrimitive(obtainedMarks),"maximum" to JsonPrimitive(maxMarks),"payload" to (old?.payload ?: JsonObject(emptyMap())))))
+    requireSession()
+    client.postgrest.rpc("save_draft_mark", buildJsonObject {
+      put("p_student",studentId); put("p_term",term.trim()); put("p_subject",subjectName.trim())
+      put("p_obtained",obtainedMarks); put("p_maximum",maxMarks)
+    })
+    refresh("marks")
   }
   override suspend fun saveCheckedPaper(studentId:String,term:String,subjectName:String,checkedPaperUrl:String) {
     updateMarkAttachments(table("marks").filter { it.student_id==studentId && it.term==term && it.subject==subjectName },"checkedPaperUrl",checkedPaperUrl)
@@ -347,7 +350,9 @@ class SupabaseDataSource : ErpDataSource {
   }
   override suspend fun publishReportCard(studentId:String,term:String,published:Boolean) {
     requireSession()
-    client.from("marks").update(buildJsonObject { put("published",published) }) { filter { eq("student_id",studentId);eq("term",term) } }
+    client.postgrest.rpc("set_result_publication", buildJsonObject {
+      put("p_student",studentId); put("p_term",term); put("p_published",published)
+    })
     refresh("marks")
   }
   override fun getExamSchedulesFlow()=models<ExamSchedule>("exams")
@@ -372,14 +377,22 @@ class SupabaseDataSource : ErpDataSource {
     }
   }
   override suspend fun markAllNotificationsAsRead() {
-    requireSession();client.from("notifications").update(buildJsonObject { put("is_read",true) }) { filter { eq("recipient_id",user.value.id) } };refresh("notifications")
+    requireSession()
+    val revision = sessionRevision.get(); val recipient = user.value.id
+    client.from("notifications").update(buildJsonObject { put("is_read",true) }) { filter { eq("recipient_id",recipient) } }
+    refresh("notifications")
+    check(sessionRevision.get()==revision && table("notifications").all { it.is_read }) { "Inbox read state was not confirmed." }
   }
   override fun getLeaveRequestsFlow()=models<LeaveRequest>("leave_requests")
   override suspend fun applyLeave(applicantName:String,applicantRole:UserRole,applicantId:String,classOrDept:String,leaveType:String,startDate:String,endDate:String,daysCount:Int,reason:String) {
     val id=UUID.randomUUID().toString()
     save("leave_requests",id,LeaveRequest(id,user.value.id,user.value.name,user.value.role,classOrDept,leaveType,startDate,endDate,daysCount,reason,"Today",LeaveStatus.PENDING,schoolId=user.value.schoolId))
   }
-  override suspend fun updateLeaveStatus(leaveId:String,status:LeaveStatus,approverRemark:String):Unit=error("Leave approval is not enabled in the Supabase demo yet.")
+  override suspend fun updateLeaveStatus(leaveId:String,status:LeaveStatus,approverRemark:String) {
+    requireSession()
+    client.postgrest.rpc("decide_leave",buildJsonObject { put("p_id",leaveId);put("p_status",status.name);put("p_remark",approverRemark) })
+    refresh("leave_requests")
+  }
   override fun getTransportRoutesFlow()=models<TransportRoute>("transport_routes")
   override fun getLibraryBooksFlow()=models<LibraryBook>("library_books")
   override suspend fun issueBook(bookId:String):Unit=error("Library circulation is not enabled in the Supabase demo yet.")

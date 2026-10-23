@@ -280,6 +280,10 @@ fun HomeworkScreen(
   val assignments by repository.assignments.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
   val scope = rememberCoroutineScope()
+  var subjectFilter by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf("") }
+  var pendingOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf(false) }
+  val subjects = assignments.map { it.subject }.distinct().sorted()
+  val filteredAssignments = assignments.filter { (subjectFilter.isBlank() || it.subject == subjectFilter) && (!pendingOnly || !it.isCompletedByStudent) }
   var submitting by remember(currentUser.id) { mutableStateOf<String?>(null) }
   var submissionError by remember(currentUser.id) { mutableStateOf<String?>(null) }
 
@@ -296,7 +300,7 @@ fun HomeworkScreen(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text("Active Homework Tasks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Assignments", modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         if (currentUser.role == UserRole.TEACHER || currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
           Button(onClick = onShowCreateAssignment, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
             Text("Assign", fontWeight = FontWeight.Bold)
@@ -305,11 +309,21 @@ fun HomeworkScreen(
       }
     }
 
+    item {
+      LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        item { FilterChip(subjectFilter.isBlank(), { subjectFilter = "" }, { Text("All subjects") }) }
+        items(subjects) { subject -> FilterChip(subjectFilter == subject, { subjectFilter = subject }, { Text(subject) }) }
+      }
+      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("${filteredAssignments.size} assignments", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FilterChip(pendingOnly, { pendingOnly = !pendingOnly }, { Text("Pending only") })
+      }
+    }
     submissionError?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
-    if (assignments.isEmpty()) {
-      item { EmptyStateView(title = "No Homework Assigned", message = "No pending assignments.") }
+    if (filteredAssignments.isEmpty()) {
+      item { EmptyStateView(title = "No matching assignments", message = "Change the subject or pending filter to see other work.") }
     } else {
-      items(assignments, key = { it.id }) { hw ->
+      items(filteredAssignments, key = { it.id }) { hw ->
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
@@ -321,7 +335,12 @@ fun HomeworkScreen(
             ScholaPillBadge(status = hw.submissionStatus)
           }
           Text(hw.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-          Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          var expanded by remember(hw.id) { mutableStateOf(false) }
+          if (expanded) Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          TextButton(onClick = { expanded = !expanded }, modifier = Modifier.testTag("assignment_details_${hw.id}")) {
+            Text(if (expanded) "Hide instructions" else "View instructions")
+            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+          }
           Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Text("Due ${hw.dueDate} · Class ${hw.classGrade}-${hw.division}",

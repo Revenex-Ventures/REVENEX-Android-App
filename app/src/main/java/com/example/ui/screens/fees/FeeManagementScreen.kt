@@ -40,6 +40,7 @@ fun FeeManagementScreen(
 ) {
   val invoices by repository.invoices.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
+  val feeRecords by repository.feeRecords.collectAsState()
   val dataMode by repository.dataMode.collectAsState()
 
   var selectedFilter by remember { mutableStateOf("Pending") }
@@ -71,83 +72,29 @@ fun FeeManagementScreen(
     contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
     verticalArrangement = Arrangement.spacedBy(Spacing.s3)
   ) {
-    // 1. NET REVENUE REALIZATION HERO CARD (Dark Onyx Surface, 22dp corners)
     item {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.hero))
-          .background(MaterialTheme.colorScheme.surfaceVariant)
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
-          .padding(Spacing.cardPaddingLarge)
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "FEES & PAYMENTS",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = TypeTokens.trackingMicroLabel
-              )
-              Text(
-                text = "Balances & invoices",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-              )
-            }
-            Surface(
-              shape = RoundedCornerShape(Radius.pill),
-              color = SemanticColors.warningContainer
-            ) {
-              Text(
-                text = "$collectionPercentage% Collected",
-                color = SemanticColors.onWarning,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-              )
-            }
-          }
-
-          Spacer(modifier = Modifier.height(Spacing.s4))
-
-          // Collection Progress Bar
-          LinearProgressIndicator(
-            progress = { (collectionPercentage / 100f).coerceIn(0f, 1f) },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(10.dp)
-              .clip(RoundedCornerShape(Radius.pill)),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.outlineVariant
-          )
-
-          Spacer(modifier = Modifier.height(Spacing.s4))
-
-          // Metrics row: Billed Total, Collected, Outstanding Receivables
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Column {
-              Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalBilled / 100L}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalCollected / 100L}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onSuccess)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-              Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalReceivables / 100L}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
-            }
-          }
+      Text("Fees & payments", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+      Text(if (currentUser.role in setOf(UserRole.STUDENT, UserRole.PARENT)) "Invoices available to your account" else "School invoice balances and payment review",
+        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    item {
+      Surface(shape = RoundedCornerShape(Radius.lg), color = SemanticColors.peachContainer) {
+        Column(Modifier.fillMaxWidth().padding(Spacing.lg16), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          Text("Outstanding balance", style = MaterialTheme.typography.labelLarge, color = SemanticColors.onPeach)
+          Text(feeCurrency(totalReceivables), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold, color = SemanticColors.onPeach)
+          Text("${invoices.count { it.pendingAmount > 0 }} unpaid invoices · ${if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) "TEST payments only" else "Local sample data"}", style = MaterialTheme.typography.bodySmall, color = SemanticColors.onPeach)
+        }
+      }
+    }
+    item {
+      Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        Row(Modifier.fillMaxWidth()) {
+          Text("Billed", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+          Text(feeCurrency(totalBilled), style = MaterialTheme.typography.titleSmall)
+        }
+        Row(Modifier.fillMaxWidth()) {
+          Text("Collected", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+          Text(feeCurrency(totalCollected), style = MaterialTheme.typography.titleSmall, color = SemanticColors.onSuccess)
         }
       }
     }
@@ -201,7 +148,7 @@ fun FeeManagementScreen(
             verticalAlignment = Alignment.Top
           ) {
             Column(modifier = Modifier.weight(1f)) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
+              Column {
                 Text(
                   text = invoice.studentName,
                   style = MaterialTheme.typography.titleMedium,
@@ -253,7 +200,7 @@ fun FeeManagementScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm8)
           ) {
             Text(
-              text = "₹${invoice.paidAmount / 100L} paid of ₹${invoice.totalAmount / 100L}",
+              text = "${feeCurrency(invoice.paidAmount)} paid of ${feeCurrency(invoice.totalAmount)}",
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               fontSize = 12.sp
@@ -294,6 +241,20 @@ fun FeeManagementScreen(
             }
           }
         }
+      }
+    }
+    item { SectionHeader(title = "Payment history") }
+    val history = feeRecords.flatMap { fee -> fee.transactions.map { fee to it } }
+    if (history.isEmpty()) item {
+      Text("No recorded payments. A receipt appears only after server-confirmed capture.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    items(history, key = { (fee, transaction) -> "${fee.id}_${transaction.transactionId}" }) { (fee, transaction) ->
+      Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+        Text(fee.studentName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text("${feeCurrency(transaction.amount)} · ${transaction.status}", style = MaterialTheme.typography.bodyMedium)
+        Text("${transaction.date} · ${transaction.receiptNo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) TextButton(onClick = { onCheckRazorpay(fee.id) }) { Text("Check invoice receipt") }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
       }
     }
   }
@@ -445,3 +406,7 @@ fun ScholaPaymentCollectionDialog(
     containerColor = MaterialTheme.colorScheme.surface
   )
 }
+
+private fun feeCurrency(paise: Long): String = java.text.NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-IN")).apply {
+  currency = java.util.Currency.getInstance("INR")
+}.format(java.math.BigDecimal.valueOf(paise, 2))

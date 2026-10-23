@@ -262,6 +262,10 @@ fun NotificationsScreen(
   val notifications by repository.notifications.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
   val scope = rememberCoroutineScope()
+  var category by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf<String?>(null) }
+  var unreadOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf(false) }
+  var markingAll by remember(currentUser.id) { mutableStateOf(false) }
+  val filtered = notifications.filter { (category == null || it.category.name == category) && (!unreadOnly || !it.isRead) }
   var opening by remember(currentUser.id) { mutableStateOf<String?>(null) }
   var inboxError by remember(currentUser.id) { mutableStateOf<String?>(null) }
 
@@ -275,6 +279,18 @@ fun NotificationsScreen(
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
           }
         },
+        actions = {
+          TextButton(enabled = !markingAll && opening == null && notifications.any { !it.isRead }, onClick = {
+            markingAll = true; inboxError = null
+            scope.launch {
+              try { repository.readAllNotificationsConfirmed() }
+              catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                inboxError = "Read state could not be confirmed. Refresh before retrying."
+              } finally { markingAll = false }
+            }
+          }) { Text(if (markingAll) "Saving…" else "Mark all read") }
+        },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
       )
     }
@@ -287,18 +303,23 @@ fun NotificationsScreen(
       verticalArrangement = Arrangement.spacedBy(Spacing.s2)
     ) {
       item {
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Text("${notifications.count { !it.isRead }} unread · School inbox",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
-          Text("Updates sync while the Supabase demo is open. Device push notifications are not enabled in this demo.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("${notifications.count { !it.isRead }} unread · School inbox", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          item { FilterChip(category == null, { category = null }, { Text("All") }) }
+          items(notifications.map { it.category }.distinct()) { value ->
+            FilterChip(category == value.name, { category = value.name }, { Text(value.name.lowercase().replaceFirstChar { it.uppercase() }) })
+          }
+          item { FilterChip(unreadOnly, { unreadOnly = !unreadOnly }, { Text("Unread") }) }
         }
+        Text("In-app updates · Device push is not enabled. Updates open their related workspace; individual record links are not available yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
       inboxError?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
-      if (notifications.isEmpty()) {
-        item { EmptyStateView(title = "No notifications", message = "School updates will appear here.") }
+      if (filtered.isEmpty()) {
+        item { EmptyStateView(title = "No matching updates", message = "School updates appear here. Clear filters to see your full inbox.") }
       }
-      items(notifications, key = { it.id }) { notif ->
-        AppCard(modifier = Modifier.fillMaxWidth().clickable(
-          enabled = opening == null,
+      items(filtered, key = { it.id }) { notif ->
+        Column(modifier = Modifier.fillMaxWidth().clickable(
+          enabled = opening == null && !markingAll,
           onClickLabel = "Open notification"
         ) {
           opening = notif.id; inboxError = null
@@ -311,7 +332,7 @@ fun NotificationsScreen(
               inboxError = "Could not open this update. Read state is not confirmed; tap again to retry."
             } finally { opening = null }
           }
-        }) {
+        }.padding(vertical = Spacing.md12)) {
           Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
@@ -355,6 +376,7 @@ fun NotificationsScreen(
             }
           }
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
       }
     }
   }

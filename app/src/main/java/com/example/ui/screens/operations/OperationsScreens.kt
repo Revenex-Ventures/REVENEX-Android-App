@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.example.data.model.LeaveStatus
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
@@ -44,118 +45,100 @@ fun OperationsHubScreen(
   onShowApplyLeave: () -> Unit
 ) {
   val currentUser by repository.currentUser.collectAsState()
+  var query by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf("") }
+  var selectedArea by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf<String?>(null) }
+  var showBoundaries by remember(currentUser.id) { mutableStateOf(false) }
+  val modules = WorkspaceDirectory.visible(currentUser.role, query, WorkspaceArea.entries.find { it.name == selectedArea })
+  val availableAreas = WorkspaceDirectory.visible(currentUser.role).map { it.area }.distinct()
+  val administrator = currentUser.role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL)
+  val width = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+  val columns = if (width >= 840) 3 else if (width >= 600) 2 else 1
 
-  data class HubModule(
-    val title: String,
-    val description: String,
-    val icon: ImageVector,
-    val iconTint: Color,
-    val bgColor: Color,
-    val route: String,
-    val allowedRoles: Set<UserRole> = UserRole.values().toSet()
-  )
-
-  val allRoles = UserRole.values().toSet()
-  val adminOnly = setOf(UserRole.PRINCIPAL, UserRole.ADMIN)
-  val staffOnly = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
-  val noStudents = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER, UserRole.PARENT)
-
-  val modules = listOf(
-    HubModule("Assignments", "Class work and submissions", Icons.Default.Assignment, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Homework.route, allRoles),
-    HubModule("Examinations", "Exam dates and schedules", Icons.Default.EventNote, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Exams.route, allRoles),
-    HubModule("Results", "Available student reports", Icons.Default.Assessment, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.ReportCard.route, allRoles),
-    HubModule("Settings & profile", "Appearance, security and account", Icons.Default.Settings, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, Screen.Profile.route, allRoles),
-    HubModule("My faculty profile", "Personal and professional details", Icons.Default.Person, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.TeacherProfile.route, setOf(UserRole.TEACHER)),
-    HubModule("Student Directory", "Admissions and student details", Icons.Default.Groups, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Students.route, adminOnly),
-    HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Teachers.route, adminOnly),
-    HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Attendance.route, allRoles),
-    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.PARENT, UserRole.STUDENT)),
-    HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Leaves.route, noStudents),
-    HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Transport.route, allRoles),
-    HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Library.route, allRoles),
-    HubModule("School Assets", "Smart Boards, Labs & IT", Icons.Default.Inventory, SemanticColors.onPeach, SemanticColors.peachContainer, Screen.Inventory.route, adminOnly),
-    HubModule("Executive Reports", "KPI Charts & Export Analytics", Icons.Default.Analytics, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Reports.route, adminOnly),
-    HubModule("Timetable", "Class Schedule & Periods", Icons.Default.CalendarMonth, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.Timetable.route, allRoles),
-    HubModule("Notices & Circulars", "School Announcements", Icons.Default.Campaign, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.secondaryContainer, Screen.Notices.route, allRoles),
-    HubModule("Study Material", "Notes, PDFs & Resources", Icons.Default.MenuBook, SemanticColors.onLavender, SemanticColors.lavenderContainer, Screen.StudyMaterial.route, allRoles),
-    HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, Screen.AiAssistant.route, allRoles)
-  ).filter { it.allowedRoles.contains(currentUser.role) }
-
-  val moduleColumns = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840) 3 else if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 2 else 1
   LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("operations_hub_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(14.dp)
+    Modifier.fillMaxSize().testTag("operations_hub_screen"),
+    contentPadding = PaddingValues(Spacing.screenPadding),
+    verticalArrangement = Arrangement.spacedBy(Spacing.md12)
   ) {
     item {
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
-        ) {
-          Text(
-            text = "School workspaces",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-          )
-          Text(
-            text = "Your role’s tools, grouped in one place",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-          )
+      Text("School workspaces", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+      Text("${currentUser.role.displayName} · ${WorkspaceDirectory.visible(currentUser.role).size} available tools",
+        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    item {
+      OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().testTag("module_search"),
+        label = { Text("Search workspaces") }, singleLine = true,
+        leadingIcon = { Icon(Icons.Default.Search, null) },
+        trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear search") } },
+        shape = RoundedCornerShape(Radius.input))
+    }
+    item {
+      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        item { FilterChip(selectedArea == null, { selectedArea = null }, { Text("All") }) }
+        items(availableAreas) { area -> FilterChip(selectedArea == area.name, { selectedArea = area.name }, { Text(area.label) }) }
+      }
+    }
+    if (query.isBlank() && selectedArea == null) item {
+      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        if (administrator) {
+          item { FilledTonalButton(onClick = onShowAddStudent) { Icon(Icons.Default.PersonAdd, null); Spacer(Modifier.width(Spacing.sm8)); Text("Enrol student") } }
+          item { OutlinedButton(onClick = onShowAddTeacher) { Text("Add faculty") } }
+          item { OutlinedButton(onClick = onShowCreateNotice) { Text("Publish notice") } }
+        } else if (currentUser.role != UserRole.STUDENT) {
+          item { FilledTonalButton(onClick = onShowApplyLeave) { Text("Apply for leave") } }
         }
       }
     }
-
-    item {
-      Text(
-        text = "Available modules",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-      )
+    if (modules.isEmpty()) item {
+      EmptyStateView(icon = Icons.Default.SearchOff, title = "No matching workspace", description = "Try a module name or choose another area.")
     }
-
-    items(modules.chunked(moduleColumns)) { pair ->
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-      ) {
-        pair.forEach { mod ->
-          Card(
-            modifier = Modifier
-              .weight(1f)
-              .clip(RoundedCornerShape(16.dp))
-              .clickable { onNavigateTo(mod.route) }
-              .testTag("module_card_${mod.title.lowercase().replace(" ", "_")}"),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
-            Row(Modifier.fillMaxWidth().padding(Spacing.md12),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-              Box(Modifier.size(40.dp).background(mod.bgColor, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {
-                Icon(mod.icon, null, tint = mod.iconTint, modifier = Modifier.size(22.dp))
+    modules.groupBy { it.area }.forEach { (area, destinations) ->
+      item(key = area.name) {
+        Text(area.label, Modifier.padding(top = Spacing.md12), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+      }
+      items(destinations.chunked(columns)) { row ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+          row.forEach { destination ->
+            val (tint, container) = when (area) {
+              WorkspaceArea.PEOPLE, WorkspaceArea.FINANCE -> SemanticColors.onPeach to SemanticColors.peachContainer
+              WorkspaceArea.ACADEMICS -> SemanticColors.onLavender to SemanticColors.lavenderContainer
+              else -> MaterialTheme.colorScheme.onSecondaryContainer to MaterialTheme.colorScheme.secondaryContainer
+            }
+            val icon = when (area) {
+              WorkspaceArea.PEOPLE -> Icons.Default.Groups
+              WorkspaceArea.ACADEMICS -> Icons.Default.MenuBook
+              WorkspaceArea.ATTENDANCE -> Icons.Default.FactCheck
+              WorkspaceArea.FINANCE -> Icons.Default.AccountBalanceWallet
+              WorkspaceArea.OPERATIONS -> Icons.Default.Dashboard
+              WorkspaceArea.ACCOUNT -> Icons.Default.NotificationsNone
+            }
+            OutlinedCard(onClick = { onNavigateTo(destination.route) },
+              modifier = Modifier.weight(1f).testTag("workspace_${destination.route.substringBefore('?')}"),
+              shape = RoundedCornerShape(Radius.md),
+              colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+              Row(Modifier.fillMaxWidth().padding(Spacing.md12), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+                Box(Modifier.size(40.dp).background(container, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint) }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+                  Text(destination.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                  Text(destination.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
               }
-              Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-                Text(mod.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(mod.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
           }
+          repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
         }
-        if (pair.size < moduleColumns) {
-          Spacer(modifier = Modifier.weight(1f))
-        }
+      }
+    }
+    if (administrator) item {
+      TextButton(onClick = { showBoundaries = !showBoundaries }, modifier = Modifier.fillMaxWidth()) {
+        Text(if (showBoundaries) "Hide integration boundaries" else "Specialist tools & integration boundaries")
+        Icon(if (showBoundaries) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+      }
+      if (showBoundaries) Column(verticalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+        Text("These are not active modules", style = MaterialTheme.typography.titleSmall)
+        Text("Machine/RFID attendance needs a device provider and secure event ingestion. Tally, payroll, SMS/email and website tools need separate integrations. Hostel, counselling, scholarship and question-bank workflows are not implemented.", style = MaterialTheme.typography.bodyMedium)
+        Text("No device sync, payroll run or message dispatch happens from this directory. See the admin module matrix for scope and setup dependencies.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
   }
@@ -169,6 +152,27 @@ fun LeaveManagementScreen(
   val leaveRequests by repository.leaveRequests.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
   var selectedTab by remember { mutableStateOf(0) }
+  val scope = rememberCoroutineScope()
+  var deciding by remember(currentUser.id) { mutableStateOf<String?>(null) }
+  var decisionError by remember(currentUser.id) { mutableStateOf<String?>(null) }
+  var confirmDecision by remember(currentUser.id) { mutableStateOf<Pair<String, LeaveStatus>?>(null) }
+  var remark by remember { mutableStateOf("") }
+  confirmDecision?.let { (id, status) ->
+    AlertDialog(onDismissRequest = { confirmDecision = null },
+      title = { Text(if (status == LeaveStatus.APPROVED) "Approve leave?" else "Reject leave?") },
+      text = { OutlinedTextField(remark, { remark = it }, label = { Text("Remark (optional)") }, supportingText = { Text("The applicant receives an in-app update after confirmation.") }) },
+      confirmButton = { TextButton(enabled = remark.length <= 1000, onClick = {
+        confirmDecision = null; deciding = id; decisionError = null
+        scope.launch {
+          try { repository.decideLeaveConfirmed(id,status,remark) }
+          catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            decisionError = "Decision not confirmed. Reload the request and check access or school setup before retrying."
+          } finally { deciding = null }
+        }
+      }) { Text("Confirm") } },
+      dismissButton = { TextButton(onClick = { confirmDecision = null }) { Text("Cancel") } })
+  }
 
   val pendingLeaves = leaveRequests.filter { it.status == LeaveStatus.PENDING }
   val historyLeaves = leaveRequests.filter { it.status != LeaveStatus.PENDING }
@@ -211,6 +215,7 @@ fun LeaveManagementScreen(
         Spacer(modifier = Modifier.height(12.dp))
       }
 
+      decisionError?.let { message -> item { Text(message, Modifier.padding(Spacing.screenPadding), color = MaterialTheme.colorScheme.error) } }
       val displayList = if (selectedTab == 0) pendingLeaves else historyLeaves
 
       if (displayList.isEmpty()) {
@@ -290,17 +295,19 @@ fun LeaveManagementScreen(
                   horizontalArrangement = Arrangement.End
                 ) {
                   OutlinedButton(
-                    onClick = { repository.rejectLeave(leave.id) },
+                    enabled = deciding == null,
+                    onClick = { remark = ""; confirmDecision = leave.id to LeaveStatus.REJECTED },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
                   ) {
                     Text("Reject")
                   }
                   Spacer(modifier = Modifier.width(8.dp))
                   Button(
-                    onClick = { repository.approveLeave(leave.id) },
+                    enabled = deciding == null,
+                    onClick = { remark = ""; confirmDecision = leave.id to LeaveStatus.APPROVED },
                     colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess)
                   ) {
-                    Text("Approve Leave")
+                    Text(if (deciding == leave.id) "Saving…" else "Approve")
                   }
                 }
               }

@@ -51,6 +51,7 @@ fun StudentDashboardScreen(
   onNavigateTo: (String) -> Unit
 ) {
   val students by repository.students.collectAsState()
+  val actor by repository.currentUser.collectAsState()
   val assignments by repository.assignments.collectAsState()
   val timetable by repository.timetable.collectAsState()
   val selectedStudentId by repository.selectedStudentId.collectAsState()
@@ -120,14 +121,13 @@ fun StudentDashboardScreen(
   // Hoisted so the hero intro plays once per VISIT to this tab (cold start or
   // switching back) but never replays while the hero item is scrolled out of
   // view and re-created.
-  var heroIntroPlayed by remember { mutableStateOf(false) }
 
   LazyColumn(
     state = listState,
     modifier = Modifier
       .fillMaxSize()
       .testTag("student_dashboard_list"),
-    contentPadding = PaddingValues(bottom = 96.dp)
+    contentPadding = PaddingValues(bottom = Spacing.xl24)
   ) {
     // 0. GREETING
     item {
@@ -147,7 +147,7 @@ fun StudentDashboardScreen(
       ) {
         Text(
           text = "$greeting, ${currentStudent.name.substringBefore(" ")}",
-          style = MaterialTheme.typography.headlineMedium,
+          style = MaterialTheme.typography.headlineSmall,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface
         )
@@ -175,94 +175,44 @@ fun StudentDashboardScreen(
       }
     }
     item {
-      AnimatedAttendanceHero(
-        attendanceValue = currentStudent.attendancePercent.toFloat(),
-        label = "Academic Attendance",
-        avatarLabel = currentStudent.name,
-        avatarUrl = currentStudent.avatarUrl,
-        introHasPlayed = heroIntroPlayed,
-        onIntroPassed = { heroIntroPlayed = true },
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(Spacing.screenPadding),
-        nameContent = {
-          Column {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = 7.dp, vertical = 2.dp)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(5.dp)
-                  .background(Color(0xFF10B981), CircleShape)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = "SCHOLAR DESK",
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                letterSpacing = 1.1.sp,
-                fontWeight = FontWeight.Bold
-              )
-            }
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-              text = currentStudent.name,
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
-              maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-              text = "Adm. #${currentStudent.admissionNumber} · Roll #${currentStudent.rollNumber}",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+      Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.screenPadding), verticalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+        if (actor.role == UserRole.PARENT) {
+          val children = if (cloudDemo) students else students.filter {
+            it.id == actor.associatedStudentId || it.id in actor.associatedChildNames ||
+              (actor.phone.isNotBlank() && it.parentPhone.filter(Char::isDigit).takeLast(10) == actor.phone.filter(Char::isDigit).takeLast(10))
           }
-        },
-        trailingContent = {
-          Surface(
-            shape = RoundedCornerShape(Radius.pill),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Default.Verified,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(12.dp)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = "ACTIVE",
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
-                color = MaterialTheme.colorScheme.onSurface
-              )
+          if (children.size > 1) {
+            var choosingChild by remember(actor.id) { mutableStateOf(false) }
+            Box {
+              OutlinedButton(onClick = { choosingChild = true }) { Text("Viewing ${currentStudent.name}"); Icon(Icons.Default.ExpandMore, null) }
+              DropdownMenu(choosingChild, { choosingChild = false }) {
+                children.forEach { child -> DropdownMenuItem(text = { Text("${child.name} · ${child.fullClass}") },
+                  onClick = { repository.setSelectedStudentId(child.id); choosingChild = false }) }
+              }
             }
           }
-        },
-        statsContent = {
-          HeroStatStrip(
-            stats = listOf(
-              HeroStat("CLASS", currentStudent.fullClass, MaterialTheme.colorScheme.primary, Icons.Default.School, "SEC ${currentStudent.division}"),
-              HeroStat("CLASS RANK", if(cloudDemo) "Not ranked" else "#${currentStudent.rank}", Color(0xFFF59E0B), Icons.Default.EmojiEvents, if(cloudDemo) "Not calculated" else "TOP 5%"),
-              HeroStat("CUMULATIVE GPA", if(cloudDemo) "Unavailable" else "${currentStudent.gpa} / 10", Color(0xFF34D399), Icons.Default.TrendingUp, if(cloudDemo) "No GPA scheme configured" else "EXCELLENT")
-            )
-          )
         }
-      )
+        OutlinedCard(onClick = { onNavigateTo(Screen.ReportCard.route) },
+          shape = RoundedCornerShape(Radius.md), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+          Row(Modifier.fillMaxWidth().padding(Spacing.md12), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+            Avatar(currentStudent.name, size = 40.dp, background = SemanticColors.peachContainer, textColor = SemanticColors.onPeach)
+            Column(Modifier.weight(1f)) {
+              Text(currentStudent.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+              Text("Class ${currentStudent.fullClass} · Roll ${currentStudent.rollNumber}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, "Open student profile")
+          }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+          CompactStatTile("Attendance", "${currentStudent.attendancePercent.toInt()}%", Icons.Default.FactCheck,
+            iconTint = SemanticColors.onSuccess, iconContainerColor = SemanticColors.successContainer,
+            modifier = Modifier.weight(1f), onClick = { onNavigateTo(Screen.Attendance.route) })
+          CompactStatTile("Tasks pending", activeAssignments.count { !it.isCompletedByStudent }.toString(), Icons.Default.Assignment,
+            iconTint = SemanticColors.onLavender, iconContainerColor = SemanticColors.lavenderContainer,
+            modifier = Modifier.weight(1f), onClick = { onNavigateTo(Screen.Homework.route) })
+        }
+      }
     }
 
     // 3. TODAY'S CLASSES
@@ -382,7 +332,7 @@ fun StudentDashboardScreen(
                   )
                 }
 
-                StatusBadge(status = "PENDING")
+                StatusBadge(status = hw.submissionStatus)
               }
             }
           }
@@ -392,26 +342,3 @@ fun StudentDashboardScreen(
   }
 }
 
-private data class HeroStat(
-  val label: String,
-  val value: String,
-  val tint: Color,
-  val icon: androidx.compose.ui.graphics.vector.ImageVector,
-  val badgeText: String? = null
-)
-
-@Composable
-private fun HeroStatStrip(stats: List<HeroStat>) {
-  Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-    stats.forEach { stat ->
-      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-        Text(stat.label.lowercase().replaceFirstChar { it.titlecase() },
-          modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.bodySmall)
-        Text(stat.value, color = MaterialTheme.colorScheme.onSurface,
-          style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-      }
-    }
-  }
-}

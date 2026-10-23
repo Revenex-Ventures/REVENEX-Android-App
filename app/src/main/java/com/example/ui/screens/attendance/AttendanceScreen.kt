@@ -93,6 +93,10 @@ fun AttendanceScreen(
     }
   }
 
+  var studentQuery by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id, selectedCohort) { mutableStateOf("") }
+  val visibleStudents = classStudents.filter { student ->
+    studentQuery.isBlank() || student.name.contains(studentQuery.trim(), true) || student.rollNumber.toString() == studentQuery.trim() || student.admissionNumber.contains(studentQuery.trim(), true)
+  }.sortedBy { it.rollNumber }
   val totalScholars = classStudents.size
   val presentCount = rollCallMap.values.count { it == AttendanceStatus.PRESENT }
   val lateCount = rollCallMap.values.count { it == AttendanceStatus.LATE }
@@ -218,7 +222,7 @@ fun AttendanceScreen(
                 color = SemanticColors.warningContainer
               ) {
                 Text(
-                  text = if (savedRecord != null) "Saved register" else "Today",
+                  text = if (savedRecord != null) "Saved register" else if (editingToday) "Unsaved" else "No record",
                   color = SemanticColors.onWarning,
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
@@ -282,7 +286,7 @@ fun AttendanceScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = Spacing.md12, vertical = Spacing.sm8)
                   )
                 }
               }
@@ -312,11 +316,18 @@ fun AttendanceScreen(
         }
       }
 
+      item {
+        OutlinedTextField(studentQuery, { studentQuery = it }, Modifier.fillMaxWidth().testTag("register_search"),
+          label = { Text("Search name, roll or admission number") }, singleLine = true,
+          leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.input))
+        Text("${visibleStudents.size} of ${classStudents.size} students · Save applies to the entire class",
+          Modifier.padding(top = Spacing.sm8), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
       // 3. STUDENT ROLL CALL CARDS
       if (!editingToday && savedRecord == null) item {
         EmptyStateView(title = "No register loaded", message = "No saved attendance is available for this class, date and session.")
       }
-      items(if (editingToday || savedRecord != null) classStudents else emptyList(), key = { it.id }) { student ->
+      items(if (editingToday || savedRecord != null) visibleStudents else emptyList(), key = { it.id }) { student ->
         val currentStatus = rollCallMap[student.id] ?: AttendanceStatus.PRESENT
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

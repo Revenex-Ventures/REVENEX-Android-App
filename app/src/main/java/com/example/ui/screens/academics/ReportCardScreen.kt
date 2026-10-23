@@ -63,6 +63,13 @@ private enum class ProfileSection { HOME, DETAILS, REPORTS, LEAVING, BONAFIDE }
 fun ReportCardScreen(
   repository: ErpDataRepository
 ) {
+  val actor by repository.currentUser.collectAsState()
+  val staff = actor.role in setOf(com.example.data.model.UserRole.PRINCIPAL, com.example.data.model.UserRole.ADMIN, com.example.data.model.UserRole.TEACHER)
+  var manageMarks by androidx.compose.runtime.saveable.rememberSaveable(actor.id) { mutableStateOf(true) }
+  if (staff && manageMarks) {
+    StaffMarksWorkspace(repository, onViewReports = { manageMarks = false })
+    return
+  }
   val context = LocalContext.current
   val students by repository.students.collectAsState()
   val reportCards by repository.reportCards.collectAsState()
@@ -146,7 +153,8 @@ fun ReportCardScreen(
       onOpenDetails = { section = ProfileSection.DETAILS },
       onOpenReports = { section = ProfileSection.REPORTS },
       onOpenLeaving = { section = ProfileSection.LEAVING },
-      onOpenBonafide = { section = ProfileSection.BONAFIDE }
+      onOpenBonafide = { section = ProfileSection.BONAFIDE },
+      onOpenMarks = if (staff) ({ manageMarks = true }) else null
     )
     ProfileSection.DETAILS -> DetailsPage(
       student = student,
@@ -182,7 +190,8 @@ private fun ProfileHub(
   onOpenDetails: () -> Unit,
   onOpenReports: () -> Unit,
   onOpenLeaving: () -> Unit,
-  onOpenBonafide: () -> Unit
+  onOpenBonafide: () -> Unit,
+  onOpenMarks: (() -> Unit)? = null
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
@@ -193,6 +202,7 @@ private fun ProfileHub(
       ProfileHeaderCard(student = student, onPickPhoto = onPickPhoto, onEditDetails = onOpenDetails)
     }
 
+    if (onOpenMarks != null) item { TextButton(onClick = onOpenMarks) { Text("Manage marks & publication") } }
     item { SectionLabel("Academic") }
 
     item {
