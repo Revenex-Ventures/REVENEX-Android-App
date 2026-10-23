@@ -63,13 +63,31 @@ fun AttendanceScreen(
     students.filter { "Grade ${it.classGrade}-${it.division}" == selectedCohort }
   }
   val today = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
+  var selectedDate by remember(currentUser.id) { mutableStateOf(today) }
+  var showDatePicker by remember { mutableStateOf(false) }
+  val editingToday = selectedDate == today
+  if (showDatePicker) {
+    val picker = rememberDatePickerState()
+    DatePickerDialog(onDismissRequest = { showDatePicker = false },
+      confirmButton = { TextButton(onClick = {
+        picker.selectedDateMillis?.let { millis ->
+          selectedDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+          }.format(Date(millis))
+          showSuccessNotification = false; saveError = null
+        }
+        showDatePicker = false
+      }, enabled = picker.selectedDateMillis != null) { Text("View date") } },
+      dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+    ) { DatePicker(state = picker) }
+  }
   val savedRecord = classAttendanceMap.values.lastOrNull { record ->
-    record.date == today && record.sessionSlot == selectedSessionSlot &&
+    record.date == selectedDate && record.sessionSlot == selectedSessionSlot &&
       classStudents.firstOrNull()?.let { it.classGrade == record.classGrade && it.division == record.division } == true
   }
-  val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord) {
+  val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord, selectedDate) {
     mutableStateMapOf<String, AttendanceStatus>().apply {
-      classStudents.forEach { st ->
+      classStudents.filter { editingToday || savedRecord != null }.forEach { st ->
         put(st.id, savedRecord?.studentList?.firstOrNull { it.studentId == st.id }?.status ?: AttendanceStatus.PRESENT)
       }
     }
@@ -146,7 +164,7 @@ fun AttendanceScreen(
                 onResult = { saved -> saving = false; showSuccessNotification = saved; saveError = if (saved) null else "Attendance was not confirmed. Check your connection and retry." }
               )
             },
-            enabled = !saving && classStudents.isNotEmpty() && currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER),
+            enabled = editingToday && !saving && classStudents.isNotEmpty() && currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER),
             containerColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier
               .fillMaxWidth()
@@ -183,7 +201,7 @@ fun AttendanceScreen(
             ) {
               Column {
                 Text(
-                  text = "ATTENDANCE · $today",
+                  text = "ATTENDANCE REGISTER",
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
                   style = MaterialTheme.typography.labelSmall,
                   letterSpacing = TypeTokens.trackingMicroLabel
@@ -211,6 +229,11 @@ fun AttendanceScreen(
 
             Spacer(modifier = Modifier.height(Spacing.s4))
 
+            OutlinedButton(onClick = { showDatePicker = true }, enabled = !saving) {
+              Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(Spacing.sm8)); Text(selectedDate)
+            }
+            if (!editingToday) Text("History is view-only. Return to today's date to record attendance.",
+              style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             // Cohort Selector Chips
             LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
               items(cohorts) { ch ->
@@ -277,7 +300,7 @@ fun AttendanceScreen(
             item { ScholaPillBadge(status = "$absentCount Absent") }
             item { ScholaPillBadge(status = "$excusedCount Excused") }
           }
-          TextButton(modifier = Modifier.align(Alignment.End), enabled = !saving &&
+          TextButton(modifier = Modifier.align(Alignment.End), enabled = editingToday && !saving &&
             currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER), onClick = {
               classStudents.forEach { rollCallMap[it.id] = AttendanceStatus.PRESENT }
               showSuccessNotification = false
@@ -290,7 +313,10 @@ fun AttendanceScreen(
       }
 
       // 3. STUDENT ROLL CALL CARDS
-      items(classStudents, key = { it.id }) { student ->
+      if (!editingToday && savedRecord == null) item {
+        EmptyStateView(title = "No register loaded", message = "No saved attendance is available for this class, date and session.")
+      }
+      items(if (editingToday || savedRecord != null) classStudents else emptyList(), key = { it.id }) { student ->
         val currentStatus = rollCallMap[student.id] ?: AttendanceStatus.PRESENT
         AppCard(modifier = Modifier.fillMaxWidth()) {
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -306,7 +332,7 @@ fun AttendanceScreen(
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
             listOf(AttendanceStatus.PRESENT to "P", AttendanceStatus.LATE to "L", AttendanceStatus.ABSENT to "A", AttendanceStatus.EXCUSED to "E").forEach { (status,label) ->
               FilterChip(colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer, selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer), selected = currentStatus == status,
-                enabled = !saving && currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER),
+                enabled = editingToday && !saving && currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER),
                 onClick = { rollCallMap[student.id] = status; showSuccessNotification = false },
                 label = { Text(label) },
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp)
