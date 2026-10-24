@@ -76,14 +76,23 @@ jobs:
       - name: Build and run Android quality checks
         run: |
           chmod +x gradlew
-          ./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Proborazzi.test.record=true assembleDebug testDebugUnitTest lintDebug verifyNoFirebaseDependencies --console=plain
+          ./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Proborazzi.test.record=true assembleDebug assembleReview testDebugUnitTest lintDebug lintReview verifyNoFirebaseDependencies --console=plain
       - name: Verify server prompt and private configuration stay out of APK
-        run: python3 scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          python3 scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
+          python3 scripts/check_apk_boundary.py app/build/outputs/apk/review/app-review.apk
       - name: Upload tested demo APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Revenex-demo-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload side-by-side review APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Revenex-review-${{ github.sha }}
+          path: app/build/outputs/apk/review/app-review.apk
           if-no-files-found: error
           retention-days: 14
       - name: Upload verification reports

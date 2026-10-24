@@ -55,6 +55,14 @@ android {
   }
 
   buildTypes {
+    // Optional side-by-side delivery: preserves an existing com.example install.
+    create("review") {
+      initWith(getByName("debug"))
+      applicationIdSuffix = ".review"
+      versionNameSuffix = "-review"
+      signingConfig = signingConfigs.getByName("debug")
+      matchingFallbacks += listOf("debug")
+    }
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
@@ -164,8 +172,9 @@ dependencies {
 // Prevent a transitive SDK from silently reintroducing the retired backend.
 tasks.register("verifyNoFirebaseDependencies") {
   doLast {
-    val retired = configurations.getByName("debugRuntimeClasspath")
-      .resolvedConfiguration.resolvedArtifacts
+    val retired = listOf("debugRuntimeClasspath", "reviewRuntimeClasspath").flatMap { name ->
+      configurations.getByName(name).resolvedConfiguration.resolvedArtifacts
+    }
       .filter { it.moduleVersion.id.group.startsWith("com.google.firebase") }
     check(retired.isEmpty()) { "Firebase dependencies must remain absent: $retired" }
   }
