@@ -91,3 +91,8 @@ The invoice fixture's actual failure was shared singleton test state: its select
 Actual installed-app inspection then caught a sign-out crash: cleanup attempted an unregistered principal_attendance route. Cleanup now considers only registered destinations, and the existing Attendance overview module has its missing NavHost destination registered for Principal/Admin. An extended regression journey covers module overview and Settings sign-out. The 14c5a0d APK is therefore superseded and is not the final recommended build, despite its green CI.
 
 Runtime evidence so far: real account/photo entry and explicitly labeled Supabase login, separate local demo, Principal and Teacher portals, stored Dark after process restart, Class 10-A attendance selection/save (4 present/2 absent confirmed in Local Demo). One emulator System UI wait prompt occurred at startup. No hosted Auth, captured Razorpay payment, physical phone or push delivery is claimed.
+
+
+## Final evidence
+
+Application 88db806 / CI 40123461452 passes 134 Android tests, both builds/lint (0 errors / 78 warnings per variant), 111 local PostgreSQL assertions, 31 mocked server-handler tests and one Deno entrypoint test. The extended registered-overview and sign-out regression passes. The exact CI review APK was installed and cold/warm/reduced-motion entry recorded. Current unauthenticated payment function responds 401 with its own sign-in message; anonymous students access is denied. No authenticated payment or private hosted workflow success is inferred. See ../README_REVENEX_DELIVERY.md for all artifacts and remaining acceptance gaps.

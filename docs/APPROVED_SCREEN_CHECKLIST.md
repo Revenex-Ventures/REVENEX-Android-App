@@ -1,3 +1,5 @@
+> Final source `88db806` / CI `40123461452`: 134 tests passed. See [consolidated delivery](../README_REVENEX_DELIVERY.md) for exact artifacts, runtime evidence and remaining hosted/device gaps.
+
 # Revenex routed-screen checklist
 
 Current implementation scope: approved ivory/orange presentation; official RV/company-card wordmark retained. This file distinguishes implementation from visual and hosted verification. MainActivity's actual NavHost was traced; the old ParentDashboardScreen and preview-only ScholaOS screenshots are not delivery evidence.
@@ -7,10 +9,10 @@ Current implementation scope: approved ivory/orange presentation; official RV/co
 | Route / experience | Actual production presentation | Rebuild and retained behavior | Evidence / remaining check |
 |---|---|---|---|
 | Auth / portal / sign-in / demo | AuthScreen + RevenexLaunchHost | Local bundled photo, separate portal sign-in and secondary demo selection; backend identity controls access | LaunchEntryTest; fresh emulator recording pending |
-| Principal | PrincipalDashboardScreen | Three metrics, labeled weekly chart, grouped actions, events, management/activity | First-batch comparisons inspected; final recapture pending |
-| Admin | AdminDashboardScreen | Context, operational metrics/exceptions, grouped modules, audit and financial activity | Actual NavHost People/Academics/Activity journey; final runtime pending |
+| Principal | PrincipalDashboardScreen | Three metrics, labeled weekly chart, grouped actions, events, management/activity | Final target/current comparison and actual CI runtime inspected |
+| Admin | AdminDashboardScreen | Context, operational metrics/exceptions, grouped modules, audit and financial activity | Actual NavHost People/Academics/Activity/Overview/sign-out journey; runtime Admin inspected |
 | Teacher | TeacherDashboardScreen | Identity, real lesson timeline, two actions, class summary, tasks | Gate render and routed attendance/class assertions |
-| Student | StudentDashboardScreen | Slim assistant entry, next class, three shortcuts, due tasks, notice | Both-palette body renders; runtime pending |
+| Student | StudentDashboardScreen | Slim assistant entry, next class, three shortcuts, due tasks, notice | Both-palette final body renders; runtime Student inspected |
 | Parent | StudentDashboardScreen parent branch | Permitted child selection, summary, chronological updates, balance, upcoming | Body render inspected; real multi-child hosted login pending |
 | Students / detail | StudentListScreen / StudentDetailScreen | Compact directory, routed Students/Faculty tabs, grouped identity/contact/academic/documents | Directory renders inspected; full-detail render pending |
 | Faculty / detail / own profile | TeacherListScreen / TeacherDetailScreen / TeacherProfileScreen | Compact rows, exact schedule matching, labeled details, local edit form preserved | Body render inspected; nested edit tests |
@@ -30,10 +32,10 @@ Current implementation scope: approved ivory/orange presentation; official RV/co
 | Transport | TransportScreen | Route rows, expanded driver/contact and ordered stops | Both-palette captures; no tracking claim |
 | Library | LibraryScreen | Searchable catalogue, local circulation action; explicit cloud limitation | Both-palette captures |
 | Inventory | InventoryScreen | Compact asset rows, condition, labeled quantity/value | Both-palette captures |
-| Reports | ReportsAnalyticsScreen | Loaded-session financial totals, class/department counts, scoped attendance periods and chronology | Final render/check pending; export explicitly unavailable |
+| Reports | ReportsAnalyticsScreen | Loaded-session financial totals, class/department counts, scoped attendance periods and chronology | Final render/date checks passed; export explicitly unavailable |
 | Search | GlobalSearchScreen | Grouped students/faculty/invoices/assignments/notices with original destinations | Final results-state inspection pending |
 | Assistant | AiAssistantScreen | Compact conversation/composer, source labels, honest on-request availability, no artificial reply delay | Local guidance tests; live provider availability unverified |
-| Settings / account / help / security | ProfileScreen | Account row, settings list, one persistent Light/Dark/System selector and detail dialogs | Appearance tests; process restart runtime pending |
+| Settings / account / help / security | ProfileScreen | Account row, settings list, one persistent Light/Dark/System selector and detail dialogs | Appearance tests; System changes, stored Dark restart and exact-CI Light startup inspected |
 | Forms / payment states / dialogs | Dialogs + shared components | Compact headers, responsive pairs, anchored actions, validation, safe inset/keyboard layout | Nested screenshots and narrow/large-font form tests |
 | Loading / empty / error | Shared controls and each production screen | Pending/failed actions kept honest; no success until confirmation | Local fixtures do not prove hosted success |
 

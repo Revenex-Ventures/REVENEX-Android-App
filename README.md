@@ -1,3 +1,5 @@
+> Final approved delivery: [APK, source, galleries, actual checks and remaining acceptance steps](README_REVENEX_DELIVERY.md). Tested application source `88db806`; CI `40123461452`; 134 Android tests passed.
+
 > Active presentation rebuild: [implementation and evidence](docs/APPROVED_BOARD_IMPLEMENTATION.md), [every routed screen](docs/APPROVED_SCREEN_CHECKLIST.md). Earlier delivery reports below are historical; use the final build record in these notes for current artifacts.
 
 > Current upgrade: [implementation, hosted evidence and remaining limits](docs/ADMIN_UPGRADE_DELIVERY.md), [latest APK/build verification](docs/CURRENT_DELIVERY.md), [screen checklist](docs/CURRENT_SCREEN_CHECKLIST.md), and [admin module matrix](docs/ADMIN_REFERENCE_MATRIX.md). Read these before historical delivery reports. The current Kotlin/Compose app uses ivory/orange light mode, coordinated dark mode and persisted Light/Dark/System appearance.
