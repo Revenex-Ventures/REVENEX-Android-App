@@ -9,15 +9,30 @@ import com.example.ui.theme.ScholaTheme
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34],qualifiers="w393dp-h852dp-xhdpi")
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class InvoiceReviewJourneyTest {
  @get:Rule val compose=createComposeRule()
+ private val dispatcher=StandardTestDispatcher()
+ @Before fun setup(){Dispatchers.setMain(dispatcher)}
+ @After fun cleanup(){dispatcher.scheduler.runCurrent();Dispatchers.resetMain()}
  @Test fun invoiceReviewPreservesItsIdentifierAndOutstandingAmountForCheckout() {
-  val repository=ErpDataRepository.getInstance();repository.setDataMode(DataMode.DEMO);repository.switchRole(UserRole.PARENT)
+  val repository=ErpDataRepository.getInstance();repository.setDataMode(DataMode.DEMO)
+  dispatcher.scheduler.runCurrent()
+  repository.switchRole(UserRole.PARENT)
+  dispatcher.scheduler.runCurrent()
+  assertEquals(UserRole.PARENT,repository.currentUser.value.role)
+  assertTrue("Parent must have a selected linked child",repository.selectedStudentId.value.isNotBlank())
   org.robolectric.shadows.ShadowLooper.idleMainLooper()
   var opened="";var amount=0L
   compose.setContent {ScholaTheme(false){FeeManagementScreen(repository,{_,_->},onPayRazorpay={id,_,due->opened=id;amount=due})}}
