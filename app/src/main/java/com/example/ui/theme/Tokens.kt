@@ -111,6 +111,7 @@ object Motion {
 object EntryTokens {
   val launchBackground = Color(0xFF090C12)
   val brandWhite = Color(0xFFF2F8FC)
+  val fieldLight = Color(0xFFECEBE6)
   val markWidth = 120.dp
   val markTravel = 25.dp
   val wordmarkOffset = 52.dp

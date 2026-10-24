@@ -38,6 +38,10 @@ fun TeacherDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
   val pupils = students.filter { "${it.classGrade}-${it.division}" == cohort }
   val day = LocalDate.now(ZoneId.of("Asia/Kolkata"))
   val slots = timetable.filter { it.teacherName.equals(user.name,true) && it.dayOfWeek.equals(day.dayOfWeek.name,true) }.sortedBy { it.periodNumber }
+  val nextListedDay=if(slots.isEmpty())(1..7).map{day.plusDays(it)}.firstOrNull{candidate->
+    timetable.any{it.teacherName.equals(user.name,true)&&it.dayOfWeek.equals(candidate.dayOfWeek.name,true)}
+  } else null
+  val shownSlots=if(slots.isNotEmpty())slots else timetable.filter{it.teacherName.equals(user.name,true)&&it.dayOfWeek.equals(nextListedDay?.dayOfWeek?.name,true)}.sortedBy{it.periodNumber}
   val register = records.values.lastOrNull { "${it.classGrade}-${it.division}" == cohort && attendanceDateMatches(it.date,day.toString()) }
   LazyColumn(Modifier.fillMaxSize().testTag("teacher_dashboard_list"), contentPadding = PaddingValues(Spacing.screenPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xl24)) {
     item { SchoolGroup {
@@ -50,9 +54,9 @@ fun TeacherDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
         TextButton(onClick = { onNavigateTo(Screen.TeacherProfile.route) }) { Text(cohort.ifBlank { "Profile" }) }
       }
     } }
-    item { SchoolSection("Today's schedule", "View all", { onNavigateTo(Screen.Timetable.route) }) {
-      if (slots.isEmpty()) Text("No lessons scheduled for today.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      slots.forEach { slot ->
+    item { SchoolSection(if(slots.isEmpty()&&shownSlots.isNotEmpty())"Next listed timetable" else "Today's schedule", "View all", { onNavigateTo(Screen.Timetable.route) }) {
+      if(slots.isEmpty())Text(if(shownSlots.isEmpty())"No lessons scheduled for today." else "No lessons scheduled today. Weekly timetable: ${nextListedDay?.dayOfWeek?.getDisplayName(java.time.format.TextStyle.FULL,Locale.getDefault())}.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      shownSlots.take(3).forEach { slot ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
           Column(Modifier.width(72.dp)) {
             Text(slot.startTime, style = MaterialTheme.typography.labelMedium)

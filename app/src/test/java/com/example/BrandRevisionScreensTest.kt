@@ -38,4 +38,20 @@ class BrandRevisionScreensTest {
    compose.onNodeWithContentDescription("Back").performClick()
   }
  }
+ @Test @Config(qualifiers="w320dp-h640dp-xhdpi")
+ fun narrowSearchRetainsARealCloseActionAndEmptyState(){
+  val repo=ErpDataRepository.getInstance();repo.setDataMode(DataMode.DEMO)
+  var closed=false
+  compose.setContent{
+   val d=androidx.compose.ui.platform.LocalDensity.current
+   CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density,1.5f)) {
+    ScholaTheme(true){com.example.ui.components.GlobalCommandPaletteModal(repo,{closed=true},{},{})}
+   }
+  }
+  compose.onNodeWithTag("command_palette_search_field").performTextInput("no-match-for-ui-verification")
+  compose.onNodeWithText("No matches found").assertExists()
+  compose.onNodeWithContentDescription("Close search").assertIsDisplayed().performClick()
+  org.junit.Assert.assertTrue(closed)
+ }
+
 }

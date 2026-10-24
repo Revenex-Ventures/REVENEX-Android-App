@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -86,21 +87,7 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
         topBar={Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
           IconButton(onClick=back,enabled=!busy,modifier=Modifier.testTag("entry_back")){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back to account entry")}
           if(demo) RevenexBrand() else Text("School account",style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }},bottomBar={
-          Surface(color=MaterialTheme.colorScheme.background) {
-            Column(Modifier.widthIn(max=EntryTokens.formWidth).fillMaxWidth().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-              if(demo) Button(onClick={
-                if(!busy){busy=true;if(mode!=DataMode.DEMO)repository.setDataMode(DataMode.DEMO)
-                  repository.switchRole(selectedRole){busy=false;onLoginSuccess()}}
-              },enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_login_button"),shape=RoundedCornerShape(Radius.input)) {
-                Text(if(busy)"Opening school…" else "Enter ${selectedRole.displayName} Dashboard")
-              } else Button(onClick=signIn,enabled=!busy&&email.isNotBlank()&&password.isNotBlank(),modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_supabase_login"),shape=RoundedCornerShape(Radius.input)) {
-                if(busy){CircularProgressIndicator(Modifier.size(Spacing.xl20),strokeWidth=2.dp);Spacer(Modifier.width(Spacing.sm8))}
-                Text(if(busy)"Signing in…" else "Sign in")
-              }
-            }
-          }
-        }) { padding ->
+        }}) { padding ->
           Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter) {
             Column(Modifier.widthIn(max=EntryTokens.formWidth).fillMaxWidth().verticalScroll(rememberScrollState()).padding(Spacing.xl20),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
               if(demo) {
@@ -109,6 +96,10 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
                   Text("Choose a sample persona. Local Demo works offline and keeps school sign-in separate.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DemoRolePicker(selectedRole,{selectedRole=it},busy)
+                Button(onClick={if(!busy){busy=true;if(mode!=DataMode.DEMO)repository.setDataMode(DataMode.DEMO);repository.switchRole(selectedRole){busy=false;onLoginSuccess()}}},enabled=!busy,
+                  modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_login_button"),shape=RoundedCornerShape(Radius.input)) {
+                  Text(if(busy)"Opening school…" else "Enter ${selectedRole.displayName} Dashboard")
+                }
                 Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(Radius.md)) {
                   Row(Modifier.padding(Spacing.lg16),horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
                     Icon(Icons.Default.Info,null,tint=MaterialTheme.colorScheme.onSecondaryContainer)
@@ -126,7 +117,8 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
                   }
                 }
                 Column(verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-                  val fieldColors=TextFieldDefaults.colors(focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,
+                  val fieldContainer=if(MaterialTheme.colorScheme.background.luminance()>.5f)EntryTokens.fieldLight else MaterialTheme.colorScheme.surfaceVariant
+                  val fieldColors=TextFieldDefaults.colors(focusedContainerColor=fieldContainer,unfocusedContainerColor=fieldContainer,
                     focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent,disabledIndicatorColor=Color.Transparent)
                   TextField(email,{email=it;error=null},Modifier.fillMaxWidth().testTag("login_email"),label={Text("Email")},singleLine=true,enabled=!busy,leadingIcon={Icon(Icons.Default.AlternateEmail,null)},
                     trailingIcon={if(email.isNotBlank())IconButton(onClick={email=""},enabled=!busy){Icon(Icons.Default.Close,"Clear email")}},
@@ -135,6 +127,10 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
                     visualTransformation=if(visible)VisualTransformation.None else PasswordVisualTransformation(),trailingIcon={IconButton(onClick={visible=!visible},enabled=!busy){Icon(if(visible)Icons.Default.VisibilityOff else Icons.Default.Visibility,if(visible)"Hide password" else "Show password")}},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={signIn()}),shape=RoundedCornerShape(Radius.input),colors=fieldColors)
                   error?.let {message->Surface(color=MaterialTheme.colorScheme.errorContainer,shape=RoundedCornerShape(Radius.sm)){Text(message,Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)}}
+                  Button(onClick=signIn,enabled=!busy&&email.isNotBlank()&&password.isNotBlank(),modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_supabase_login"),shape=RoundedCornerShape(Radius.input)) {
+                    if(busy){CircularProgressIndicator(Modifier.size(Spacing.xl20),strokeWidth=2.dp);Spacer(Modifier.width(Spacing.sm8))}
+                    Text(if(busy)"Signing in…" else "Sign in")
+                  }
                   TextButton(onClick={help=true},enabled=!busy){Text("Need help signing in?")}
                 }
                 HorizontalDivider()

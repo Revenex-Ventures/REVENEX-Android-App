@@ -28,7 +28,7 @@ class PresentationJourneysTest {
     compose.onNodeWithTag("role_select_admin").assertDoesNotExist()
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
     compose.onNodeWithTag("role_select_admin").performScrollTo().performClick()
-    compose.onNodeWithTag("submit_login_button").assertIsDisplayed().performClick()
+    compose.onNodeWithTag("submit_login_button").performScrollTo().assertIsDisplayed().performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil {entered}
     assertEquals(UserRole.ADMIN,repo.currentUser.value.role)

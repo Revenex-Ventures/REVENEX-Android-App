@@ -67,7 +67,7 @@ class LaunchEntryTest {
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
     compose.onNodeWithTag("portal_teacher").performScrollTo().performClick()
     compose.onNodeWithTag("supabase_entry_label").performScrollTo().assertTextEquals("School sign-in · Supabase")
-    compose.onNodeWithTag("submit_supabase_login").assertIsDisplayed().assertIsNotEnabled()
+    compose.onNodeWithTag("submit_supabase_login").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
     compose.onNodeWithTag("role_select_teacher").assertDoesNotExist()
     assertFalse(entered)
   }
@@ -76,7 +76,7 @@ class LaunchEntryTest {
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
     compose.onNodeWithTag("role_select_parent").performScrollTo().performClick()
-    compose.onNodeWithTag("submit_login_button").assertIsDisplayed().performClick()
+    compose.onNodeWithTag("submit_login_button").performScrollTo().assertIsDisplayed().performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil {entered}
     assertEquals(UserRole.PARENT,repo.currentUser.value.role)
@@ -86,7 +86,7 @@ class LaunchEntryTest {
     compose.setContent {ScholaTheme(false){ScholaErpApp(false,false,"",{_,_->},{})}}
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
     compose.onNodeWithTag("role_select_teacher").performScrollTo().performClick()
-    compose.onNodeWithTag("submit_login_button").assertIsDisplayed().performClick()
+    compose.onNodeWithTag("submit_login_button").performScrollTo().assertIsDisplayed().performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil(10000) {compose.onAllNodesWithTag("teacher_dashboard_list").fetchSemanticsNodes().isNotEmpty()}
     capture("routed_teacher_dashboard_light")
@@ -134,7 +134,7 @@ class LaunchEntryTest {
     compose.onNodeWithTag("login_password").performScrollTo().performTextInput("synthetic-input")
     compose.onNodeWithContentDescription("Show password").performClick()
     compose.onNodeWithContentDescription("Hide password").assertExists()
-    compose.onNodeWithTag("submit_supabase_login").performScrollTo().assertIsNotEnabled()
+    compose.onNodeWithTag("submit_supabase_login").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
     capture("login_narrow_large_text")
   }
   @Test @Config(qualifiers="w840dp-h900dp-xhdpi")
