@@ -12,21 +12,21 @@
         <item name="android:colorAccent">#FFB681</item>
     </style>
     <style name="Theme.Revenex.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#F8F7F3</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_book</item>
+        <item name="windowSplashScreenBackground">#090C12</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_brand</item>
         <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
     <style name="Theme.Revenex.Starting.Dark" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#1D2228</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_book</item>
+        <item name="windowSplashScreenBackground">#090C12</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_brand</item>
         <item name="postSplashScreenTheme">@style/Theme.Revenex.Dark</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
     <style name="Theme.Revenex.Starting.Light" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#F8F7F3</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_book</item>
+        <item name="windowSplashScreenBackground">#090C12</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_brand</item>
         <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

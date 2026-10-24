@@ -44,7 +44,7 @@ class LaunchEntryTest {
       compose.onNodeWithTag("login_email").assertExists()
       compose.onNodeWithTag("submit_supabase_login").assertIsNotEnabled()
       assertEquals(original,repo.currentUser.value);assertFalse(entered)
-      compose.onNodeWithTag("entry_back").performScrollTo().performClick()
+      compose.onNodeWithTag("entry_back").assertIsDisplayed().performClick()
     }
     compose.onNodeWithText("Welcome to Revenex").assertExists()
   }
@@ -60,12 +60,21 @@ class LaunchEntryTest {
     compose.onNodeWithTag("role_select_parent").performScrollTo().assertExists()
     capture("local_demo_light")
   }
+  @Test fun schoolSignInIsExplicitlySupabaseAndSeparateFromDemo() {
+    val repo=repo();var entered=false
+    compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
+    compose.onNodeWithTag("portal_teacher").performScrollTo().performClick()
+    compose.onNodeWithTag("supabase_entry_label").performScrollTo().assertTextEquals("School sign-in · Supabase")
+    compose.onNodeWithTag("submit_supabase_login").assertIsDisplayed().assertIsNotEnabled()
+    compose.onNodeWithTag("role_select_teacher").assertDoesNotExist()
+    assertFalse(entered)
+  }
   @Test fun guardianDemoRetainsParentIdentity() {
     val repo=repo();var entered=false
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
     compose.onNodeWithTag("role_select_parent").performScrollTo().performClick()
-    compose.onNodeWithTag("submit_login_button").performScrollTo().performClick()
+    compose.onNodeWithTag("submit_login_button").assertIsDisplayed().performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil {entered}
     assertEquals(UserRole.PARENT,repo.currentUser.value.role)
@@ -75,7 +84,7 @@ class LaunchEntryTest {
     compose.setContent {ScholaTheme(false){ScholaErpApp(false,false,"",{_,_->},{})}}
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
     compose.onNodeWithTag("role_select_teacher").performScrollTo().performClick()
-    compose.onNodeWithTag("submit_login_button").performScrollTo().performClick()
+    compose.onNodeWithTag("submit_login_button").assertIsDisplayed().performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil(10000) {compose.onAllNodesWithTag("teacher_dashboard_list").fetchSemanticsNodes().isNotEmpty()}
     capture("routed_teacher_dashboard_light")
@@ -97,7 +106,9 @@ class LaunchEntryTest {
     compose.waitForIdle()
     compose.mainClock.advanceTimeBy(800)
     capture("brand_reveal_mid")
-    compose.mainClock.advanceTimeBy(900)
+    compose.mainClock.advanceTimeBy(500)
+    capture("brand_outgoing_opaque")
+    compose.mainClock.advanceTimeBy(400)
     compose.waitForIdle()
     compose.onNodeWithTag("revenex_brand_intro").assertDoesNotExist()
     compose.runOnIdle {recomposition++}

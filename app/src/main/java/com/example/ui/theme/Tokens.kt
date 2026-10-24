@@ -107,6 +107,26 @@ object Motion {
   )
 }
 
+/** Company-card artwork geometry and focused account-entry layout. */
+object EntryTokens {
+  val launchBackground = Color(0xFF090C12)
+  val brandWhite = Color(0xFFF2F8FC)
+  val markWidth = 120.dp
+  val markTravel = 25.dp
+  val wordmarkOffset = 52.dp
+  val wordmarkMaxWidth = 360.dp
+  val brandStageHeight = 192.dp
+  val compactMark = 26.dp
+  val compactName = 124.dp
+  val formWidth = 480.dp
+  val tabletBreakpoint = 720.dp
+  val inputHeight = 56.dp
+  const val photoFraction = .42f
+  const val wordmarkFraction = .86f
+  const val brandDuration = 1400
+  const val contentFade = 140
+}
+
 // Role Accent Configuration (soft academic pastel family)
 object RoleAccent {
   // Role identity wells remain dark in both palettes.

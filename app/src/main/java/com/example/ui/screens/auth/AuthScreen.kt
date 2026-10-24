@@ -22,6 +22,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.selection.selectable
+import com.example.ui.components.RevenexBrand
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -43,6 +49,7 @@ private enum class Portal(val label: String, val detail: String) {
   FAMILY("Student / Guardian", "Learning and school updates")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
   val mode by repository.dataMode.collectAsState()
@@ -75,45 +82,71 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
     if (portal == null && !demo) {
       PhotoPortalEntry(onPortal={portalName=it.name},onDemo={demo=true})
     } else {
-      Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding(),contentAlignment=Alignment.Center) {
-        Column(Modifier.widthIn(max=480.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(Spacing.xl20),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
-          Row(verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick=back,enabled=!busy,modifier=Modifier.testTag("entry_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back to account entry") }
-            Text("REVENEX",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
-          }
-          if (demo) {
-            Text("Explore a sample school",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-            Text("Local demo works offline. These are synthetic personas, separate from school sign-in.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Column { DemoModeLoginContent(selectedRole,{selectedRole=it},busy,error) {
-              if (!busy) {
-                busy=true
-                if(mode!=DataMode.DEMO) repository.setDataMode(DataMode.DEMO)
-                repository.switchRole(selectedRole) {busy=false;onLoginSuccess()}
+      Scaffold(modifier=Modifier.fillMaxSize().safeDrawingPadding().imePadding(),containerColor=MaterialTheme.colorScheme.background,
+        topBar={Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
+          IconButton(onClick=back,enabled=!busy,modifier=Modifier.testTag("entry_back")){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back to account entry")}
+          if(demo) RevenexBrand() else Text("School account",style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }},bottomBar={
+          Surface(color=MaterialTheme.colorScheme.background) {
+            Column(Modifier.widthIn(max=EntryTokens.formWidth).fillMaxWidth().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+              if(demo) Button(onClick={
+                if(!busy){busy=true;if(mode!=DataMode.DEMO)repository.setDataMode(DataMode.DEMO)
+                  repository.switchRole(selectedRole){busy=false;onLoginSuccess()}}
+              },enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_login_button"),shape=RoundedCornerShape(Radius.input)) {
+                Text(if(busy)"Opening school…" else "Enter ${selectedRole.displayName} Dashboard")
+              } else Button(onClick=signIn,enabled=!busy&&email.isNotBlank()&&password.isNotBlank(),modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_supabase_login"),shape=RoundedCornerShape(Radius.input)) {
+                if(busy){CircularProgressIndicator(Modifier.size(Spacing.xl20),strokeWidth=2.dp);Spacer(Modifier.width(Spacing.sm8))}
+                Text(if(busy)"Signing in…" else "Sign in")
               }
-            } }
-          } else {
-            Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-              Text("${portal!!.label} sign-in",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-              Text("Use your school account. Your verified identity determines your access after sign-in.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Column(verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-              OutlinedTextField(email,{email=it;error=null},Modifier.fillMaxWidth().testTag("login_email"),label={Text("Email")},singleLine=true,enabled=!busy,
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email,imeAction=ImeAction.Next),shape=RoundedCornerShape(Radius.input))
-              OutlinedTextField(password,{password=it;error=null},Modifier.fillMaxWidth().testTag("login_password"),label={Text("Password")},singleLine=true,enabled=!busy,
-                visualTransformation=if(visible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon={IconButton(onClick={visible=!visible},enabled=!busy) {Icon(if(visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,if(visible) "Hide password" else "Show password")}},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={signIn()}),shape=RoundedCornerShape(Radius.input))
-              error?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
-              Button(onClick=signIn,enabled=!busy&&email.isNotBlank()&&password.isNotBlank(),modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("submit_supabase_login"),shape=RoundedCornerShape(Radius.input)) {
-                if(busy) {CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(Spacing.sm8))}
-                Text(if(busy) "Signing in…" else "Sign in")
+          }
+        }) { padding ->
+          Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter) {
+            Column(Modifier.widthIn(max=EntryTokens.formWidth).fillMaxWidth().verticalScroll(rememberScrollState()).padding(Spacing.xl20),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+              if(demo) {
+                Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                  Text("Explore a school day",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                  Text("Choose a sample persona. Local Demo works offline and keeps school sign-in separate.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                DemoRolePicker(selectedRole,{selectedRole=it},busy)
+                Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(Radius.md)) {
+                  Row(Modifier.padding(Spacing.lg16),horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+                    Icon(Icons.Default.Info,null,tint=MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text("Sample school data · no real student accounts or payments",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
+                  }
+                }
+              } else {
+                RevenexBrand(Modifier.align(Alignment.CenterHorizontally).padding(top=Spacing.sm8),stacked=true)
+                Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                  Text("${portal!!.label} sign-in",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                  Text("Continue with your assigned school account.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                  Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                    Icon(Icons.Default.Lock,null,Modifier.size(Spacing.lg16),tint=MaterialTheme.colorScheme.primary)
+                    Text("School sign-in · Supabase",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary,modifier=Modifier.testTag("supabase_entry_label"))
+                  }
+                }
+                Column(verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+                  val fieldColors=TextFieldDefaults.colors(focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent,disabledIndicatorColor=Color.Transparent)
+                  TextField(email,{email=it;error=null},Modifier.fillMaxWidth().testTag("login_email"),label={Text("Email")},singleLine=true,enabled=!busy,leadingIcon={Icon(Icons.Default.AlternateEmail,null)},
+                    trailingIcon={if(email.isNotBlank())IconButton(onClick={email=""},enabled=!busy){Icon(Icons.Default.Close,"Clear email")}},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email,imeAction=ImeAction.Next),shape=RoundedCornerShape(Radius.input),colors=fieldColors)
+                  TextField(password,{password=it;error=null},Modifier.fillMaxWidth().testTag("login_password"),label={Text("Password")},singleLine=true,enabled=!busy,leadingIcon={Icon(Icons.Default.LockOutline,null)},
+                    visualTransformation=if(visible)VisualTransformation.None else PasswordVisualTransformation(),trailingIcon={IconButton(onClick={visible=!visible},enabled=!busy){Icon(if(visible)Icons.Default.VisibilityOff else Icons.Default.Visibility,if(visible)"Hide password" else "Show password")}},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={signIn()}),shape=RoundedCornerShape(Radius.input),colors=fieldColors)
+                  error?.let {message->Surface(color=MaterialTheme.colorScheme.errorContainer,shape=RoundedCornerShape(Radius.sm)){Text(message,Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)}}
+                  TextButton(onClick={help=true},enabled=!busy){Text("Need help signing in?")}
+                }
+                HorizontalDivider()
+                Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                  Text("Just exploring?",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+                  OutlinedButton(onClick={demo=true;portalName=null;password="";error=null},enabled=!busy,modifier=Modifier.fillMaxWidth().testTag("try_demo"),shape=RoundedCornerShape(Radius.input)){Text("Try demo")}
+                  Text("Your school sets your role and access after sign-in.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
               }
-              TextButton(onClick={help=true},enabled=!busy) {Text("Need help signing in?")}
-              TextButton(onClick={demo=true;portalName=null;password="";error=null},enabled=!busy,modifier=Modifier.testTag("try_demo")) {Text("Try demo")}
             }
           }
         }
-      }
     }
   }
   if(help) AlertDialog(onDismissRequest={help=false},title={Text("Account help")},text={Text("Use the account assigned by your school. Contact your school administrator for account creation, password recovery or access changes. Local demo is available offline through Try demo.")},confirmButton={TextButton(onClick={help=false}){Text("Done")}})
@@ -122,8 +155,8 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
 @Composable
 private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
   BoxWithConstraints(Modifier.fillMaxSize()) {
-    val photoHeight = maxHeight * .42f
-    val wide = maxWidth >= 720.dp
+    val photoHeight = maxHeight * EntryTokens.photoFraction
+    val wide = maxWidth >= EntryTokens.tabletBreakpoint
     @Composable fun Photo(modifier: Modifier) {
       Box(modifier) {
         Image(painterResource(R.drawable.school_classroom_chennai),"Illustrative classroom in Chennai, India",Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
@@ -133,12 +166,11 @@ private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
     @Composable fun Entries(modifier: Modifier) {
       Column(modifier.padding(horizontal=Spacing.xl20).padding(bottom=Spacing.xl24),verticalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-          Icon(Icons.Default.AutoStories,null,tint=RevenexBrandOrange)
-          Text("REVENEX",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+          RevenexBrand()
         }
         Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
           Text("Welcome to Revenex",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-          Text("Choose how you want to continue.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          Text("Choose your portal for school sign-in with Supabase.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
           Portal.entries.forEach { portal ->
@@ -169,128 +201,37 @@ private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
   }
 }
 
-// ========================================================================
-// Demo Mode Login Content
-// ========================================================================
 
 @Composable
-private fun DemoModeLoginContent(
-  selectedRole: UserRole,
-  onRoleSelected: (UserRole) -> Unit,
-  isLoggingIn: Boolean,
-  errorMessage: String?,
-  onLogin: () -> Unit
-) {
-  Text(
-    text = "Demo Mode — Select Persona to Explore",
-    style = MaterialTheme.typography.titleMedium,
-    fontWeight = FontWeight.Bold
-  )
-
-  Spacer(modifier = Modifier.height(10.dp))
-
-  val demoRoles = listOf(UserRole.ADMIN, UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT)
-
-  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    demoRoles.forEach { role ->
-      val isSelected = selectedRole == role
-      Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(12.dp))
-          .clickable { onRoleSelected(role) }
-          .testTag("role_select_${role.name.lowercase()}")
-      ) {
-        Row(
-          modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Icon(
-            imageVector = when (role) {
-              UserRole.PRINCIPAL -> Icons.Default.AdminPanelSettings
-              UserRole.ADMIN -> Icons.Default.ManageAccounts
-              UserRole.TEACHER -> Icons.Default.School
-              else -> Icons.Default.FamilyRestroom
-            },
-            contentDescription = null,
-            tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
-          )
-          Spacer(modifier = Modifier.width(10.dp))
-          Column(modifier = Modifier.weight(1f)) {
-            Text(
-              text = when (role) {
-                UserRole.PRINCIPAL -> "Principal / Academic Leader"
-                UserRole.ADMIN -> "School Administrator"
-                UserRole.TEACHER -> "Teacher / Faculty"
-                UserRole.STUDENT -> "Student"
-                else -> "Parent / Guardian"
-              },
-              style = MaterialTheme.typography.titleSmall,
-              fontWeight = FontWeight.Bold,
-              color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-              text = when (role) {
-                UserRole.PRINCIPAL -> "Dr. Arvind Sharma (Academic Director)"
-                UserRole.ADMIN -> "Meera Iyer (School Operations)"
-                UserRole.TEACHER -> "Prof. Sunita Rao (Math Faculty)"
-                UserRole.STUDENT -> "Synthetic student · Class 10-A"
-                else -> "Synthetic guardian · linked child"
-              },
-              style = MaterialTheme.typography.bodySmall,
-              fontSize = 12.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-          if (isSelected) {
-            Icon(
-              imageVector = Icons.Default.CheckCircle,
-              contentDescription = "Selected",
-              tint = MaterialTheme.colorScheme.onPrimaryContainer,
-              modifier = Modifier.size(18.dp)
-            )
-          }
+private fun DemoRolePicker(selectedRole: UserRole,onSelected: (UserRole)->Unit,busy: Boolean) {
+  val roles=listOf(UserRole.ADMIN,UserRole.PRINCIPAL,UserRole.TEACHER,UserRole.STUDENT,UserRole.PARENT)
+  val large=LocalDensity.current.fontScale>1.25f
+  fun title(role: UserRole)=when(role){UserRole.ADMIN->"School Administrator";UserRole.PRINCIPAL->"Principal / Academic Leader";UserRole.TEACHER->"Teacher / Faculty";UserRole.STUDENT->"Student";else->"Parent / Guardian"}
+  fun detail(role: UserRole)=when(role){UserRole.ADMIN->"Admissions, people & operations";UserRole.PRINCIPAL->"School overview & decisions";UserRole.TEACHER->"Classes, tasks & results";UserRole.STUDENT->"Lessons, assignments & fees";else->"Child updates & school accounts"}
+  @Composable fun Persona(role: UserRole,modifier: Modifier=Modifier) {
+    val chosen=selectedRole==role
+    Surface(modifier.fillMaxWidth().selectable(chosen,onClick={onSelected(role)},enabled=!busy,role=Role.RadioButton).testTag("role_select_${role.name.lowercase()}"),
+      shape=RoundedCornerShape(Radius.lg),color=if(chosen)MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+      border=androidx.compose.foundation.BorderStroke(if(chosen)2.dp else 1.dp,if(chosen)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
+      Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+          Icon(when(role){UserRole.ADMIN->Icons.Default.ManageAccounts;UserRole.PRINCIPAL->Icons.Default.School;UserRole.TEACHER->Icons.Default.MenuBook;UserRole.STUDENT->Icons.Default.Person;else->Icons.Default.FamilyRestroom},null,tint=MaterialTheme.colorScheme.primary)
+          if(chosen)Icon(Icons.Default.CheckCircle,"Selected",tint=MaterialTheme.colorScheme.primary)
+        }
+        Text(title(role),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+        Text(detail(role),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+    }
+  }
+  BoxWithConstraints(Modifier.fillMaxWidth()) {
+    Column(verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      if(maxWidth<360.dp||large) roles.forEach{Persona(it)}
+      else roles.chunked(2).forEach { pair->
+        Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+          pair.forEach {Persona(it,Modifier.weight(1f))}
+          if(pair.size==1)Spacer(Modifier.weight(1f))
         }
       }
     }
   }
-
-  if (errorMessage != null) {
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-      text = errorMessage,
-      color = MaterialTheme.colorScheme.error,
-      style = MaterialTheme.typography.bodySmall
-    )
-  }
-
-  Spacer(modifier = Modifier.height(18.dp))
-
-  if (isLoggingIn) {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-      CircularProgressIndicator(modifier = Modifier.size(36.dp))
-    }
-  } else {
-    Button(
-      onClick = onLogin,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(50.dp)
-        .testTag("submit_login_button"),
-      shape = RoundedCornerShape(14.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-    ) {
-      Icon(Icons.Default.Login, contentDescription = null)
-      Spacer(modifier = Modifier.width(8.dp))
-      Text(
-        text = "Enter ${selectedRole.displayName} Dashboard",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-      )
-    }
-  }
 }
-

@@ -130,8 +130,7 @@ fun ScholaTopAppBar(
       navigationIcon?.invoke()
       Row(Modifier.weight(1f).padding(start = Spacing.sm8), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        Icon(Icons.Default.AutoStories, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        RevenexBrand()
       }
       IconButton(onClick = onSearchClick, modifier = Modifier.testTag("command_palette_trigger_pill")) {
         Icon(Icons.Default.Search, "Search school records")
