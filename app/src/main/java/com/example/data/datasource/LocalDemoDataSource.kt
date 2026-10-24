@@ -397,37 +397,25 @@ class LocalDemoDataSource : ErpDataSource {
 
   override fun getReportCardsFlow(): Flow<List<ReportCard>> = _reportCards.asStateFlow()
 
-  override suspend fun saveStudentMarks(
-    studentId: String,
-    term: String,
-    subjectName: String,
-    obtainedMarks: Int,
-    maxMarks: Int
-  ) {
+  override suspend fun saveStudentMarks(studentId: String, term: String, subjectName: String, obtainedMarks: Int, maxMarks: Int) {
+    require(term.isNotBlank() && subjectName.isNotBlank() && maxMarks in 1..10000 && obtainedMarks in 0..maxMarks)
+    val student = _students.value.first { it.id == studentId }
+    check(_reportCards.value.none { it.studentId == studentId && it.term == term && it.published }) { "Unpublish before editing." }
+    val fraction = obtainedMarks.toDouble() / maxMarks
+    val grade = when { fraction >= 0.9 -> "A+"; fraction >= 0.8 -> "A"; fraction >= 0.7 -> "B+"; fraction >= 0.6 -> "B"; fraction >= 0.5 -> "C"; else -> "D" }
+    val previousScore = _reportCards.value.firstOrNull { it.studentId == studentId && it.term == term }?.scores?.firstOrNull { it.subjectName == subjectName }
+    val score = previousScore?.copy(obtainedMarks = obtainedMarks, maxMarks = maxMarks, grade = grade)
+      ?: SubjectScore(subjectName, maxMarks, obtainedMarks, grade, "Marks entered by faculty")
     _reportCards.update { list ->
-      list.map { card ->
-        if (card.studentId == studentId && card.term.contains(term, ignoreCase = true)) {
-          val updatedScores = card.scores.toMutableList()
-          val existingIndex = updatedScores.indexOfFirst { it.subjectName.equals(subjectName, ignoreCase = true) }
-          
-          val pct = if (maxMarks > 0) obtainedMarks.toDouble() / maxMarks else 0.0
-          val grade = when {
-            pct >= 0.9 -> "A+"
-            pct >= 0.8 -> "A"
-            pct >= 0.7 -> "B+"
-            pct >= 0.6 -> "B"
-            pct >= 0.5 -> "C"
-            else -> "D"
-          }
-          
-          val newScore = SubjectScore(subjectName, maxMarks, obtainedMarks, grade, "Marks entered by faculty")
-          if (existingIndex >= 0) {
-            updatedScores[existingIndex] = newScore
-          } else {
-            updatedScores.add(newScore)
-          }
-          card.copy(scores = updatedScores)
-        } else card
+      val existing = list.firstOrNull { it.studentId == studentId && it.term == term }
+      if (existing == null) list + ReportCard(
+        id = "${studentId}_$term", studentId = studentId, studentName = student.name,
+        classGrade = student.classGrade, division = student.division, rollNumber = student.rollNumber,
+        term = term, academicYear = student.sessionId, scores = listOf(score), attendanceRate = student.attendancePercent,
+        rankInClass = 0, totalStudents = 0, principalRemark = "", issueDate = "", schoolId = student.schoolId,
+        sessionId = student.sessionId, published = false
+      ) else list.map { card ->
+        if (card.id == existing.id) card.copy(scores = card.scores.filterNot { it.subjectName == subjectName } + score) else card
       }
     }
   }

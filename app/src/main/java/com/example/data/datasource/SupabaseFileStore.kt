@@ -14,7 +14,7 @@ import kotlin.time.Duration.Companion.hours
 
 object SupabaseFileStore {
   private val allowed = setOf("application/pdf", "image/jpeg", "image/png", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-  suspend fun upload(context:Context,uri:Uri,displayName:String?,mimeType:String,user:UserProfile,session:String):FirebaseStorageManager.UploadResult = withContext(Dispatchers.IO) {
+  suspend fun upload(context:Context,uri:Uri,displayName:String?,mimeType:String,user:UserProfile,session:String):DocumentFiles.UploadResult = withContext(Dispatchers.IO) {
     require(mimeType in allowed) { "Choose a PDF, PNG, JPEG or DOCX file." }
     val bytes=context.contentResolver.openInputStream(uri)?.use { input ->
       val out=java.io.ByteArrayOutputStream()
@@ -38,7 +38,7 @@ object SupabaseFileStore {
     })
     client.storage.from("erp-documents").upload(path,bytes) { contentType=ContentType.parse(mimeType);upsert=false }
     // Persist a stable reference; sign only when the recipient requests a download.
-    FirebaseStorageManager.UploadResult(name,mimeType,"supabase://erp-documents/$path",bytes.size.toLong())
+    DocumentFiles.UploadResult(name,mimeType,"supabase://erp-documents/$path",bytes.size.toLong())
   }
 
   internal fun documentPath(reference: String): String? {

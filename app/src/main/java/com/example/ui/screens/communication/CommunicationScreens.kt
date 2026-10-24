@@ -1,5 +1,7 @@
 package com.example.ui.screens.communication
 
+import androidx.compose.animation.AnimatedVisibility
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,275 +32,99 @@ import com.example.data.model.*
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
 import com.example.ui.theme.*
+import com.example.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 // ============================================================================
 // AUDIT TRAIL & BROADCASTS WORKSPACE
 // Segmented sub-tab: "System Audit Logs" ↔ "Parent Broadcasts"
 // ============================================================================
 @Composable
-fun NoticesScreen(
-  repository: ErpDataRepository,
-  onShowCreateNotice: () -> Unit
-) {
-  val auditLogs by repository.auditLogs.collectAsState()
+fun NoticesScreen(repository: ErpDataRepository,onShowCreateNotice: () -> Unit,initialAudit:Boolean=false) {
   val notices by repository.notices.collectAsState()
-  val currentUser by repository.currentUser.collectAsState()
-
-  var selectedSubTab by remember { mutableStateOf(0) } // 0 = System Audit Logs, 1 = Parent Broadcasts
-  var auditFilter by remember { mutableStateOf("All") }
-  val auditFilters = listOf("All", "ROLL_CALL", "FEE_PAYMENT", "GRADEBOOK", "ADMISSION", "BROADCAST")
-
-  val filteredAuditLogs = remember(auditLogs, auditFilter) {
-    if (auditFilter == "All") auditLogs
-    else auditLogs.filter { it.actionType.equals(auditFilter, ignoreCase = true) }
-  }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(GlassBgTransparent)
-      .testTag("notices_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    // 1. HERO SURFACE (Dark Onyx, 22dp corners)
-    item {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.hero))
-          .background(ScholaOnyx)
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
-          .padding(Spacing.cardPaddingLarge)
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "COMMUNICATION & GOVERNANCE",
-                color = ScholaOnyxMuted,
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = TypeTokens.trackingMicroLabel
-              )
-              Text(
-                text = if (selectedSubTab == 0) "System Audit Trail" else "Parent Broadcasts & Circulars",
-                color = ScholaOnyxText,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-              )
-            }
-            if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
-              Button(
-                onClick = onShowCreateNotice,
-                colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-              ) {
-                Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Compose", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-              }
-            }
-          }
-        }
-      }
+  val logs by repository.auditLogs.collectAsState()
+  val actor by repository.currentUser.collectAsState()
+  val administrator=actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)
+  var audit by remember(actor.id,initialAudit){mutableStateOf(initialAudit && administrator)}
+  var filter by remember(actor.id){mutableStateOf("All")}
+  var expanded by remember(actor.id){mutableStateOf<String?>(null)}
+  val filtered=logs.filter {filter=="All"||it.actionType.equals(filter,true)}
+  Column(Modifier.fillMaxSize().testTag("notices_screen")) {
+    WorkspacePageHeader(if(audit)"School activity" else "Notices & circulars",Modifier.padding(horizontal=Spacing.screenPadding)) {
+      if(administrator) Button(onClick=onShowCreateNotice,shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Default.Add,null);Text("Add")}
     }
-
-    // 2. SEGMENTED SUB-TAB TOGGLE ("System Audit Logs" ↔ "Parent Broadcasts")
-    item {
-      Surface(
-        shape = RoundedCornerShape(Radius.pill),
-        color = ScholaSurface,
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.pill))
-          .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.pill))
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(4.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-          listOf("System Audit Logs", "Parent Broadcasts").forEachIndexed { index, title ->
-            val isSelected = selectedSubTab == index
-            Box(
-              modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(if (isSelected) ScholaTerracotta else Color.Transparent)
-                .clickable { selectedSubTab = index }
-                .padding(vertical = 10.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else ScholaTextSecondary,
-                fontSize = 12.sp
-              )
-            }
-          }
-        }
-      }
+    if(administrator) TabRow(selectedTabIndex=if(audit)1 else 0,containerColor=MaterialTheme.colorScheme.background) {
+      Tab(selected=!audit,onClick={audit=false},text={Text("Notices")});Tab(selected=audit,onClick={audit=true},text={Text("Audit log")})
     }
-
-    // 3. SUB-TAB CONTENT
-    if (selectedSubTab == 0) {
-      // TAB 1: SYSTEM AUDIT LOGS
-      item {
-        LazyRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-        ) {
-          items(auditFilters) { flt ->
-            val isSelected = auditFilter == flt
-            Surface(
-              shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) ScholaSlateNavy else ScholaSurface,
-              modifier = Modifier
-                .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) ScholaSlateNavy else ScholaBorder, RoundedCornerShape(Radius.pill))
-                .clickable { auditFilter = flt }
-            ) {
-              Text(
-                text = flt.replace("_", " "),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
-                modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
-              )
-            }
-          }
-        }
-      }
-
-      if (filteredAuditLogs.isEmpty()) {
-        item {
-          EmptyStateView(title = "No Audit Logs", message = "No system audit logs found matching '$auditFilter'.")
-        }
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      if(audit) {
+        item {LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){items(listOf("All")+logs.map {it.actionType}.distinct()){value->SchoolFilterChip(filter==value,{filter=value},{Text(value.replace('_',' '))})}}}
+        if(filtered.isEmpty()) item {EmptyStateView(title="No activity in this view",message="Confirmed school activity appears here when available.")}
+        items(filtered,key={it.id}) {log->SchoolGroup {
+          SchoolRow(log.actionSummary,"${log.actorName} · ${log.timestamp}",Icons.Default.History,{expanded=if(expanded==log.id)null else log.id})
+          AnimatedVisibility(expanded==log.id){Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Text(log.details,style=MaterialTheme.typography.bodyMedium);Text("${log.actorRole} · ${log.actionType}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(log.targetScholar.isNotBlank()) Text(log.targetScholar,style=MaterialTheme.typography.bodySmall)
+          }}
+        }}
       } else {
-        items(filteredAuditLogs, key = { it.id }) { log ->
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.Top
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(38.dp)
-                  .clip(CircleShape)
-                  .background(
-                    when (log.actionType) {
-                      "ROLL_CALL" -> StatusSuccessBg
-                      "FEE_PAYMENT" -> ScholaTerracottaContainer
-                      "GRADEBOOK" -> Color(0xFFEDE9FE)
-                      else -> ScholaSlateContainer
-                    }
-                  ),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = when (log.actionType) {
-                    "ROLL_CALL" -> Icons.Default.CheckCircle
-                    "FEE_PAYMENT" -> Icons.Default.Payment
-                    "GRADEBOOK" -> Icons.Default.Grade
-                    "ADMISSION" -> Icons.Default.PersonAdd
-                    else -> Icons.Default.Campaign
-                  },
-                  contentDescription = null,
-                  tint = when (log.actionType) {
-                    "ROLL_CALL" -> StatusSuccessText
-                    "FEE_PAYMENT" -> ScholaTerracotta
-                    "GRADEBOOK" -> ScholaTerracottaDark
-                    else -> ScholaSlateNavy
-                  },
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-
-              Spacer(modifier = Modifier.width(Spacing.s3))
-
-              Column(modifier = Modifier.weight(1f)) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(log.actionSummary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(log.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                  text = "${log.actorName} (${log.actorRole}) • Target: ${log.targetScholar}",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = ScholaOnTerracottaContainer,
-                  fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(log.details, style = MaterialTheme.typography.bodySmall, color = ScholaTextSecondary)
-              }
-            }
-          }
-        }
-      }
-    } else {
-      // TAB 2: PARENT BROADCASTS
-      item {
-        SectionHeader(title = "Published Official Circulars (${notices.size})")
-      }
-
-      items(notices, key = { it.id }) { notice ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            ScholaPillBadge(status = notice.category.label)
-            Text(notice.publishedDate, style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
-          }
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          Text(notice.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(notice.content, style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          Text(
-            text = "Issued by ${notice.authorName} (${notice.authorRole}) • Target: ${notice.targetAudience}",
-            style = MaterialTheme.typography.labelSmall,
-            color = ScholaMuted,
-            fontSize = 12.sp
-          )
-        }
+        if(notices.isEmpty()) item {EmptyStateView(title="No school notices",message="Published announcements appear here when available to your account.")}
+        items(notices,key={it.id}) {notice->SchoolGroup {
+          SchoolRow(notice.title,"${notice.category.label} · ${notice.publishedDate}",Icons.Default.Campaign,{expanded=if(expanded==notice.id)null else notice.id},if(notice.isImportant)"Important" else null)
+          AnimatedVisibility(expanded==notice.id){Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Text(notice.content,style=MaterialTheme.typography.bodyMedium)
+            Text("${notice.authorName} · ${notice.authorRole}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Audience: ${notice.targetAudience}",style=MaterialTheme.typography.bodySmall)
+            if(notice.attachmentName.isNotBlank()) Text("Attachment: ${notice.attachmentName}",style=MaterialTheme.typography.bodySmall)
+          }}
+        }}
       }
     }
   }
 }
 
-// Notifications Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
   repository: ErpDataRepository,
-  onBack: () -> Unit
+  onBack: () -> Unit,
+  onNavigateTo: (String) -> Unit = {}
 ) {
   val notifications by repository.notifications.collectAsState()
+  val currentUser by repository.currentUser.collectAsState()
+  val scope = rememberCoroutineScope()
+  var about by remember(currentUser.id) {mutableStateOf(false)}
+  if(about) AlertDialog(onDismissRequest={about=false},title={Text("In-app inbox")},text={Text("Updates are stored for your account. Read state is individual. Device push is not configured. Each update opens its related workspace; record-specific links are not available yet.")},confirmButton={TextButton(onClick={about=false}){Text("Done")}})
+  var category by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf<String?>(null) }
+  var unreadOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf(false) }
+  var markingAll by remember(currentUser.id) { mutableStateOf(false) }
+  val filtered = notifications.filter { (category == null || it.category.name == category) && (!unreadOnly || !it.isRead) }
+  var opening by remember(currentUser.id) { mutableStateOf<String?>(null) }
+  var inboxError by remember(currentUser.id) { mutableStateOf<String?>(null) }
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       TopAppBar(
-        title = { Text("Notifications", fontWeight = FontWeight.Bold) },
+        title = { Text("Inbox", style=MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
           }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = ScholaLinen)
+        actions = {
+          TextButton(enabled = !markingAll && opening == null && notifications.any { !it.isRead }, onClick = {
+            markingAll = true; inboxError = null
+            scope.launch {
+              try { repository.readAllNotificationsConfirmed() }
+              catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                inboxError = "Read state could not be confirmed. Refresh before retrying."
+              } finally { markingAll = false }
+            }
+          }) { Text(if (markingAll) "Saving…" else "Mark all read") }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
       )
     }
   ) { paddingValues ->
@@ -307,62 +136,72 @@ fun NotificationsScreen(
       verticalArrangement = Arrangement.spacedBy(Spacing.s2)
     ) {
       item {
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Text("In-app school inbox",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
-          Text("Updates sync while the Supabase demo is open. Device push notifications are not enabled in this demo.",style=MaterialTheme.typography.bodySmall,color=ScholaTextSecondary)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+          Text("${notifications.count { !it.isRead }} unread",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          IconButton(onClick={about=true}){Icon(Icons.Default.Info,"Inbox information",Modifier.size(Spacing.xl20))}
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          item { SchoolFilterChip(category == null, { category = null }, { Text("All") }) }
+          items(notifications.map { it.category }.distinct()) { value ->
+            SchoolFilterChip(category == value.name, { category = value.name }, { Text(value.label) })
+          }
+          item { SchoolFilterChip(unreadOnly, { unreadOnly = !unreadOnly }, { Text("Unread") }) }
         }
       }
-      if (notifications.isEmpty()) {
-        item { EmptyStateView(title = "No notifications", message = "School updates will appear here.") }
+      inboxError?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
+      if (filtered.isEmpty()) {
+        item { EmptyStateView(title = "No matching updates", message = "School updates appear here. Clear filters to see your full inbox.") }
       }
-      items(notifications, key = { it.id }) { notif ->
-        AppCard(modifier = Modifier.fillMaxWidth().clickable(
-          enabled = !notif.isRead,
-          onClickLabel = "Mark notification as read"
-        ) { repository.markNotificationAsRead(notif.id) }) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-          ) {
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(if (!notif.isRead) ScholaTerracottaContainer else ScholaBorder),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = when (notif.category) {
-                  NotificationCategory.ATTENDANCE -> Icons.Default.HowToReg
-                  NotificationCategory.FEES -> Icons.Default.AttachMoney
-                  NotificationCategory.EXAMS -> Icons.Default.EventNote
-                  else -> Icons.Default.Notifications
-                },
-                contentDescription = null,
-                tint = if (!notif.isRead) ScholaTerracotta else ScholaMuted,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-
-            Spacer(modifier = Modifier.width(Spacing.s3))
-
-            Column(modifier = Modifier.weight(1f)) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-              ) {
-                Text(notif.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                if (!notif.isRead) {
-                  Box(modifier = Modifier.size(8.dp).background(ScholaTerracotta, CircleShape))
-                }
+      filtered.groupBy { notice ->
+        notice.timestamp.take(10).takeIf {it.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))} ?: "Recent updates"
+      }.forEach { (date,entries) ->
+        item { Text(date,Modifier.padding(top=Spacing.md12,bottom=Spacing.xs4),style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Bold) }
+        items(entries,key={it.id}) { notif ->
+          Surface(onClick={
+          opening = notif.id; inboxError = null
+          scope.launch {
+            try {
+              if (!notif.isRead) repository.readNotificationConfirmed(notif.id)
+              onNavigateTo(notificationDestination(notif.category))
+            } catch (e: Exception) {
+              if (e is kotlinx.coroutines.CancellationException) throw e
+              inboxError = "Could not open this update. Read state is not confirmed; tap again to retry."
+            } finally { opening = null }
+          }
+          },enabled=opening==null&&!markingAll,color=MaterialTheme.colorScheme.background) {
+            Row(Modifier.fillMaxWidth().semantics {stateDescription=if(notif.isRead)"Read" else "Unread"}.padding(vertical=Spacing.sm8),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+              val (well,ink)=when(notif.category) {
+                NotificationCategory.FEES->SemanticColors.butterContainer to SemanticColors.onButter
+                NotificationCategory.ATTENDANCE->SemanticColors.successContainer to SemanticColors.onSuccess
+                NotificationCategory.HOMEWORK,NotificationCategory.EXAMS->SemanticColors.lavenderContainer to SemanticColors.onLavender
+                else->SemanticColors.peachContainer to SemanticColors.onPeach
               }
-              Text(notif.message, style = MaterialTheme.typography.bodySmall, color = ScholaTextSecondary)
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
+              Surface(shape=CircleShape,color=well) {Icon(when(notif.category){NotificationCategory.FEES->Icons.Default.CurrencyRupee;NotificationCategory.ATTENDANCE->Icons.Default.HowToReg;NotificationCategory.HOMEWORK->Icons.Default.Description;else->Icons.Default.Campaign},null,Modifier.padding(Spacing.sm8).size(18.dp),tint=ink)}
+              Column(Modifier.weight(1f)) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                  Text(notif.title,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=if(notif.isRead)FontWeight.Medium else FontWeight.Bold)
+                  Text(if(opening==notif.id)"Opening…" else shortSchoolTimestamp(notif.timestamp),Modifier.semantics{contentDescription=notif.timestamp},style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                  if(!notif.isRead) Box(Modifier.padding(top=Spacing.xs4).size(6.dp).background(MaterialTheme.colorScheme.primary,CircleShape))
+                }
+                Text(notif.message,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+
+              }
             }
           }
+          HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         }
       }
+
     }
   }
+}
+
+internal fun notificationDestination(category: NotificationCategory): String = when (category) {
+  NotificationCategory.ATTENDANCE -> Screen.Attendance.route
+  NotificationCategory.FEES -> Screen.Fees.route
+  NotificationCategory.HOMEWORK -> Screen.Homework.route
+  NotificationCategory.EXAMS -> Screen.ReportCard.route
+  NotificationCategory.LEAVE -> Screen.Leaves.route
+  NotificationCategory.ANNOUNCEMENTS -> Screen.Notices.route
+  else -> Screen.OperationsHub.route
 }

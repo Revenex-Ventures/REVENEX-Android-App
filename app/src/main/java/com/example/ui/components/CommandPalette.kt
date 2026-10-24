@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.data.model.UserRole
+import com.example.ui.screens.operations.WorkspaceDirectory
 import com.example.data.model.Student
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.navigation.Screen
@@ -47,29 +49,26 @@ fun GlobalCommandPaletteModal(
   onTriggerAction: (String) -> Unit
 ) {
   val students by repository.students.collectAsState()
+  val currentUser by repository.currentUser.collectAsState()
   var query by remember { mutableStateOf("") }
 
-  val defaultActions = remember {
-    listOf(
-      PaletteAction("Executive Dashboard", "WORKSPACE", Icons.Default.Dashboard, ScholaTerracotta, Screen.Dashboard.route),
-      PaletteAction("Scholars Directory (Student 360)", "WORKSPACE", Icons.Default.People, ScholaTerracotta, Screen.Students.route),
-      PaletteAction("Attendance Matrix (Roll Call)", "WORKSPACE", Icons.Default.HowToReg, ScholaTerracottaLight, Screen.Attendance.route),
-      PaletteAction("Bursar & Financial Ledger", "WORKSPACE", Icons.Default.AccountBalanceWallet, ScholaTerracottaLight, Screen.Fees.route),
-      PaletteAction("Academic Timetable & Slots", "WORKSPACE", Icons.Default.CalendarMonth, ScholaTerracottaLight, Screen.Timetable.route),
-      PaletteAction("Student Profile & Reports", "WORKSPACE", Icons.Default.Person, ScholaTerracotta, Screen.ReportCard.route),
-      PaletteAction("Official Circulars & Broadcasts", "WORKSPACE", Icons.Default.Campaign, ScholaTerracottaLight, Screen.Notices.route),
-      PaletteAction("Operations & Leave Hub", "WORKSPACE", Icons.Default.Apps, ScholaTerracottaLight, Screen.OperationsHub.route),
-
-      // Quick Actions
-      PaletteAction("Take Morning Roll Call", "ACTION", Icons.Default.FactCheck, ScholaTerracotta, Screen.Attendance.route),
-      PaletteAction("Enroll New Scholar", "ACTION", Icons.Default.PersonAdd, ScholaTerracotta, onAction = { onTriggerAction("admit_student") }),
-      PaletteAction("Collect Tuition Payment", "ACTION", Icons.Default.Payment, ScholaTerracottaLight, Screen.Fees.route),
-      PaletteAction("Publish Institutional Notice", "ACTION", Icons.Default.EditNote, ScholaTerracottaLight, onAction = { onTriggerAction("create_notice") }),
-      PaletteAction("Assign STEM Homework", "ACTION", Icons.Default.Assignment, ScholaTerracotta, onAction = { onTriggerAction("create_assignment") })
-    )
+  val palette = MaterialTheme.colorScheme
+  val defaultActions = buildList {
+    add(PaletteAction("Home", "WORKSPACE", Icons.Default.Home, palette.primary, Screen.Dashboard.route))
+    WorkspaceDirectory.visible(currentUser.role).forEach { destination ->
+      add(PaletteAction(destination.title, destination.area.label, Icons.Default.Apps, palette.primary, destination.route))
+    }
+    add(PaletteAction("Modules", "WORKSPACE", Icons.Default.Apps, palette.primary, Screen.OperationsHub.route))
+    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+      add(PaletteAction("Add student", "ACTION", Icons.Default.PersonAdd, palette.primary, onAction = { onTriggerAction("admit_student") }))
+      add(PaletteAction("Publish notice", "ACTION", Icons.Default.Campaign, palette.primary, onAction = { onTriggerAction("create_notice") }))
+    }
+    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)) {
+      add(PaletteAction("New assignment", "ACTION", Icons.Default.Assignment, palette.primary, onAction = { onTriggerAction("create_assignment") }))
+    }
   }
 
-  val filteredActions = remember(query) {
+  val filteredActions = remember(query, defaultActions) {
     if (query.isBlank()) defaultActions
     else defaultActions.filter { it.title.contains(query, ignoreCase = true) || it.category.contains(query, ignoreCase = true) }
   }
@@ -83,174 +82,33 @@ fun GlobalCommandPaletteModal(
     }.take(4)
   }
 
-  Dialog(
-    onDismissRequest = onDismiss,
-    properties = DialogProperties(usePlatformDefaultWidth = false)
-  ) {
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .safeDrawingPadding()
-        .imePadding()
-        .background(Color.Black.copy(alpha = 0.55f))
-        .padding(Spacing.s4),
-      contentAlignment = Alignment.TopCenter
-    ) {
-      Surface(
-        modifier = Modifier
-          .widthIn(max = 640.dp)
-          .fillMaxWidth()
-          .padding(top = 40.dp)
-          .clip(RoundedCornerShape(Radius.hero))
-          .border(1.dp, ScholaBorder, RoundedCornerShape(Radius.hero)),
-        color = ScholaSurface,
-        shape = RoundedCornerShape(Radius.hero),
-        tonalElevation = Elev.e3
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          // Search Input Header
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(Spacing.s4),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(
-              imageVector = Icons.Default.Search,
-              contentDescription = "Search",
-              tint = ScholaTerracotta,
-              modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(Spacing.s3))
-            TextField(
-              value = query,
-              onValueChange = { query = it },
-              placeholder = { Text("Type a command, workspace, or scholar name...", color = ScholaMuted, fontSize = 15.sp) },
-              modifier = Modifier
-                .weight(1f)
-                .testTag("command_palette_search_field"),
-              colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-              ),
-              singleLine = true
-            )
-            if (query.isNotEmpty()) {
-              IconButton(onClick = { query = "" }) {
-                Icon(Icons.Default.Close, contentDescription = "Clear", tint = ScholaMuted, modifier = Modifier.size(18.dp))
-              }
-            }
-            Surface(
-              shape = RoundedCornerShape(Radius.sm),
-              color = ScholaSlateContainer
-            ) {
-              Text("ESC", color = ScholaSlateNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-            }
+  Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    Surface(Modifier.widthIn(max=600.dp).fillMaxWidth(.94f)
+      .heightIn(max=androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp-Spacing.xxl32)
+      .safeDrawingPadding().imePadding(),shape=RoundedCornerShape(Radius.lg),color=MaterialTheme.colorScheme.surface) {
+      Column {
+        Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.md12),verticalAlignment=Alignment.CenterVertically) {
+          Text("Search school",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+          IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close search")}
+        }
+        TextField(query,{query=it},Modifier.fillMaxWidth().padding(horizontal=Spacing.md12).testTag("command_palette_search_field"),
+          placeholder={Text("Student, workspace or action")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,
+          trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear")}},shape=RoundedCornerShape(Radius.input))
+        LazyColumn(Modifier.fillMaxWidth().weight(1f,fill=false),contentPadding=PaddingValues(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          if(query.isNotBlank()&&matchedStudents.isEmpty()&&filteredActions.isEmpty())item{EmptyStateView("No matches found","Try a student name, admission ID, or workspace name.")}
+          if(matchedStudents.isNotEmpty()) {
+            item{Text("Students",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+            items(matchedStudents,key={it.id}){student->SchoolRow(student.name,"Class ${student.fullClass} · Roll ${student.rollNumber} · ${student.admissionNumber}",Icons.Default.PersonOutline,{onDismiss();onNavigateTo(Screen.StudentDetail.createRoute(student.id))})}
           }
-
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(1.dp)
-              .background(ScholaBorder)
-          )
-
-          // Results / Shortcuts List
-          LazyColumn(
-            modifier = Modifier
-              .fillMaxWidth()
-              .heightIn(max = 420.dp),
-            contentPadding = PaddingValues(vertical = Spacing.s2)
-          ) {
-            // Matched Scholars
-            if (query.isNotBlank() && matchedStudents.isEmpty() && filteredActions.isEmpty()) {
-              item {
-                Column(Modifier.fillMaxWidth().padding(Spacing.lg16)) {
-                  Text("No matches found", style = MaterialTheme.typography.titleMedium)
-                  Spacer(Modifier.height(Spacing.xs4))
-                  Text("Try a student name, admission ID, or workspace name.", style = MaterialTheme.typography.bodyMedium, color = ScholaTextSecondary)
-                }
-              }
-            }
-            if (matchedStudents.isNotEmpty()) {
-              item {
-                Text(
-                  text = "SCHOLARS DIRECTORY",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = ScholaMuted,
-                  letterSpacing = TypeTokens.trackingMicroLabel,
-                  modifier = Modifier.padding(horizontal = Spacing.s4, vertical = Spacing.s1)
-                )
-              }
-              items(matchedStudents, key = { it.id }) { st ->
-                Row(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                      onDismiss()
-                      onNavigateTo(Screen.StudentDetail.createRoute(st.id))
-                    }
-                    .padding(horizontal = Spacing.s4, vertical = 10.dp),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Avatar(name = st.name, size = 32.dp)
-                  Spacer(modifier = Modifier.width(Spacing.s3))
-                  Column(modifier = Modifier.weight(1f)) {
-                    Text(st.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Text("Class ${st.fullClass} • Roll #${st.rollNumber} • Adm: ${st.admissionNumber}", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
-                  }
-                  ScholaPillBadge(status = st.feeStatus.label)
-                }
-              }
-            }
-
-            // Commands & Workspaces
-            item {
-              Text(
-                text = if (query.isBlank()) "QUICK WORKSPACE COMMANDS" else "MATCHED COMMANDS",
-                style = MaterialTheme.typography.labelSmall,
-                color = ScholaMuted,
-                letterSpacing = TypeTokens.trackingMicroLabel,
-                modifier = Modifier.padding(horizontal = Spacing.s4, vertical = Spacing.s2)
-              )
-            }
-
-            items(filteredActions, key = { it.title }) { action ->
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .clickable {
-                    onDismiss()
-                    if (action.route != null) {
-                      onNavigateTo(action.route)
-                    } else {
-                      action.onAction?.invoke()
-                    }
-                  }
-                  .padding(horizontal = Spacing.s4, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Box(
-                  modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(Radius.sm))
-                    .background(ScholaTerracottaContainer),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(action.icon, contentDescription = null, tint = ScholaTerracotta, modifier = Modifier.size(18.dp))
-                }
-                Spacer(modifier = Modifier.width(Spacing.s3))
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(action.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(action.category, style = MaterialTheme.typography.labelSmall, color = ScholaMuted, fontSize = 12.sp)
-                }
-                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = ScholaMuted, modifier = Modifier.size(18.dp))
-              }
-            }
+          filteredActions.groupBy{it.category}.forEach{(category,actions)->
+            item{Text(category.lowercase().replaceFirstChar{it.titlecase()},Modifier.padding(top=Spacing.sm8),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+            items(actions){action->SchoolRow(action.title,if(action.route!=null)"Open workspace" else "School action",action.icon,{
+              onDismiss();if(action.route!=null)onNavigateTo(action.route) else action.onAction?.invoke()
+            })}
           }
         }
+        HorizontalDivider()
+        Text("${currentUser.role.displayName} · Your permitted school workspace",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
   }

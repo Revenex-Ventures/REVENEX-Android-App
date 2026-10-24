@@ -19,6 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,35 +45,60 @@ fun AttendanceScreen(
 ) {
   val students by repository.students.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
+  val canEdit = currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
   val classAttendanceMap by repository.classAttendance.collectAsState()
 
-  var selectedCohort by remember { mutableStateOf("Grade 10-A") }
-  val cohorts = listOf("Grade 10-A", "Grade 10-B", "Grade 11-Sci", "Grade 12-Arts")
+  val cohorts = students.map { "Class ${it.classGrade}-${it.division}" }.distinct().sorted()
+  var selectedCohort by remember(currentUser.id, initialClassGrade, initialDivision) {
+    mutableStateOf(if (initialClassGrade != null && initialDivision != null) "Class $initialClassGrade-$initialDivision" else "")
+  }
+  LaunchedEffect(cohorts) { if (selectedCohort !in cohorts) selectedCohort = cohorts.firstOrNull().orEmpty() }
+  var saving by remember(currentUser.id) { mutableStateOf(false) }
 
   var selectedSessionSlot by remember { mutableStateOf("Morning Roll Call") }
   val sessionSlots = listOf("Morning Roll Call", "STEM Lab", "Senior Practicum")
 
   var showSuccessNotification by remember { mutableStateOf(false) }
+  var saveError by remember { mutableStateOf<String?>(null) }
 
   val classStudents = remember(students, selectedCohort) {
-    when (selectedCohort) {
-      "Grade 10-A" -> students.filter { it.classGrade == "10" && it.division == "A" }
-      "Grade 10-B" -> students.filter { it.classGrade == "10" && it.division == "B" }
-      "Grade 11-Sci" -> students.filter { it.classGrade == "11" || it.fullClass.contains("11") }
-      "Grade 12-Arts" -> students.filter { it.classGrade == "12" || it.fullClass.contains("12") }
-      else -> students
-    }
+    students.filter { "Class ${it.classGrade}-${it.division}" == selectedCohort }
   }
-
-  // Local editable roll call state
-  val rollCallMap = remember(classStudents, selectedSessionSlot) {
+  val today = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
+  var selectedDate by remember(currentUser.id) { mutableStateOf(today) }
+  var showDatePicker by remember { mutableStateOf(false) }
+  val editingToday = selectedDate == today
+  if (showDatePicker) {
+    val picker = rememberDatePickerState()
+    DatePickerDialog(onDismissRequest = { showDatePicker = false },
+      confirmButton = { TextButton(onClick = {
+        picker.selectedDateMillis?.let { millis ->
+          selectedDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+          }.format(Date(millis))
+          showSuccessNotification = false; saveError = null
+        }
+        showDatePicker = false
+      }, enabled = picker.selectedDateMillis != null) { Text("View date") } },
+      dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+    ) { DatePicker(state = picker) }
+  }
+  val savedRecord = classAttendanceMap.values.lastOrNull { record ->
+    attendanceDateMatches(record.date, selectedDate) && record.sessionSlot == selectedSessionSlot &&
+      classStudents.firstOrNull()?.let { it.classGrade == record.classGrade && it.division == record.division } == true
+  }
+  val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord, selectedDate, canEdit) {
     mutableStateMapOf<String, AttendanceStatus>().apply {
-      classStudents.forEach { st ->
-        put(st.id, if (st.rollNumber == 31) AttendanceStatus.EXCUSED else AttendanceStatus.PRESENT)
+      classStudents.filter { (editingToday && canEdit) || savedRecord != null }.forEach { st ->
+        put(st.id, savedRecord?.studentList?.firstOrNull { it.studentId == st.id }?.status ?: AttendanceStatus.PRESENT)
       }
     }
   }
 
+  var studentQuery by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id, selectedCohort) { mutableStateOf("") }
+  val visibleStudents = classStudents.filter { student ->
+    studentQuery.isBlank() || student.name.contains(studentQuery.trim(), true) || student.rollNumber.toString() == studentQuery.trim() || student.admissionNumber.contains(studentQuery.trim(), true)
+  }.sortedBy { it.rollNumber }
   val totalScholars = classStudents.size
   val presentCount = rollCallMap.values.count { it == AttendanceStatus.PRESENT }
   val lateCount = rollCallMap.values.count { it == AttendanceStatus.LATE }
@@ -82,20 +110,21 @@ fun AttendanceScreen(
   } else 0.0
 
   Scaffold(
-    containerColor = GlassBgTransparent,
+    containerColor = MaterialTheme.colorScheme.background,
     bottomBar = {
       Surface(
-        color = ScholaSurface,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
           .fillMaxWidth()
-          .border(1.dp, ScholaBorder, RoundedCornerShape(topStart = Radius.lg, topEnd = Radius.lg))
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(topStart = Radius.lg, topEnd = Radius.lg))
           .navigationBarsPadding()
       ) {
         Column(modifier = Modifier.padding(Spacing.s4)) {
+          saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
           if (showSuccessNotification) {
             Surface(
               shape = RoundedCornerShape(Radius.md),
-              color = StatusSuccessBg,
+              color = SemanticColors.successContainer,
               modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = Spacing.s2)
@@ -104,22 +133,25 @@ fun AttendanceScreen(
                 modifier = Modifier.padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
               ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StatusSuccessText)
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SemanticColors.onSuccess)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                  text = "Roll call successfully recorded & verified for $selectedCohort ($selectedSessionSlot)!",
+                  text = "Attendance saved · $selectedCohort",
                   style = MaterialTheme.typography.bodySmall,
                   fontWeight = FontWeight.Bold,
-                  color = StatusSuccessText
+                  color = SemanticColors.onSuccess
                 )
               }
             }
           }
 
-          AppButton(
-            text = "Dispatch Roll Call ($presentCount Present, $lateCount Late, $absentCount Absent, $excusedCount Excused)",
+          Text("${if(savedRecord != null) "Saved" else "Draft"} · $presentCount present · $absentCount absent · Whole class",
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.padding(bottom=Spacing.sm8))
+          if (canEdit) AppButton(
+            text = if (saving) "Saving…" else "Save attendance",
             onClick = {
               showSuccessNotification = false
+              saveError = null
               val list = classStudents.map { st ->
                 StudentAttendance(
                   studentId = st.id,
@@ -128,25 +160,24 @@ fun AttendanceScreen(
                   status = rollCallMap[st.id] ?: AttendanceStatus.PRESENT
                 )
               }
-              val (grade, div) = when (selectedCohort) {
-                "Grade 10-A" -> "10" to "A"
-                "Grade 10-B" -> "10" to "B"
-                "Grade 11-Sci" -> "11" to "Sci"
-                else -> "12" to "Arts"
-              }
+              val cohort = classStudents.firstOrNull() ?: return@AppButton
+              val grade = cohort.classGrade
+              val div = cohort.division
+              saving = true
               repository.recordRollCallSession(
                 classGrade = grade,
                 division = div,
                 sessionSlot = selectedSessionSlot,
                 studentList = list,
-                onResult = { saved -> showSuccessNotification = saved }
+                onResult = { saved -> saving = false; showSuccessNotification = saved; saveError = if (saved) null else "Attendance was not confirmed. Check your connection and retry." }
               )
             },
-            containerColor = ScholaTerracotta,
+            enabled = editingToday && !saving && classStudents.isNotEmpty() && currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER),
+            containerColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier
               .fillMaxWidth()
               .testTag("submit_save_attendance")
-          )
+          ) else Text("Only saved school attendance appears here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
     }
@@ -160,225 +191,115 @@ fun AttendanceScreen(
       verticalArrangement = Arrangement.spacedBy(Spacing.s3),
       contentPadding = PaddingValues(bottom = 20.dp)
     ) {
-      // 1. HERO MATRIX SURFACE (Dark Onyx, 22dp corners)
       item {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.hero))
-            .background(ScholaOnyx)
-            .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
-            .padding(Spacing.cardPaddingLarge)
-        ) {
-          Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column {
-                Text(
-                  text = "ROLL CALL MATRIX",
-                  color = ScholaOnyxMuted,
-                  style = MaterialTheme.typography.labelSmall,
-                  letterSpacing = TypeTokens.trackingMicroLabel
-                )
-                Text(
-                  text = selectedCohort,
-                  color = ScholaOnyxText,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = ScholaGoldContainer
-              ) {
-                Text(
-                  text = "Live Sync",
-                  color = ScholaGoldText,
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-              }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+          Text("Class attendance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+          if(canEdit) TextButton(enabled=editingToday && !saving && classStudents.isNotEmpty(),onClick={
+            classStudents.forEach {rollCallMap[it.id]=AttendanceStatus.PRESENT};showSuccessNotification=false
+          },modifier=Modifier.testTag("mark_all_present")){Text("All present")}
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          OutlinedButton(onClick = { showDatePicker = true }, enabled = !saving, modifier = Modifier.weight(1f), shape = RoundedCornerShape(Radius.sm), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+            Icon(Icons.Default.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(Spacing.xs4)); Text(selectedDate)
+          }
+          var cohortMenu by remember { mutableStateOf(false) }
+          Box(Modifier.weight(1f)) {
+            OutlinedButton(onClick = { cohortMenu = true }, enabled = !saving, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.sm), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+              Text(selectedCohort.ifBlank { "Select class" }, Modifier.weight(1f))
+              Icon(Icons.Default.ExpandMore,null,Modifier.size(18.dp))
             }
-
-            Spacer(modifier = Modifier.height(Spacing.s4))
-
-            // Cohort Selector Chips
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-              items(cohorts) { ch ->
-                val isSelected = selectedCohort == ch
-                Surface(
-                  shape = RoundedCornerShape(Radius.pill),
-                  color = if (isSelected) ScholaTerracotta else ScholaOnyxSurface,
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .border(1.dp, if (isSelected) ScholaTerracotta else ScholaOnyxBorder, RoundedCornerShape(Radius.pill))
-                    .clickable {
-                      selectedCohort = ch
-                      showSuccessNotification = false
-                    }
-                ) {
-                  Text(
-                    text = ch,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) Color.White else ScholaOnyxMuted,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                  )
-                }
-              }
+            DropdownMenu(expanded = cohortMenu, onDismissRequest = { cohortMenu = false }) {
+              cohorts.forEach { cohort -> DropdownMenuItem(text = { Text(cohort) }, onClick = {
+                selectedCohort = cohort; cohortMenu = false; showSuccessNotification = false
+              }) }
             }
+          }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          sessionSlots.forEach { slot ->
+            SchoolFilterChip(selected = selectedSessionSlot == slot, onClick = {
+              if (!saving) { selectedSessionSlot = slot; showSuccessNotification = false }
+            }, label = { Text(when(slot) { "Morning Roll Call" -> "Morning"; "Senior Practicum" -> "Practicum"; else -> slot }) }, enabled = !saving, modifier = Modifier.weight(1f).heightIn(min = 48.dp))
+          }
+        }
+        if (!editingToday) Text("History is view-only.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
 
-            Spacer(modifier = Modifier.height(Spacing.s3))
-
-            // Session Slot Switcher (Morning Roll Call, STEM Lab, Senior Practicum)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-              items(sessionSlots) { slot ->
-                val isSelected = selectedSessionSlot == slot
-                Surface(
-                  shape = RoundedCornerShape(Radius.sm),
-                  color = if (isSelected) ScholaSlateNavy else ScholaOnyxSurface,
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.sm))
-                    .border(1.dp, if (isSelected) ScholaGold else ScholaOnyxBorder, RoundedCornerShape(Radius.sm))
-                    .clickable {
-                      selectedSessionSlot = slot
-                      showSuccessNotification = false
-                    }
-                ) {
-                  Text(
-                    text = slot,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) ScholaGoldLight else ScholaOnyxMuted,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                  )
-                }
+      item {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          listOf(Triple(presentCount,"Present",SchoolMetricTone.POSITIVE),Triple(absentCount,"Absent",SchoolMetricTone.DANGER),
+            Triple(lateCount,"Late",SchoolMetricTone.FINANCE),Triple(excusedCount,"Excused",SchoolMetricTone.NEUTRAL)).forEach {(count,label,tone)->
+            val colors=when(tone){SchoolMetricTone.POSITIVE->SemanticColors.successContainer to SemanticColors.onSuccess;SchoolMetricTone.DANGER->SemanticColors.dangerContainer to SemanticColors.onDanger;SchoolMetricTone.FINANCE->SemanticColors.butterContainer to SemanticColors.onButter;else->SemanticColors.blueContainer to SemanticColors.onBlue}
+            Surface(Modifier.weight(1f),shape=RoundedCornerShape(Radius.sm),color=colors.first) {
+              Column(Modifier.padding(Spacing.sm8)) {
+                Text(count.toString(),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=colors.second)
+                Text(label,style=MaterialTheme.typography.bodySmall,color=colors.second)
               }
             }
           }
         }
       }
 
-      // 2. LIVE SUMMARY COUNTERS & MARK ALL PRESENT ACTION
       item {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ScholaPillBadge(status = "$presentCount Present")
-            ScholaPillBadge(status = "$lateCount Late")
-            ScholaPillBadge(status = "$absentCount Absent")
-            ScholaPillBadge(status = "$excusedCount Excused")
-          }
-
-          TextButton(
-            onClick = {
-              classStudents.forEach { st ->
-                rollCallMap[st.id] = AttendanceStatus.PRESENT
-              }
-            },
-            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-          ) {
-            Icon(Icons.Default.DoneAll, contentDescription = null, tint = ScholaTerracotta, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Mark All", color = ScholaOnTerracottaContainer, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-          }
-        }
+        OutlinedTextField(studentQuery, { studentQuery = it }, Modifier.fillMaxWidth().testTag("register_search"),
+          placeholder = { Text("Search students") }, singleLine = true,
+          leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.sm),
+          colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant))
+        Text(if (canEdit) "${visibleStudents.size} of ${classStudents.size} students" else "Saved records for the selected date and session",
+          Modifier.padding(top = Spacing.sm8), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
-
       // 3. STUDENT ROLL CALL CARDS
-      items(classStudents, key = { it.id }) { student ->
+      if (savedRecord == null && (!editingToday || !canEdit)) item {
+        EmptyStateView(title = "No register loaded", message = "No saved attendance is available for this class, date and session.")
+      }
+      items(if ((editingToday && canEdit) || savedRecord != null) visibleStudents else emptyList(), key = { it.id }) { student ->
         val currentStatus = rollCallMap[student.id] ?: AttendanceStatus.PRESENT
-
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier.weight(1f)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .background(ScholaSlateContainer, CircleShape),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = student.rollNumber.toString(),
-                  style = MaterialTheme.typography.labelMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = ScholaSlateNavy
-                )
-              }
-
-              Spacer(modifier = Modifier.width(Spacing.s3))
-
-              Column {
-                Text(
-                  text = student.name,
-                  style = MaterialTheme.typography.titleSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = ScholaTextPrimary
-                )
-                Text(
-                  text = "Roll #${student.rollNumber} • Adm #${student.admissionNumber}",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = ScholaMuted,
-                  fontSize = 12.sp
-                )
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.md), color = MaterialTheme.colorScheme.surface,
+          border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+          BoxWithConstraints(Modifier.padding(Spacing.sm8)) {
+            val stacked = maxWidth < 300.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+            val identity: @Composable () -> Unit = {
+              Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                Avatar(student.name,size=Spacing.xl24,background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
+                Column {
+                Text(student.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Roll ${student.rollNumber}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
               }
             }
-
-            // 4 One-Tap Status Chips: Present, Late, Absent, Excused
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-              listOf(
-                AttendanceStatus.PRESENT to "P",
-                AttendanceStatus.LATE to "L",
-                AttendanceStatus.ABSENT to "A",
-                AttendanceStatus.EXCUSED to "E"
-              ).forEach { (status, label) ->
-                val isActive = currentStatus == status
-                val (bgColor, textColor) = when (status) {
-                  AttendanceStatus.PRESENT -> StatusSuccessBg to StatusSuccessText
-                  AttendanceStatus.LATE -> StatusWarningBg to StatusWarningText
-                  AttendanceStatus.ABSENT -> StatusDangerBg to StatusDangerText
-                  AttendanceStatus.EXCUSED -> StatusNeutralBg to StatusNeutralText
-                  else -> ScholaSurface to ScholaMuted
-                }
-
-                Surface(
-                  shape = RoundedCornerShape(8.dp),
-                  color = if (isActive) bgColor else ScholaSurface,
-                  modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, if (isActive) textColor else ScholaBorder, RoundedCornerShape(8.dp))
-                    .clickable { rollCallMap[student.id] = status }
-                    .testTag("btn_${status.name.lowercase()}_${student.rollNumber}")
-                ) {
-                  Box(contentAlignment = Alignment.Center) {
-                    Text(
-                      text = label,
-                      fontWeight = FontWeight.Bold,
-                      color = if (isActive) textColor else ScholaMuted,
-                      fontSize = 12.sp
-                    )
+            val controls: @Composable () -> Unit = {
+              Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+                listOf(AttendanceStatus.PRESENT to "P", AttendanceStatus.ABSENT to "A", AttendanceStatus.LATE to "L", AttendanceStatus.EXCUSED to "E").forEach { (status,label) ->
+                  val selected = currentStatus == status
+                  val container = when (status) {
+                    AttendanceStatus.PRESENT -> SemanticColors.onSuccess
+                    AttendanceStatus.ABSENT -> SemanticColors.onDanger
+                    else -> SemanticColors.onWarning
+                  }
+                  Surface(onClick = { rollCallMap[student.id] = status; showSuccessNotification = false },
+                    enabled = editingToday && !saving && canEdit,
+                    color = if (selected) container else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(Radius.xs),
+                    modifier = Modifier.size(48.dp).semantics {
+                      contentDescription = "${status.name.lowercase()} for ${student.name}"
+                      this.selected = selected
+                    }
+                      .testTag("btn_${status.name.lowercase()}_${student.rollNumber}")) {
+                    Box(contentAlignment = Alignment.Center) { Text(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                      color = if (selected) when (status) { AttendanceStatus.PRESENT -> SemanticColors.successContainer; AttendanceStatus.ABSENT -> SemanticColors.dangerContainer; else -> SemanticColors.warningContainer } else MaterialTheme.colorScheme.onSurfaceVariant) }
                   }
                 }
               }
             }
+            if (stacked) Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) { identity(); controls() }
+            else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+              Box(Modifier.weight(1f)) { identity() }; controls()
+            }
           }
         }
       }
+      item { Text("P Present · A Absent · L Late · E Excused", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
   }
 }

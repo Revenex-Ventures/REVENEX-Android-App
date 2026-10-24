@@ -4,6 +4,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import kotlinx.coroutines.CancellationException
@@ -28,6 +29,18 @@ data class RazorpayPaymentResult(
     receipt_no.startsWith("RZP-TEST-") && amount>0 && currency=="INR"
 }
 
+/** Sanitized, actionable errors; never surface provider response bodies or headers. */
+class PaymentServiceException(status: Int?) : IllegalStateException(paymentServiceMessage(status))
+internal fun paymentServiceMessage(status: Int?): String = when (status) {
+  401 -> "Your school session expired. Sign in again before paying."
+  403 -> "This account cannot pay this invoice. Ask the school to check the student link."
+  404 -> "School payment service is not deployed. Ask the administrator to apply payment migrations and deploy razorpay-payments."
+  409 -> "The invoice or order changed. Use Check payment status before starting another payment."
+  400 -> "Payment details could not be verified. Use Check payment status; no fee credit was assumed."
+  502, 503 -> "School payment service is unavailable. Ask the administrator to check test credentials and deployment."
+  else -> "Payment could not be confirmed. Check your connection, then use Check payment status before retrying."
+}
+
 /** Only public checkout data crosses this boundary. No Razorpay secret in Android. */
 object RazorpayPayments {
   private fun requireSession():String {
@@ -39,11 +52,13 @@ object RazorpayPayments {
     try {
       val response=SupabaseProvider.client.functions.invoke("razorpay-payments",body=body,
         headers=Headers.build { append(HttpHeaders.ContentType,ContentType.Application.Json.toString()) })
-      check(response.status.isSuccess())
+      if (!response.status.isSuccess()) throw PaymentServiceException(response.status.value)
       return SupabaseProvider.json.decodeFromString<T>(response.bodyAsText())
     } catch(e:Exception) {
       if(e is CancellationException) throw e
-      throw IllegalStateException("Payment verification is unavailable. Check the server setup, sign-in and network. No fee credit was assumed.")
+      if (e is PaymentServiceException) throw e
+      if (e is ResponseException) throw PaymentServiceException(e.response.status.value)
+      throw PaymentServiceException(null)
     }
   }
   suspend fun create(feeId:String):RazorpayCheckoutOrder = invoke<RazorpayCheckoutOrder>(buildJsonObject {

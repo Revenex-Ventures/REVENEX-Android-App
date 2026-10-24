@@ -9,6 +9,9 @@ import com.example.data.datasource.DataMode
 import com.example.data.datasource.RazorpayCheckoutOrder
 import com.example.data.datasource.RazorpayPaymentResult
 import com.example.data.datasource.RazorpayPayments
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.ui.screens.auth.RevenexLaunchHost
+import com.example.ui.screens.auth.LaunchLifetime
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,10 +27,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.compose.animation.*
@@ -82,10 +85,30 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
   }
   private val repository get() = ErpDataRepository.getInstance()
   override fun onCreate(savedInstanceState: Bundle?) {
+    val appearance = Appearance.parse(getSharedPreferences("revenex_appearance", MODE_PRIVATE).getString("mode", null))
+    val systemDark = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    setTheme(if (appearance.usesDark(systemDark)) R.style.Theme_Revenex_Starting_Dark else R.style.Theme_Revenex_Starting_Light)
+    val splash = installSplashScreen()
+    val showBrand = savedInstanceState == null && LaunchLifetime.claim()
+    var splashExited by mutableStateOf(false)
+    splash.setOnExitAnimationListener { provider ->
+      provider.remove()
+      splashExited = true
+    }
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
+      val paymentMode by repository.dataMode.collectAsState()
+      val paymentUser by repository.currentUser.collectAsState()
+      LaunchedEffect(paymentMode, paymentUser.id) {
+        if (paymentMode == DataMode.SUPABASE_DEMO && paymentUser.id.isNotBlank() && paymentUser.role != UserRole.TEACHER) {
+          // Warm checkout resources while the signed-in user reviews the school app.
+          // Optional preload failure must not fabricate an order or block local demo.
+          runCatching { Checkout.preload(applicationContext) }
+        }
+      }
       ScholaTheme {
+        RevenexLaunchHost(showBrand, splashExited) {
         ScholaErpApp(
           isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
           onStartPayment={ feeId, _ -> startRazorpayPayment(feeId) },
@@ -96,6 +119,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
           verifiedPaymentAmount=activeAmount,verifiedReceipt=paymentReceipt,paymentStatus=paymentStatusMessage,
           onCheckPayment={ feeId -> checkPaymentStatus(feeId) }
         )
+        }
       }
     }
   }
@@ -121,16 +145,15 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         val options=JSONObject().apply {
           put("name","Revenex School ERP");put("description","School fees • TEST MODE")
           put("order_id",order.order_id);put("currency",order.currency);put("amount",order.amount)
-          put("theme.color","#FF5A1F")
+          put("theme.color",java.lang.String.format(java.util.Locale.US,"#%06X",ScholaTerracotta.toArgb() and 0xFFFFFF))
           put("prefill",JSONObject().apply { put("email",repository.currentUser.value.email) })
         }
-        Checkout.preload(applicationContext)
         val checkout=Checkout();checkout.setKeyID(order.key_id)
         paymentStatusMessage="Complete the test payment in secure checkout."
         checkout.open(this@MainActivity,options)
       } catch(e:Exception) {
         if(e is CancellationException)throw e
-        paymentFailure("Test checkout is unavailable. Check Supabase payment deployment and server secrets, then retry.")
+        paymentFailure(if (e is com.example.data.datasource.PaymentServiceException) e.message.orEmpty() else "Test checkout could not open. Check payment status before retrying.")
       }
     }
   }
@@ -206,9 +229,35 @@ fun ScholaErpApp(
   val backendState by repository.backendState.collectAsState()
   val dataMode by repository.dataMode.collectAsState()
   val unreadNotificationsCount = notifications.count { !it.isRead }
+  val initialRoute = remember {
+    if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isNotBlank() &&
+      runCatching { repository.supabaseDataSource.sessionId().isNotBlank() }.getOrDefault(false))
+      Screen.Dashboard.route else Screen.Auth.route
+  }
 
   val navBackStackEntry by navController.currentBackStackEntryAsState()
   val currentRoute = navBackStackEntry?.destination?.route
+  val clearAccountNavigation: () -> Unit = {
+    (WorkspaceDirectory.destinations.map {it.route} + listOf(Screen.Dashboard.route,Screen.Academics.route,
+      Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.Auth.route))
+      .distinct().filter { navController.graph.findNode(it) != null }.forEach {
+      navController.clearBackStack(it)
+    }
+  }
+  LaunchedEffect(currentRoute, dataMode, currentUser.id, backendState.busy) {
+    if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isBlank() && !backendState.busy &&
+      currentRoute != null && currentRoute != Screen.Auth.route) {
+      clearAccountNavigation()
+      navController.navigate(Screen.Auth.route) { popUpTo(navController.graph.id) { inclusive = true }; launchSingleTop = true }
+    }
+  }
+
+  var recentConfirmation by remember(currentUser.id) {mutableStateOf<String?>(null)}
+  LaunchedEffect(currentUser.id,backendState.message,backendState.busy,backendState.failed) {
+    if(backendState.busy || backendState.failed) recentConfirmation=null
+    else if(backendState.message.startsWith("Saved to school database") || backendState.message=="Attendance saved" || backendState.message.startsWith("Student enrolled")) recentConfirmation=backendState.message
+  }
+  LaunchedEffect(recentConfirmation) {if(recentConfirmation!=null){delay(3500);recentConfirmation=null}}
 
   // Global Command Palette (⌘K) Modal State
   var showCommandPalette by remember { mutableStateOf(false) }
@@ -225,6 +274,14 @@ fun ScholaErpApp(
   var paymentModalAmount by remember { mutableStateOf(0L) }
   var paymentModalFeeId by remember { mutableStateOf("") }
 
+  LaunchedEffect(currentUser.id, dataMode) {
+    showCommandPalette = false
+    showAddStudentDialog = false; showAddTeacherDialog = false
+    showCreateNoticeDialog = false; showCreateAssignmentDialog = false; showApplyLeaveDialog = false
+    showFeePaymentModal = false
+    paymentModalStudentName = ""; paymentModalAmount = 0L; paymentModalFeeId = ""
+  }
+
   ScholaResponsiveScaffold(
     currentRoute = currentRoute,
     currentUser = currentUser,
@@ -232,7 +289,7 @@ fun ScholaErpApp(
     onNavigateToRoute = { route ->
       if (currentRoute != route) {
         navController.navigate(route) {
-          popUpTo(navController.graph.findStartDestination().id) {
+          popUpTo(Screen.Dashboard.route) {
             saveState = true
           }
           launchSingleTop = true
@@ -243,28 +300,35 @@ fun ScholaErpApp(
     onOpenCommandPalette = { showCommandPalette = true },
     onOpenNotifications = { navController.navigate(Screen.Notifications.route) },
     onOpenProfile = {
-      val route = if (currentUser.role == UserRole.TEACHER) Screen.TeacherProfile.route else Screen.Profile.route
+      val route = Screen.Profile.route
       navController.navigate(route)
     },
     onLogout = {
+      clearAccountNavigation()
       repository.logout()
       navController.navigate(Screen.Auth.route) {
-        popUpTo(0) { inclusive = true }
+        popUpTo(navController.graph.id) { inclusive = true }
       }
+    },
+    onBack = {
+      if (!navController.popBackStack()) navController.navigate(Screen.Dashboard.route) { launchSingleTop = true }
     }
   ) { paddingValues ->
     Column(Modifier.fillMaxSize().padding(paddingValues)) {
-    if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank()) {
+    if (currentRoute != Screen.Auth.route && dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank() && (backendState.busy || backendState.failed || recentConfirmation!=null)) {
       Surface(color=if(backendState.failed) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant) {
         Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
           if(backendState.busy) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
-          Text(backendState.message,style=MaterialTheme.typography.bodySmall)
+          Text(if(backendState.busy) "Saving…" else if(backendState.failed) backendState.message else "Saved",style=MaterialTheme.typography.bodySmall)
         }
       }
     }
+    // Auth must survive switching from local demo to cloud and loading the profile.
+    // Logout already clears the graph and account-scoped repository state.
+    key(Unit) {
     NavHost(
       navController = navController,
-      startDestination = Screen.Auth.route,
+      startDestination = initialRoute,
       modifier = Modifier.weight(1f),
       enterTransition = {
         val fromAuth = initialState.destination.route == Screen.Auth.route
@@ -305,7 +369,7 @@ fun ScholaErpApp(
         AuthScreen(
           repository = repository,
           onLoginSuccess = {
-            navController.navigate(Screen.Loading.route) {
+            navController.navigate(Screen.Dashboard.route) {
               popUpTo(Screen.Auth.route) { inclusive = true }
             }
           }
@@ -364,7 +428,8 @@ fun ScholaErpApp(
           onNavigateToStudentDetail = { studentId ->
             navController.navigate(Screen.StudentDetail.createRoute(studentId))
           },
-          onShowAddStudent = { showAddStudentDialog = true }
+          onShowAddStudent = { showAddStudentDialog = true },
+          onOpenFaculty = {navController.navigate(Screen.Teachers.route)}
         )
       }
 
@@ -397,7 +462,8 @@ fun ScholaErpApp(
           onNavigateToTeacherDetail = { teacherId ->
             navController.navigate(Screen.TeacherDetail.createRoute(teacherId))
           },
-          onShowAddTeacher = { showAddTeacherDialog = true }
+          onShowAddTeacher = { showAddTeacherDialog = true },
+          onOpenStudents = {navController.navigate(Screen.Students.route)}
         )
       }
 
@@ -439,6 +505,14 @@ fun ScholaErpApp(
       }
 
       // Bursar & Financial Ledger
+      composable(Screen.PrincipalAttendance.route) {
+        if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+          PrincipalAttendanceScreen(repository, onBack = { navController.popBackStack() })
+        } else {
+          EmptyStateView("Attendance overview unavailable", "Open your own attendance from the class portal.")
+        }
+      }
+
       composable(Screen.Fees.route) {
         FeeManagementScreen(
           repository = repository,
@@ -453,9 +527,22 @@ fun ScholaErpApp(
             } else {
               onResetPayment();paymentModalFeeId=feeId;paymentModalStudentName=name;paymentModalAmount=amt
               showFeePaymentModal=true
+              if (amt == 0L) onCheckPayment(feeId)
             }
           },
-          onCheckRazorpay = onCheckPayment
+          onCheckRazorpay = { feeId ->
+            // Reconciliation can finish after checkout has closed. Reopen its
+            // receipt surface instead of updating an invisible modal + toast only.
+            val invoice = repository.invoices.value.firstOrNull { it.id == feeId }
+            if (invoice != null) {
+              onResetPayment()
+              paymentModalFeeId = feeId
+              paymentModalStudentName = invoice.studentName
+              paymentModalAmount = 0L
+              showFeePaymentModal = true
+              onCheckPayment(feeId)
+            }
+          }
         )
       }
 
@@ -498,7 +585,8 @@ fun ScholaErpApp(
       composable(Screen.Notifications.route) {
         NotificationsScreen(
           repository = repository,
-          onBack = { navController.popBackStack() }
+          onBack = { navController.popBackStack() },
+          onNavigateTo = { navController.navigate(it) { launchSingleTop = true } }
         )
       }
 
@@ -533,6 +621,14 @@ fun ScholaErpApp(
         )
       }
 
+      composable(Screen.Academics.route) {
+        OperationsHubScreen(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},
+          {showCreateNoticeDialog=true},{showApplyLeaveDialog=true},initialArea=WorkspaceArea.ACADEMICS)
+      }
+      composable(Screen.Audit.route) {
+        NoticesScreen(repository,{showCreateNoticeDialog=true},initialAudit=true)
+      }
+
       // Reports & AI
       composable(Screen.Reports.route) {
         ReportsAnalyticsScreen(repository = repository)
@@ -557,10 +653,16 @@ fun ScholaErpApp(
         ProfileScreen(
           repository = repository,
           onBack = { navController.popBackStack() },
-          onNavigateTo = { navController.navigate(it) }
+          onNavigateTo = { route ->
+          if (route == Screen.Auth.route) clearAccountNavigation()
+          navController.navigate(route) {
+            if (route == Screen.Auth.route) popUpTo(navController.graph.id) { inclusive = true }
+            launchSingleTop = true
+          } }
         )
       }
     }
+    } // account-scoped navigation content
     } // cloud sync status column
   }
 
@@ -592,7 +694,14 @@ fun ScholaErpApp(
     )
   }
 
-  if (showAddTeacherDialog) {
+  if (showAddTeacherDialog && dataMode == DataMode.SUPABASE_DEMO) {
+    androidx.compose.material3.AlertDialog(
+      onDismissRequest = { showAddTeacherDialog = false },
+      title = { Text("Faculty setup") },
+      text = { Text("Teacher accounts and faculty provisioning are operator-managed in this cloud demo. No record has been created. Use the school operator setup to provision an account and its authorized class links.") },
+      confirmButton = { androidx.compose.material3.TextButton(onClick = { showAddTeacherDialog = false }) { Text("Close") } }
+    )
+  } else if (showAddTeacherDialog) {
     val teachersList by repository.teachers.collectAsState()
     AddTeacherDialog(
       existingEmployeeIds = teachersList.map { it.employeeId },
@@ -604,7 +713,8 @@ fun ScholaErpApp(
   if (showCreateNoticeDialog) {
     CreateNoticeDialog(
       onDismiss = { showCreateNoticeDialog = false },
-      onPublish = { notice -> repository.publishNotice(notice) }
+      onPublish = { notice -> repository.publishNotice(notice) },
+      onSubmitNotice = { repository.publishNoticeConfirmed(it) }
     )
   }
 
@@ -613,7 +723,8 @@ fun ScholaErpApp(
       teacherName = currentUser.name,
       repository = repository,
       onDismiss = { showCreateAssignmentDialog = false },
-      onCreate = { hw -> repository.createAssignment(hw) }
+      onCreate = { hw -> repository.createAssignment(hw) },
+      onSubmitAssignment = { repository.createAssignmentConfirmed(it) }
     )
   }
 
@@ -664,20 +775,19 @@ fun ScholaErpApp(
 @Composable
 private fun LoadingScreen(onReady: () -> Unit) {
   LaunchedEffect(Unit) {
-    delay(500)
     onReady()
   }
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen),
+      .background(MaterialTheme.colorScheme.background),
     contentAlignment = Alignment.Center
   ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       CircularProgressIndicator(
         modifier = Modifier.size(44.dp),
-        color = ScholaTerracotta,
-        trackColor = ScholaOnyxBorder,
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.outlineVariant,
         strokeWidth = 4.dp
       )
       Spacer(modifier = Modifier.height(Spacing.s3))
@@ -685,7 +795,7 @@ private fun LoadingScreen(onReady: () -> Unit) {
         text = "Preparing your dashboard…",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Medium,
-        color = ScholaTextSecondary
+        color = MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
   }

@@ -55,6 +55,14 @@ android {
   }
 
   buildTypes {
+    // Optional side-by-side delivery: preserves an existing com.example install.
+    create("review") {
+      initWith(getByName("debug"))
+      applicationIdSuffix = ".review"
+      versionNameSuffix = "-review"
+      signingConfig = signingConfigs.getByName("debug")
+      matchingFallbacks += listOf("debug")
+    }
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
@@ -103,7 +111,6 @@ dependencies {
   implementation("io.github.jan-tennert.supabase:functions-kt")
   implementation("io.ktor:ktor-client-okhttp:3.2.3")
   implementation(platform(libs.androidx.compose.bom))
-  implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)
@@ -117,6 +124,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
+  implementation("androidx.core:core-splashscreen:1.2.0")
   // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -126,16 +134,9 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
-  implementation(libs.firebase.firestore)
-  implementation(libs.firebase.auth)
-  implementation(libs.firebase.storage)
-  implementation(libs.firebase.messaging)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services)
   implementation(libs.googleid)
-  implementation(libs.firebase.appcheck.recaptcha)
-  implementation(libs.firebase.appcheck.debug)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
@@ -166,4 +167,15 @@ dependencies {
   implementation("com.razorpay:checkout:1.6.39")
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+}
+
+// Prevent a transitive SDK from silently reintroducing the retired backend.
+tasks.register("verifyNoFirebaseDependencies") {
+  doLast {
+    val retired = listOf("debugRuntimeClasspath", "reviewRuntimeClasspath").flatMap { name ->
+      configurations.getByName(name).resolvedConfiguration.resolvedArtifacts
+    }
+      .filter { it.moduleVersion.id.group.startsWith("com.google.firebase") }
+    check(retired.isEmpty()) { "Firebase dependencies must remain absent: $retired" }
+  }
 }

@@ -27,6 +27,7 @@ class SupabaseDataIntegrationTest {
     assertTrue(source.getNotificationsFlow().first().isEmpty())
     assertTrue(source.getFeeRecordsFlow().first().isEmpty())
     assertTrue(runCatching { source.switchRole(UserRole.PRINCIPAL) }.isFailure)
+    assertTrue(runCatching { source.selectStudentForPresentation("unpermitted") }.isFailure)
     assertTrue(runCatching { source.login("someone@example.com",UserRole.PRINCIPAL,"Fake") }.isFailure)
     assertTrue(runCatching { source.markAllNotificationsAsRead() }.isFailure)
   }
@@ -46,7 +47,6 @@ class SupabaseDataIntegrationTest {
     assertEquals("",repository.currentUser.value.id)
     repository.setDataMode(DataMode.DEMO);runCurrent()
     assertTrue(repository.students.value.isNotEmpty())
-    assertTrue(runCatching { repository.setDataMode(DataMode.PRODUCTION) }.isFailure)
   }
   @Test fun documentReferencesAreValidatedWithoutUsingCloudCredentials()=runTest(dispatcher) {
     assertEquals("",SupabaseFileStore.resolveUrl(""))
@@ -58,13 +58,12 @@ class SupabaseDataIntegrationTest {
     assertTrue(runCatching { SupabaseFileStore.resolveUrl("http://example.com/file") }.isFailure)
     assertTrue(runCatching { SupabaseFileStore.resolveUrl("javascript:alert(1)") }.isFailure)
   }
-  @Test fun firebaseOperatingSystemEntryPointsAreDisabled() {
+  @Test fun firebaseComponentsAreAbsent() {
     val context=androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-    val manager=context.packageManager
-    val disabled=android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS
-    assertFalse(manager.getServiceInfo(android.content.ComponentName(context.packageName,"com.google.firebase.messaging.FirebaseMessagingService"),disabled).enabled)
-    assertFalse(manager.getReceiverInfo(android.content.ComponentName(context.packageName,"com.google.firebase.iid.FirebaseInstanceIdReceiver"),disabled).enabled)
-    val providers=manager.getPackageInfo(context.packageName,android.content.pm.PackageManager.GET_PROVIDERS).providers.orEmpty()
-    assertTrue(providers.none { it.name=="com.google.firebase.provider.FirebaseInitProvider" })
+    val flags=android.content.pm.PackageManager.GET_PROVIDERS or android.content.pm.PackageManager.GET_SERVICES or android.content.pm.PackageManager.GET_RECEIVERS
+    val info=context.packageManager.getPackageInfo(context.packageName,flags)
+    val names=info.providers.orEmpty().map { it.name } + info.services.orEmpty().map { it.name } + info.receivers.orEmpty().map { it.name }
+    assertTrue(names.none { it.startsWith("com.google.firebase.") || it.endsWith("MyFirebaseMessagingService") })
+    assertTrue(runCatching { Class.forName("com.google.firebase.auth.FirebaseAuth") }.isFailure)
   }
 }

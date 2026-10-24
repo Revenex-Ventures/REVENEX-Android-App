@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,7 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,7 +31,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import android.webkit.MimeTypeMap
-import com.example.data.datasource.FirebaseStorageManager
+import com.example.data.datasource.DocumentFiles
 import com.example.data.model.*
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.theme.*
@@ -37,6 +40,53 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+
+@Composable
+private fun FormHeading(title: String, subtitle: String, enabled: Boolean = true, onDismiss: () -> Unit) {
+  Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+      Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    IconButton(enabled = enabled, onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+  }
+}
+
+@Composable
+internal fun ResponsiveFormFields(
+  first: @Composable (Modifier) -> Unit,
+  second: @Composable (Modifier) -> Unit,
+  third: (@Composable (Modifier) -> Unit)? = null
+) {
+  val largeText = LocalDensity.current.fontScale > 1.2f
+  BoxWithConstraints(Modifier.fillMaxWidth()) {
+    if (maxWidth < 360.dp || largeText) {
+      Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        first(Modifier.fillMaxWidth()); second(Modifier.fillMaxWidth()); third?.invoke(Modifier.fillMaxWidth())
+      }
+    } else {
+      Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        first(Modifier.weight(1f)); second(Modifier.weight(1f)); third?.invoke(Modifier.weight(1f))
+      }
+    }
+  }
+}
+
+@Composable
+private fun CompactFormLayout(header: @Composable () -> Unit, footer: @Composable ColumnScope.() -> Unit,
+  content: @Composable ColumnScope.() -> Unit) {
+  Surface(modifier=Modifier.widthIn(max=600.dp).fillMaxWidth(0.94f)
+    .heightIn(max=LocalConfiguration.current.screenHeightDp.dp-Spacing.xxl32)
+    .windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),shape=RoundedCornerShape(Radius.lg),color=MaterialTheme.colorScheme.surface) {
+    Column {
+      Box(Modifier.fillMaxWidth().padding(Spacing.screenPadding)){header()}
+      HorizontalDivider()
+      Column(Modifier.weight(1f,fill=false).fillMaxWidth().verticalScroll(rememberScrollState()).padding(Spacing.screenPadding),content=content)
+      HorizontalDivider()
+      Column(Modifier.fillMaxWidth().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.sm8),content=footer)
+    }
+  }
+}
 
 @Composable
 fun AddStudentDialog(
@@ -68,232 +118,10 @@ fun AddStudentDialog(
     onDismissRequest = { if(!saving) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column {
-            Text(
-              text = "New Student Admission",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Fill all required fields (*) to complete admission",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-          IconButton(onClick = onDismiss, enabled = !saving) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-          value = name,
-          onValueChange = { name = it; validationError = null },
-          label = { Text("Full Student Name *") },
-          placeholder = { Text("e.g., Aarav Patel") },
-          leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("input_student_name"),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = studentId,
-            onValueChange = { studentId = it; validationError = null },
-            label = { Text("Student ID *") },
-            placeholder = { Text("stu_1011") },
-            modifier = Modifier.weight(1.2f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = admissionNo,
-            onValueChange = { admissionNo = it; validationError = null },
-            label = { Text("Admission No *") },
-            placeholder = { Text("REV-2026-1001") },
-            modifier = Modifier.weight(1.8f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = classGrade,
-            onValueChange = { classGrade = it; validationError = null },
-            label = { Text("Class * (1-12)") },
-            placeholder = { Text("10") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = division,
-            onValueChange = { division = it },
-            label = { Text("Division") },
-            placeholder = { Text("A") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = rollNo,
-            onValueChange = { rollNo = it },
-            label = { Text("Roll No") },
-            placeholder = { Text("16") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = dob,
-          onValueChange = { dob = it; validationError = null },
-          label = { Text("Date of Birth * (DD/MM/YYYY)") },
-          placeholder = { Text("15/08/2009") },
-          leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = gender,
-            onValueChange = { gender = it },
-            label = { Text("Gender") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = bloodGroup,
-            onValueChange = { bloodGroup = it },
-            label = { Text("Blood Group") },
-            placeholder = { Text("O+") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Section divider
-        Text(
-          text = "Parent / Guardian Details",
-          style = MaterialTheme.typography.titleSmall,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-          value = parentName,
-          onValueChange = { parentName = it; validationError = null },
-          label = { Text("Parent / Guardian Full Name *") },
-          leadingIcon = { Icon(Icons.Default.FamilyRestroom, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = parentPhone,
-          onValueChange = { parentPhone = it; validationError = null },
-          label = { Text("Parent Phone Number * (+91 XXXXX XXXXX)") },
-          leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = parentEmail,
-          onValueChange = { parentEmail = it },
-          label = { Text("Parent Email (Optional)") },
-          leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = address,
-          onValueChange = { address = it },
-          label = { Text("Residential Address") },
-          leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          maxLines = 2
-        )
-
-        if (onSubmitStudent != null && com.example.data.datasource.AppEnvironment.currentMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) {
-          Spacer(Modifier.height(10.dp))
-          OutlinedTextField(value=annualFee,onValueChange={ annualFee=it },label={ Text("Initial fee in INR (optional)") },supportingText={ Text("Creates an unpaid invoice. Blank means no invoice; it does not create login accounts.") },modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=!saving)
-        }
-        // Validation error display
-        if (validationError != null) {
-          Spacer(modifier = Modifier.height(8.dp))
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.errorContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(10.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = validationError ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-              )
-            }
-          }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+    CompactFormLayout(
+      header = {FormHeading("New student", "Identity, class and guardian details. Required fields are marked *.", enabled = !saving, onDismiss = onDismiss)},
+      footer = {
+        validationError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
           onClick = {
             // Validation
@@ -379,18 +207,194 @@ fun AddStudentDialog(
             .height(50.dp)
             .testTag("submit_add_student_button"),
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
           enabled = !saving && name.isNotBlank() && parentName.isNotBlank() && classGrade.isNotBlank()
         ) {
           Icon(Icons.Default.PersonAdd, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Complete Admission & Save", fontWeight = FontWeight.Bold)
+          Text("Add student", fontWeight = FontWeight.Bold)
         }
+      },
+      content = {
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+          value = name,
+          onValueChange = { name = it; validationError = null },
+          label = { Text("Student name *") },
+          placeholder = { Text("e.g., Aarav Patel") },
+          leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("input_student_name"),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = studentId,
+              onValueChange = { studentId = it; validationError = null },
+              label = { Text("Student ID *") },
+              placeholder = { Text("stu_1011") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = admissionNo,
+              onValueChange = { admissionNo = it; validationError = null },
+              label = { Text("Admission No *") },
+              placeholder = { Text("REV-2026-1001") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = classGrade,
+              onValueChange = { classGrade = it; validationError = null },
+              label = { Text("Class * (1-12)") },
+              placeholder = { Text("10") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = division,
+              onValueChange = { division = it },
+              label = { Text("Division") },
+              placeholder = { Text("A") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          third = { fieldModifier ->
+            OutlinedTextField(
+              value = rollNo,
+              onValueChange = { rollNo = it },
+              label = { Text("Roll No") },
+              placeholder = { Text("16") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = dob,
+          onValueChange = { dob = it; validationError = null },
+          label = { Text("Date of Birth * (DD/MM/YYYY)") },
+          placeholder = { Text("15/08/2009") },
+          leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = gender,
+              onValueChange = { gender = it },
+              label = { Text("Gender") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = bloodGroup,
+              onValueChange = { bloodGroup = it },
+              label = { Text("Blood Group") },
+              placeholder = { Text("O+") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Section divider
+        Text(
+          text = "Guardian",
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+          value = parentName,
+          onValueChange = { parentName = it; validationError = null },
+          label = { Text("Guardian name *") },
+          leadingIcon = { Icon(Icons.Default.FamilyRestroom, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = parentPhone,
+          onValueChange = { parentPhone = it; validationError = null },
+          label = { Text("Guardian phone *") },
+          leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = parentEmail,
+          onValueChange = { parentEmail = it },
+          label = { Text("Guardian email (optional)") },
+          leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = address,
+          onValueChange = { address = it },
+          label = { Text("Address") },
+          leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          maxLines = 2
+        )
+
+        if (onSubmitStudent != null && com.example.data.datasource.AppEnvironment.currentMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) {
+          Spacer(Modifier.height(10.dp))
+          OutlinedTextField(value=annualFee,onValueChange={ annualFee=it },label={ Text("Initial fee in INR (optional)") },supportingText={ Text("Creates an unpaid invoice. Blank means no invoice; it does not create login accounts.") },modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=!saving)
+        }
+        // Validation error display
+
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+
       }
-    }
+    )
   }
 }
-
 
 @Composable
 fun AddTeacherDialog(
@@ -415,200 +419,10 @@ fun AddTeacherDialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column {
-            Text(
-              text = "Add Faculty Member",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Fill faculty information to register staff profile",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-          IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-          value = name,
-          onValueChange = { name = it; validationError = null },
-          label = { Text("Faculty Full Name *") },
-          placeholder = { Text("e.g. Prof. Sunita Rao") },
-          leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("input_teacher_name"),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = employeeId,
-            onValueChange = { employeeId = it; validationError = null },
-            label = { Text("Employee ID *") },
-            placeholder = { Text("EMP-201") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = department,
-            onValueChange = { department = it },
-            label = { Text("Department") },
-            placeholder = { Text("Science") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = dob,
-          onValueChange = { dob = it; validationError = null },
-          label = { Text("Date of Birth * (DD/MM/YYYY)") },
-          placeholder = { Text("12/04/1982") },
-          leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = designation,
-            onValueChange = { designation = it },
-            label = { Text("Designation") },
-            placeholder = { Text("Head of Dept") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = qualification,
-            onValueChange = { qualification = it },
-            label = { Text("Qualification") },
-            placeholder = { Text("Ph.D, M.Ed") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = gender,
-            onValueChange = { gender = it },
-            label = { Text("Gender") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = subject,
-            onValueChange = { subject = it },
-            label = { Text("Primary Subject(s)") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = email,
-          onValueChange = { email = it; validationError = null },
-          label = { Text("Institutional Email *") },
-          leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-          placeholder = { Text("teacher@revenexschool.edu.in") },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = phone,
-          onValueChange = { phone = it; validationError = null },
-          label = { Text("Contact Phone Number * (+91 XXXXX XXXXX)") },
-          leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = assignedClass,
-          onValueChange = { assignedClass = it },
-          label = { Text("Assigned Classes (comma separated)") },
-          leadingIcon = { Icon(Icons.Default.Class, contentDescription = null) },
-          placeholder = { Text("10-A, 9-B") },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        // Validation error display
-        if (validationError != null) {
-          Spacer(modifier = Modifier.height(8.dp))
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.errorContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(10.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = validationError ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-              )
-            }
-          }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+    CompactFormLayout(
+      header = {FormHeading("Add faculty member", "Contact information and teaching assignment.", enabled = true, onDismiss = onDismiss)},
+      footer = {
+        validationError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
           onClick = {
             when {
@@ -665,23 +479,171 @@ fun AddTeacherDialog(
             .height(50.dp)
             .testTag("submit_add_teacher_button"),
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
           enabled = name.isNotBlank() && employeeId.isNotBlank()
         ) {
           Icon(Icons.Default.School, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Save Faculty Profile", fontWeight = FontWeight.Bold)
+          Text("Save faculty", fontWeight = FontWeight.Bold)
         }
+      },
+      content = {
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+          value = name,
+          onValueChange = { name = it; validationError = null },
+          label = { Text("Faculty name *") },
+          placeholder = { Text("e.g. Prof. Sunita Rao") },
+          leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("input_teacher_name"),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = employeeId,
+              onValueChange = { employeeId = it; validationError = null },
+              label = { Text("Employee ID *") },
+              placeholder = { Text("EMP-201") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = department,
+              onValueChange = { department = it },
+              label = { Text("Department") },
+              placeholder = { Text("Science") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = dob,
+          onValueChange = { dob = it; validationError = null },
+          label = { Text("Date of Birth * (DD/MM/YYYY)") },
+          placeholder = { Text("12/04/1982") },
+          leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = designation,
+              onValueChange = { designation = it },
+              label = { Text("Designation") },
+              placeholder = { Text("Head of Dept") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = qualification,
+              onValueChange = { qualification = it },
+              label = { Text("Qualification") },
+              placeholder = { Text("Ph.D, M.Ed") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = gender,
+              onValueChange = { gender = it },
+              label = { Text("Gender") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = subject,
+              onValueChange = { subject = it },
+              label = { Text("Primary Subject(s)") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = email,
+          onValueChange = { email = it; validationError = null },
+          label = { Text("School email *") },
+          leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+          placeholder = { Text("teacher@revenexschool.edu.in") },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = phone,
+          onValueChange = { phone = it; validationError = null },
+          label = { Text("Phone *") },
+          leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = assignedClass,
+          onValueChange = { assignedClass = it },
+          label = { Text("Assigned Classes (comma separated)") },
+          leadingIcon = { Icon(Icons.Default.Class, contentDescription = null) },
+          placeholder = { Text("10-A, 9-B") },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        // Validation error display
+
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+
       }
-    }
+    )
   }
 }
 
 @Composable
 fun CreateNoticeDialog(
   onDismiss: () -> Unit,
-  onPublish: (SchoolNotice) -> Unit
+  onPublish: (SchoolNotice) -> Unit,
+  onSubmitNotice: (suspend (SchoolNotice) -> Unit)? = null
 ) {
+  val publishScope = rememberCoroutineScope()
+  val noticeId = remember { "not_${java.util.UUID.randomUUID()}" }
+  var saving by remember { mutableStateOf(false) }
+  var saveError by remember { mutableStateOf<String?>(null) }
   var title by remember { mutableStateOf("") }
   var content by remember { mutableStateOf("") }
   var category by remember { mutableStateOf(NoticeCategory.CIRCULAR) }
@@ -689,39 +651,51 @@ fun CreateNoticeDialog(
   var isImportant by remember { mutableStateOf(false) }
 
   Dialog(
-    onDismissRequest = onDismiss,
+    onDismissRequest = { if (!saving) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
+    CompactFormLayout(
+      header = {FormHeading("Publish a notice", "Write a clear school announcement and choose its category.", enabled = !saving, onDismiss = onDismiss)},
+      footer = {
+        saveError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        Button(
+          onClick = {
+            if (title.isNotBlank() && content.isNotBlank()) {
+              val notice = SchoolNotice(
+                id = noticeId,
+                title = title.trim(),
+                content = content.trim(),
+                category = category,
+                publishedDate = "Today",
+                authorName = "Principal / Admin Office",
+                authorRole = "Administration",
+                targetAudience = targetAudience,
+                isImportant = isImportant
+              )
+              saving = true
+              saveError = null
+              publishScope.launch {
+                try {
+                  if (onSubmitNotice != null) onSubmitNotice(notice) else onPublish(notice)
+                  onDismiss()
+                } catch (e: Exception) {
+                  if (e is kotlinx.coroutines.CancellationException) throw e
+                  saveError = "Publication could not be confirmed. Your notice is kept here; check the inbox before retrying."
+                } finally { saving = false }
+              }
+            }
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("submit_publish_notice_button"),
+          enabled = title.isNotBlank() && content.isNotBlank() && !saving
         ) {
-          Text(
-            text = "Publish Notice / Circular",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
+          Icon(Icons.Default.Campaign, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(if (saving) "Publishing…" else "Publish school announcement")
         }
+      },
+      content = {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -740,10 +714,10 @@ fun CreateNoticeDialog(
         OutlinedTextField(
           value = content,
           onValueChange = { content = it },
-          label = { Text("Detailed Notice Content *") },
+          label = { Text("Notice message *") },
           modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .heightIn(min = 120.dp)
             .testTag("input_notice_content"),
           maxLines = 6
         )
@@ -756,11 +730,12 @@ fun CreateNoticeDialog(
           fontWeight = FontWeight.Bold
         )
         Row(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
           horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
           listOf(NoticeCategory.CIRCULAR, NoticeCategory.EVENT, NoticeCategory.EXAM, NoticeCategory.HOLIDAY).forEach { cat ->
             FilterChip(
+              modifier = Modifier.heightIn(min = 48.dp),
               selected = category == cat,
               onClick = { category = cat },
               label = { Text(cat.label, fontSize = 12.sp) }
@@ -776,7 +751,7 @@ fun CreateNoticeDialog(
           horizontalArrangement = Arrangement.SpaceBetween
         ) {
           Text(
-            text = "Mark as High Priority Alert",
+            text = "Important",
             style = MaterialTheme.typography.bodyMedium
           )
           Switch(
@@ -787,35 +762,8 @@ fun CreateNoticeDialog(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-          onClick = {
-            if (title.isNotBlank() && content.isNotBlank()) {
-              val notice = SchoolNotice(
-                id = "not_${System.currentTimeMillis()}",
-                title = title.trim(),
-                content = content.trim(),
-                category = category,
-                publishedDate = "Today",
-                authorName = "Principal / Admin Office",
-                authorRole = "Administration",
-                targetAudience = targetAudience,
-                isImportant = isImportant
-              )
-              onPublish(notice)
-              onDismiss()
-            }
-          },
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("submit_publish_notice_button"),
-          enabled = title.isNotBlank() && content.isNotBlank()
-        ) {
-          Icon(Icons.Default.Campaign, contentDescription = null)
-          Spacer(modifier = Modifier.width(8.dp))
-          Text("Publish School Announcement")
-        }
       }
-    }
+    )
   }
 }
 
@@ -824,13 +772,15 @@ fun CreateAssignmentDialog(
   teacherName: String,
   repository: ErpDataRepository,
   onDismiss: () -> Unit,
-  onCreate: (HomeworkAssignment) -> Unit
+  onCreate: (HomeworkAssignment) -> Unit,
+  onSubmitAssignment: (suspend (HomeworkAssignment) -> Unit)? = null
 ) {
+  val assignmentId = remember { "hw_${java.util.UUID.randomUUID()}" }
   var title by remember { mutableStateOf("") }
   var subject by remember { mutableStateOf("Mathematics") }
   var classGrade by remember { mutableStateOf("10") }
   var division by remember { mutableStateOf("A") }
-  var dueDate by remember { mutableStateOf("05 Sep 2026") }
+  var dueDate by remember { mutableStateOf(SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date())) }
   var instructions by remember { mutableStateOf("") }
   var maxPoints by remember { mutableStateOf("20") }
   val context = LocalContext.current
@@ -851,7 +801,7 @@ fun CreateAssignmentDialog(
     attachmentError = null
     if (uri != null) {
       val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
-      if (!FirebaseStorageManager.isAllowedDocumentType(mime)) {
+      if (!DocumentFiles.isAllowedDocumentType(mime)) {
         attachmentError = "Only PDF, DOC or DOCX files are allowed as attachments."
         selectedFileName = ""
         selectedFileMime = ""
@@ -877,151 +827,13 @@ fun CreateAssignmentDialog(
   val createScope = rememberCoroutineScope()
 
   Dialog(
-    onDismissRequest = onDismiss,
+    onDismissRequest = { if (!isUploading) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "Create Homework Assignment",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-          value = title,
-          onValueChange = { title = it },
-          label = { Text("Assignment Title *") },
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = subject,
-            onValueChange = { subject = it },
-            label = { Text("Subject") },
-            modifier = Modifier.weight(1.5f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = dueDate,
-            onValueChange = { dueDate = it },
-            label = { Text("Due Date") },
-            modifier = Modifier.weight(1.5f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = instructions,
-          onValueChange = { instructions = it },
-          label = { Text("Detailed Instructions & Guidelines *") },
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp),
-          maxLines = 4
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = classGrade,
-            onValueChange = { classGrade = it.filter { c -> c.isDigit() } },
-            label = { Text("Class *") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = division,
-            onValueChange = { division = it.uppercase(Locale.US).take(2) },
-            label = { Text("Division *") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = maxPoints,
-            onValueChange = { maxPoints = it.filter { c -> c.isDigit() }.take(2) },
-            label = { Text("Max Marks") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = if (selectedFileName.isEmpty()) "No file attached" else selectedFileName,
-          onValueChange = {},
-          readOnly = true,
-          isError = attachmentError != null,
-          supportingText = {
-            if (attachmentError != null) {
-              Text(attachmentError.orEmpty(), color = MaterialTheme.colorScheme.error)
-            }
-          },
-          label = { Text("Attach Reference File (PDF / DOC / DOCX)") },
-          trailingIcon = {
-            if (isUploading) {
-              CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-            } else {
-              IconButton(onClick = { filePicker.launch("*/*") }, enabled = !isUploading) {
-                Icon(Icons.Default.AttachFile, contentDescription = "Attach File")
-              }
-            }
-          },
-          leadingIcon = {
-            if (selectedFileName.isNotEmpty() && !isUploading) {
-              IconButton(onClick = {
-                selectedFileName = ""
-                selectedFileMime = ""
-                selectedFileUri = null
-              }) {
-                Icon(Icons.Default.Clear, contentDescription = "Remove Attachment")
-              }
-            }
-          },
-          modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+    CompactFormLayout(
+      header = {FormHeading("New assignment", "Set the subject, class, deadline and optional reference document.", enabled = !isUploading, onDismiss = onDismiss)},
+      footer = {
+        attachmentError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
           onClick = {
             attachmentError = null
@@ -1057,7 +869,7 @@ fun CreateAssignmentDialog(
                     attachedUrl = result.url
                   }
                   val assignment = HomeworkAssignment(
-                    id = "hw_${System.currentTimeMillis()}",
+                    id = assignmentId,
                     title = title.trim(),
                     subject = subject.trim(),
                     classGrade = classGrade.trim(),
@@ -1073,10 +885,11 @@ fun CreateAssignmentDialog(
                     isCompletedByStudent = false,
                     submissionStatus = "Pending"
                   )
-                  onCreate(assignment)
+                  if (onSubmitAssignment != null) onSubmitAssignment(assignment) else onCreate(assignment)
                   onDismiss()
                 } catch (e: Exception) {
-                  attachmentError = e.message ?: "Could not upload attachment."
+                  if (e is kotlinx.coroutines.CancellationException) throw e
+                  attachmentError = "Assignment could not be confirmed. Your work is retained; check Homework before retrying."
                 } finally {
                   isUploading = false
                 }
@@ -1089,10 +902,127 @@ fun CreateAssignmentDialog(
         ) {
           Icon(Icons.Default.Assignment, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Assign to Class $classGrade-$division")
+          Text(if (isUploading) "Publishing…" else "Assign to class $classGrade-$division")
         }
+      },
+      content = {
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+          value = title,
+          onValueChange = { title = it },
+          label = { Text("Title *") },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = subject,
+              onValueChange = { subject = it },
+              label = { Text("Subject") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = dueDate,
+              onValueChange = { dueDate = it },
+              label = { Text("Due Date") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = instructions,
+          onValueChange = { instructions = it },
+          label = { Text("Instructions *") },
+          modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 100.dp),
+          maxLines = 4
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = classGrade,
+              onValueChange = { classGrade = it.filter { c -> c.isDigit() } },
+              label = { Text("Class *") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = division,
+              onValueChange = { division = it.uppercase(Locale.US).take(2) },
+              label = { Text("Division *") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          third = { fieldModifier ->
+            OutlinedTextField(
+              value = maxPoints,
+              onValueChange = { maxPoints = it.filter { c -> c.isDigit() }.take(2) },
+              label = { Text("Max Marks") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = if (selectedFileName.isEmpty()) "No file attached" else selectedFileName,
+          onValueChange = {},
+          readOnly = true,
+          isError = attachmentError != null,
+          supportingText = {
+    
+          },
+          label = { Text("Attach Reference File (PDF / DOC / DOCX)") },
+          trailingIcon = {
+            if (isUploading) {
+              CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+            } else {
+              IconButton(onClick = { filePicker.launch("*/*") }, enabled = !isUploading) {
+                Icon(Icons.Default.AttachFile, contentDescription = "Attach File")
+              }
+            }
+          },
+          leadingIcon = {
+            if (selectedFileName.isNotEmpty() && !isUploading) {
+              IconButton(onClick = {
+                selectedFileName = ""
+                selectedFileMime = ""
+                selectedFileUri = null
+              }) {
+                Icon(Icons.Default.Clear, contentDescription = "Remove Attachment")
+              }
+            }
+          },
+          modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+
       }
-    }
+    )
   }
 }
 
@@ -1114,102 +1044,10 @@ fun ApplyLeaveDialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "Apply for Leave",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-          IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close")
-          }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-          text = "Leave Type",
-          style = MaterialTheme.typography.labelMedium,
-          fontWeight = FontWeight.Bold
-        )
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-          listOf("Medical", "Casual", "Family Event", "Sports").forEach { type ->
-            FilterChip(
-              selected = leaveType.contains(type),
-              onClick = { leaveType = "$type Leave" },
-              label = { Text(type, fontSize = 12.sp) }
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          OutlinedTextField(
-            value = startDate,
-            onValueChange = { startDate = it },
-            label = { Text("From Date") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-          OutlinedTextField(
-            value = endDate,
-            onValueChange = { endDate = it },
-            label = { Text("To Date") },
-            modifier = Modifier.weight(1f),
-            singleLine = true
-          )
-        }
-
-        if (dateError != null) {
-          Spacer(modifier = Modifier.height(10.dp))
-          Text(
-            text = dateError!!,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = reason,
-          onValueChange = { reason = it },
-          label = { Text("Reason for Absence *") },
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp),
-          maxLines = 4
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+    CompactFormLayout(
+      header = {FormHeading("Request leave", "Choose the dates and explain your request.", enabled = true, onDismiss = onDismiss)},
+      footer = {
+        dateError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
           onClick = {
             dateError = null
@@ -1236,248 +1074,124 @@ fun ApplyLeaveDialog(
         ) {
           Icon(Icons.Default.Send, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Submit Leave Application")
+          Text("Submit request")
         }
+      },
+      content = {
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+          text = "Leave Type",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.Bold
+        )
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          listOf("Medical", "Casual", "Family Event", "Sports").forEach { type ->
+            FilterChip(
+              selected = leaveType.contains(type),
+              onClick = { leaveType = "$type Leave" },
+              label = { Text(type, fontSize = 12.sp) }
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ResponsiveFormFields(
+          first = { fieldModifier ->
+            OutlinedTextField(
+              value = startDate,
+              onValueChange = { startDate = it },
+              label = { Text("From Date") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          },
+          second = { fieldModifier ->
+            OutlinedTextField(
+              value = endDate,
+              onValueChange = { endDate = it },
+              label = { Text("To Date") },
+              modifier = fieldModifier,
+              singleLine = true
+            )
+          }
+        )
+
+
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+          value = reason,
+          onValueChange = { reason = it },
+          label = { Text("Reason *") },
+          modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 100.dp),
+          maxLines = 4
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+
       }
-    }
+    )
   }
 }
 
 @Composable
-fun FeePaymentDialog(
-  studentName: String,
-  amountDue: Long,
-  isProcessing: Boolean,
-  paymentCompleted: Boolean,
-  razorpayPaymentId: String,
-  onDismiss: () -> Unit,
-  onStartRazorpay: (method: String) -> Unit,
-  receiptNo: String = "",
-  statusMessage: String = "",
-  onCheckStatus: (() -> Unit)? = null
-) {
-  Dialog(
-    onDismissRequest = { if (!isProcessing) onDismiss() },
-    properties = DialogProperties(usePlatformDefaultWidth = false)
-  ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .imePadding()
-        .padding(vertical = 16.dp)
-        .glassEffect(cornerRadius = 24.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = ScholaSurface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .verticalScroll(rememberScrollState())
-          .padding(20.dp)
-      ) {
-        if (!paymentCompleted) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "Pay School Fees",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-              )
-              Text(
-                text = "Student: $studentName",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-            }
-            IconButton(onClick = onDismiss, enabled = !isProcessing) {
-              Icon(Icons.Default.Close, contentDescription = "Close")
-            }
-          }
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          // Razorpay Test Mode Banner
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = Color(0xFFFFF3CD),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(10.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Default.Science,
-                contentDescription = null,
-                tint = Color(0xFF856404),
-                modifier = Modifier.size(16.dp)
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = "Razorpay Test Mode — No real money will be charged",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF856404)
-              )
-            }
-          }
-
-          Spacer(modifier = Modifier.height(12.dp))
-
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = RevenexPrimaryContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(16.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column {
-                Text(
-                  text = "Total Payable Amount",
-                  style = MaterialTheme.typography.labelMedium,
-                  color = RevenexOnPrimaryContainer
-                )
-                Text(
-                  text = "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}",
-                  style = MaterialTheme.typography.headlineMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = RevenexOnPrimaryContainer
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color.White.copy(alpha = 0.8f)
-              ) {
-                Text(
-                  text = "Verified receipt",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = RevenexBlue,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-              }
-            }
-          }
-
-          Spacer(modifier = Modifier.height(16.dp))
-
-          Text("Choose an available payment method in Razorpay secure checkout.", style=MaterialTheme.typography.bodySmall)
-          if (statusMessage.isNotBlank()) Text(statusMessage, style=MaterialTheme.typography.bodySmall)
-          if (!isProcessing && onCheckStatus != null) TextButton(onClick=onCheckStatus) { Text("Check payment status") }
-          Spacer(modifier = Modifier.height(20.dp))
-
-          if (isProcessing) {
-            Column(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-              CircularProgressIndicator(modifier = Modifier.size(36.dp))
-              Spacer(modifier = Modifier.height(8.dp))
-              Text(
-                text = "Securing transaction via Razorpay (Test Mode)...",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-            }
-          } else {
-            Button(
-              onClick = {
-                onStartRazorpay("Razorpay Test")
-              },
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .testTag("submit_fee_payment_button"),
-              shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
-            ) {
-              Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = "Pay ₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)} Securely",
-                fontWeight = FontWeight.Bold
-              )
-            }
-          }
-        } else {
-          // ========== Success / Receipt State ==========
-          Column(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-          ) {
-            Box(
-              modifier = Modifier
-                .size(64.dp)
-                .background(StatusSuccessContainer, CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = StatusSuccess,
-                modifier = Modifier.size(36.dp)
-              )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-              text = "Payment Received Successfully!",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold,
-              color = StatusSuccessText
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Receipt details card
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = MaterialTheme.colorScheme.surfaceVariant,
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              Column(modifier = Modifier.padding(14.dp)) {
-                ReceiptRow("Receipt No.", receiptNo)
-                ReceiptRow("Razorpay ID", razorpayPaymentId)
-                ReceiptRow("Student", studentName)
-                ReceiptRow("Amount", "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}")
-                ReceiptRow("Method", "Razorpay Test")
-                ReceiptRow("Status", "Captured · verified (test)")
-              }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-              text = "Receipt saved in the school ledger and in-app inbox.",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-              onClick = onDismiss,
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-              shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = RevenexBlue, contentColor = Color.White)
-            ) {
-              Text("Done & View Updated Ledger", fontWeight = FontWeight.Bold)
-            }
+fun FeePaymentDialog(studentName: String,amountDue: Long,isProcessing: Boolean,paymentCompleted: Boolean,razorpayPaymentId: String,
+ onDismiss: ()->Unit,onStartRazorpay: (String)->Unit,receiptNo: String="",statusMessage: String="",onCheckStatus: (()->Unit)?=null) {
+ val amount="₹${String.format(java.util.Locale.US,"%,.2f",amountDue/100.0)}"
+ Dialog(onDismissRequest={if(!isProcessing)onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+  CompactFormLayout(header={FormHeading(if(paymentCompleted)"Verified receipt" else if(amountDue<=0L)"Receipt & payment status" else "Review test payment",studentName,!isProcessing,onDismiss)},footer={
+    if(isProcessing) {
+      LinearProgressIndicator(Modifier.fillMaxWidth())
+      Text(statusMessage.ifBlank{"Preparing secure test checkout…"},style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    } else if(paymentCompleted) {
+      Button(onClick=onDismiss,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input)){Text("Done")}
+    } else {
+      if(amountDue>0L)Button(onClick={onStartRazorpay("Razorpay Test")},modifier=Modifier.fillMaxWidth().testTag("submit_fee_payment_button"),shape=RoundedCornerShape(Radius.input)) {
+        Icon(Icons.Default.Lock,null);Spacer(Modifier.width(Spacing.sm8));Text("Pay")
+      }
+      onCheckStatus?.let{check->TextButton(onClick=check,modifier=Modifier.fillMaxWidth()){Text("Check status")}}
+      if(amountDue<=0L)TextButton(onClick=onDismiss){Text("Close")}
+    }
+  }) {
+    if(paymentCompleted) {
+      Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+        Icon(Icons.Default.CheckCircle,null,tint=SemanticColors.onSuccess,modifier=Modifier.size(Spacing.xxl32))
+        Text("Payment Received Successfully!",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      }
+      Spacer(Modifier.height(Spacing.lg16))
+      Text(amount,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+      Spacer(Modifier.height(Spacing.lg16));HorizontalDivider();Spacer(Modifier.height(Spacing.sm8))
+      ReceiptRow("Receipt No.",receiptNo);ReceiptRow("Razorpay ID",razorpayPaymentId);ReceiptRow("Student",studentName);ReceiptRow("Amount",amount);ReceiptRow("Method","Razorpay Test");ReceiptRow("Status","Captured · verified (test)")
+      Spacer(Modifier.height(Spacing.lg16));Text("Receipt saved in the school ledger and in-app inbox.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+      if(amountDue>0L) {
+        Text("Outstanding amount",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(amount,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+        Spacer(Modifier.height(Spacing.lg16))
+        Surface(color=SemanticColors.warningContainer,shape=RoundedCornerShape(Radius.sm)) {
+          Row(Modifier.padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
+            Icon(Icons.Default.Science,null,tint=SemanticColors.onWarning)
+            Text("Razorpay Test Mode — No real money will be charged",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onWarning)
           }
         }
+        Spacer(Modifier.height(Spacing.lg16));Text("Choose an available payment method in Razorpay secure checkout.",style=MaterialTheme.typography.bodyMedium)
+      }
+      if(!isProcessing) {
+        Spacer(Modifier.height(Spacing.md12));Text(statusMessage.ifBlank{if(amountDue<=0L)"No verified receipt is loaded. Check status to retrieve your account's payment record." else "Your invoice is updated only after the school payment server confirms capture."},style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
   }
+ }
 }
 
 @Composable
@@ -1491,12 +1205,15 @@ fun ReceiptRow(label: String, value: String) {
     Text(
       text = label,
       style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.weight(0.4f)
     )
     Text(
       text = value,
       style = MaterialTheme.typography.bodySmall,
-      fontWeight = FontWeight.Bold
+      fontWeight = FontWeight.Bold,
+      modifier = Modifier.weight(0.6f),
+      textAlign = androidx.compose.ui.text.style.TextAlign.End
     )
   }
 }

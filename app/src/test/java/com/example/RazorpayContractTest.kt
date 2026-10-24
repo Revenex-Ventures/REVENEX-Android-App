@@ -19,4 +19,10 @@ class RazorpayContractTest {
     assertTrue(RazorpayPaymentResult("paid",order.reference,"pay_123","RZP-TEST-verified",1000,"INR").verifiedPaid)
     assertFalse(RazorpayPaymentResult("paid",order.reference,"pay_123","RZP-TEST-verified",1000,"USD").verifiedPaid)
   }
+  @Test fun paymentErrorsAreActionableWithoutPrivateResponseData() {
+    assertTrue(com.example.data.datasource.paymentServiceMessage(404).contains("deploy"))
+    assertTrue(com.example.data.datasource.paymentServiceMessage(401).contains("Sign in"))
+    assertTrue(com.example.data.datasource.paymentServiceMessage(409).contains("Check payment status"))
+    assertFalse(com.example.data.datasource.paymentServiceMessage(503).contains("rzp_"))
+  }
 }

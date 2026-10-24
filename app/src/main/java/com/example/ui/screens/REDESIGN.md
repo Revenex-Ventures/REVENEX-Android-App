@@ -1,3 +1,5 @@
+> Historical record. The active approved-board implementation and final evidence are in `docs/APPROVED_BOARD_IMPLEMENTATION.md` and `docs/APPROVED_SCREEN_CHECKLIST.md`. Artifact/source claims below belong to their stated earlier builds.
+
 > Superseded visual direction: the user subsequently requested the original black/orange UI. The original palette and carbon/ember shared components from `6efa23f` are restored. Supabase login, truthful loading/error/data states, administrator access, safe insets and reduced-motion detection remain. The green design rationale below is historical and does not describe the new APK.
 
 # Revenex visual direction and screen register

@@ -64,20 +64,20 @@ val Typography = Typography(
   titleLarge = TextStyle(
     fontFamily = FontFamily.SansSerif,
     fontWeight = FontWeight.SemiBold,
-    fontSize = 17.sp,
+    fontSize = 18.sp,
     lineHeight = 24.sp
   ),
   titleMedium = TextStyle(
     fontFamily = FontFamily.SansSerif,
     fontWeight = FontWeight.SemiBold,
-    fontSize = 15.sp,
-    lineHeight = 20.sp
+    fontSize = 16.sp,
+    lineHeight = 22.sp
   ),
   titleSmall = TextStyle(
     fontFamily = FontFamily.SansSerif,
     fontWeight = FontWeight.Medium,
-    fontSize = 13.sp,
-    lineHeight = 18.sp
+    fontSize = 14.sp,
+    lineHeight = 20.sp
   ),
 
   // Body Text

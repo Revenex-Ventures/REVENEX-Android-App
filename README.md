@@ -1,4 +1,10 @@
-> Server AI and delivery update: [security architecture, activation and CI/CD](docs/SERVER_AI_AND_CICD.md). The supplied assistant prompt is server-only; Android sends text through Auth, and the backend derives every permission from school data. Live AI is unavailable until server secrets and migration 8 are configured. GitHub Actions builds the APK and gates optional Supabase function deployment on tests/lint/security checks.
+> Final approved delivery: [APK, source, galleries, actual checks and remaining acceptance steps](README_REVENEX_DELIVERY.md). Tested application source `88db806`; CI `40123461452`; 134 Android tests passed.
+
+> Active presentation rebuild: [implementation and evidence](docs/APPROVED_BOARD_IMPLEMENTATION.md), [every routed screen](docs/APPROVED_SCREEN_CHECKLIST.md). Earlier delivery reports below are historical; use the final build record in these notes for current artifacts.
+
+> Current upgrade: [implementation, hosted evidence and remaining limits](docs/ADMIN_UPGRADE_DELIVERY.md), [latest APK/build verification](docs/CURRENT_DELIVERY.md), [screen checklist](docs/CURRENT_SCREEN_CHECKLIST.md), and [admin module matrix](docs/ADMIN_REFERENCE_MATRIX.md). Read these before historical delivery reports. The current Kotlin/Compose app uses ivory/orange light mode, coordinated dark mode and persisted Light/Dark/System appearance.
+
+> Supabase is the active cloud demo backend; Firebase is removed. Migration 10 adds confirmed draft marks/publication and administrator leave decisions. A hosted rollback-only permission test passed; actual two-device and captured Razorpay TEST acceptance remain separate. Payments must be server verified. Current hosted AI availability has not been reverified; automatic deployment remains gated. Existing school data was preserved.
 
 # REVENEX SCHOOL ERP — ENTERPRISE EDITION
 
@@ -10,7 +16,7 @@ Current readiness, known gaps, test evidence and the implementation roadmap are 
 
 ## Current demo backend migration
 
-The default local demo remains available. **Supabase Demo** adds email/password login, PostgreSQL data with RLS, private file storage and a database notification inbox with live subscriptions. The Supabase path has no Firebase startup, billing or FCM dependency. Razorpay test checkout is optional and requires the separate server setup below. Legacy SDK code remains for comparison; it has not been deleted.
+The default local demo remains available. **Supabase Demo** adds email/password login, PostgreSQL data with RLS, private file storage and a database notification inbox with live subscriptions. The Supabase path has no Firebase startup, billing or FCM dependency. Razorpay test checkout is optional and requires the separate server setup below. Firebase SDKs, legacy Android adapters, FCM service and the old Firebase Functions backend have been removed.
 
 - [What changed, previous architecture, actual checks and remaining limitations](docs/PROJECT_CHANGES_AND_STATUS.md)
 - [Supabase setup, SQL migrations, account provisioning and verification](supabase/README.md)
@@ -36,7 +42,7 @@ Use a dedicated synthetic demo project. Configure only the URL and **publishable
 * Local demo: choose a sample role.
 * Supabase demo: email/password, with role, school and session loaded from protected profiles. Roles cannot be chosen by the cloud client.
 * Sessions are memory-only; process restart requires sign-in. Auth can refresh while running.
-* Legacy Firebase login source is retained but unreachable from demo mode.
+* Authentication uses Supabase only; local demo uses synthetic personas.
 
 ### 📊 2. Principal Dashboard & Attendance Hub
 * **Real-time snapshot**: Quick overview of student counts, faculty attendance rate, and collected fees.
@@ -45,10 +51,10 @@ Use a dedicated synthetic demo project. Configure only the URL and **publishable
   * **Level 2**: Class-wise attendance breakdown (Class 10-A, 10-B, 9-A, etc.) dynamically calculated from actual database records.
   * **Level 3**: Student-wise percentages inside the selected class, with clickable overlays showing detailed chronological attendance logs.
 
-### 📝 3. Faculty Marks & Evaluations Desk
-* **Marks Entry registry**: Teachers select class, exam term, and subject to record marks for every student, with input limits strictly validated (`obtained <= max`).
-* **Checked Papers Upload**: Allows teachers to upload scans or photos of a student's evaluated examination paper. Students/parents can open it directly from their marks sheet.
-* **Answer Key Attachment**: Class-wide answers and solution booklets can be uploaded by the teacher and downloaded/viewed by all enrolled students.
+### 📝 3. Results and evaluations
+* Existing results/report views respect published-data permissions.
+* Staff Results now opens a reachable draft marks editor with student/term selection, save confirmation, review/publish and unpublish controls. PostgreSQL RPC/RLS remains authoritative; hosted two-account publication acceptance is still required.
+* Hosted attachment delivery and publication notifications require setup and acceptance tests.
 
 ### 💳 4. Demo Fee Ledger
 * Fee records are read from Supabase and mapped into the existing ledger UI.
@@ -86,15 +92,21 @@ Build a fresh, updated debug APK reflecting current code changes:
 ```
 *Expected output after a successful build*: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Demo builds use checked-in public defaults from `secrets.defaults.properties` and Android's standard debug signing configuration. Configure the local Android SDK through `ANDROID_HOME` or ignored `local.properties`. Live Firebase services additionally require your project's ignored `app/google-services.json`. Keep all gateway and webhook secrets on the backend.
+Demo builds use checked-in public defaults from `secrets.defaults.properties` and Android's standard debug signing configuration. Configure the local Android SDK through `ANDROID_HOME` or ignored `local.properties`. Cloud demo services require project configuration in ignored `supabase.local.properties` (see `supabase.local.properties.example`). Keep all gateway and webhook secrets on the backend.
 
 ---
 
+## Current checks and artifact
+
+Historical pre-rebuild verification: application source c29ecd226524ff608a6b944b18ad33660174eef0. [CI run 39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed **85 Android tests**, lint (0 errors / 69 warnings), Firebase removal and APK boundary gates, 105 PostgreSQL checks and 31 server handler tests. Historical 81/82 counts belong to earlier builds.
+
+Historical downloaded APK: `app/build/final-delivery/apk/app-debug.apk`. Exact hash, final light/dark galleries and remaining device/payment blockers are in [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). A standard new local Gradle build still uses `app/build/outputs/apk/debug/app-debug.apk`.
+
 ## 📈 Next verification steps
 
-1. Apply the Supabase demo migrations, provision the four synthetic Auth accounts, then run the seed.
-2. Run the local hidden-password hosted verification script and the two-device workflow checklist from `supabase/README.md`.
-3. Verify live updates, private file access, offline errors and every supported role before replacing the local demo as the default.
-4. Design future secure server operations with Edge Functions after the demo is verified. Payments and device push are deferred.
+1. Existing hosted setup: four demo profiles are provisioned; the teacher Auth account is confirmed; missing migrations 6–9 have been applied. Do not rerun the seed or reset this database. SQL Editor application does not populate CLI migration history automatically.
+2. Complete a signed-in synthetic student/parent Razorpay test checkout, confirm captured receipt/balance, principal and payer inbox entries, cancellation/failure behavior and webhook replay. See [payment setup](supabase/RAZORPAY_SETUP.md).
+3. Run the hosted and two-device workflow checklist from [Supabase setup](supabase/README.md): assignments, draft/published marks, recipient-isolated read state, reconnect and account switching. Verify private files and honest offline errors.
+4. Finish nested dialog/form/keyboard, large-font, rotation and accessibility checks on actual devices. Device push remains unconfigured; the database inbox is not background push. Live payments and production accounting remain outside the verified demo scope.
 
-Firebase rule deployment and FCM setup are not part of the demo path.
+Firebase backend and SDKs have been retired; Supabase handles all cloud persistence, authentication, and security boundaries.

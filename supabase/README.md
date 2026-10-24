@@ -1,3 +1,7 @@
+> Staff workflow update (24 October): migration `202610240010_staff_workflows.sql` is applied in the hosted demo, following existing migrations 1–9. **Do not blindly replay deployed SQL**: manual SQL Editor application does not populate CLI history. The added RPCs enforce existing marks RLS and verified administrator leave decisions. `verify_staff_workflows_rollback.sql` passed locally and against the hosted synthetic links; temporary rows were rolled back. See `../docs/ADMIN_UPGRADE_DELIVERY.md` for evidence and limits.
+
+> Current hosted status (23 October 2026): missing migrations 6–9 were applied successfully through SQL Editor, including result-publication notifications. Do not reapply them or reseed the existing database. Checks confirmed four demo profiles, the confirmed teacher Auth account and RLS on every public table. `razorpay-payments` is deployed; the three exact payment-secret names are saved by the operator. Unsigned user/webhook probes reject with 401/400. Credential pairing, captured checkout and webhook delivery remain unverified; AI remains undeployed. See [current changes](../docs/changes/README.md) and [delivery evidence](../docs/IVORY_DELIVERY_VERIFICATION.md). Android reconciles inbox/task rows every 30 seconds; device push remains unconfigured.
+
 > Current action-workflow update: enrollment is now supported for principal/admin through migration 7, with optional initial invoice and server-generated school notifications. Optional Razorpay TEST capture/failure notifications require migrations 6–7 and the deployed Edge Function; see [RAZORPAY_SETUP.md](RAZORPAY_SETUP.md). Older read-only fee/enrollment limitations below describe the earlier migration stage. For the reported sign-in failure, run `diagnose_setup.sql` in SQL Editor and use the exact Auth account/password, not a local demo persona. No private values should be shared.
 
 # Revenex Supabase Backend Setup Guide
@@ -36,7 +40,7 @@ Android requires only public-facing credentials (`SUPABASE_URL` and `SUPABASE_PU
 2. Create a new project (e.g., `revenex-demo`).
 3. Note your project URL and publishable API key (under Project Settings > API).
 
-### Step 2: Apply Database Schema & Policies
+### Step 2: Apply Database Schema & Policies (new empty demo project only)
 1. In the Supabase Dashboard, navigate to the **SQL Editor**.
 2. Open `supabase/migrations/202610200001_schema_rls.sql`, copy its entire content, paste into the SQL Editor, and click **Run**.
    - This creates all ERP tables, foreign keys, private security functions, and RLS policies.
@@ -44,7 +48,8 @@ Android requires only public-facing credentials (`SUPABASE_URL` and `SUPABASE_PU
    - This configures audit/notification triggers, Realtime publication, and private storage bucket policies.
 4. Run `supabase/migrations/202610200003_document_access.sql` next, then `supabase/migrations/202610200004_integrity.sql`. These add scoped document grants, integrity constraints, independent roll-call sessions, and leave-request identity protection.
 5. Run `supabase/migrations/202610200005_student_privacy.sql`. This removes duplicated fee fields from student payloads, enforces their removal on future writes, and upgrades no-op notification handling. Financial summaries come only from permitted fee records.
-6. Apply each numbered migration once, in order, to a dedicated demo database. Keep `erp_private` out of Data API exposed schemas. Expose `public` in Data API; no anonymous ERP grants are needed. The migration enables the intended Realtime tables in `supabase_realtime`.
+6. For a new project, continue in order with migrations `202610200006_razorpay_test_payments.sql`, `202610200007_action_workflows.sql`, `202610210008_assistant_security.sql`, `202610210009_result_notifications.sql`, and `202610240010_staff_workflows.sql`. These add secure TEST payment storage/settlement, enrolment/events, assistant quota schema, published-result notifications and confirmed staff operations. Schema installation alone does not deploy/activate payment or AI services.
+7. Apply each numbered migration once, in order, to a dedicated demo database. Keep `erp_private` out of Data API exposed schemas. Expose `public` in Data API; no anonymous ERP grants are needed. The migration enables the intended Realtime tables in `supabase_realtime`.
 
 ### Step 3: Provision Demo Auth Accounts
 Go to **Authentication > Users** in the Supabase Dashboard and click **Add User > Create User** for each of the following:
@@ -60,7 +65,7 @@ Choose **Auto Confirm User** when creating these synthetic demo users so no emai
 
 *Note: Choose passwords locally and provide them directly to the device user. Passwords must never be embedded in the repository.*
 
-### Step 4: Seed Initial School Data
+### Step 4: Seed Initial School Data (new demo only; never replay on the configured project)
 1. In the Supabase Dashboard, navigate back to the **SQL Editor**.
 2. Open `supabase/seed.sql`, paste into the SQL Editor, and click **Run**.
    - The script verifies that all 4 demo users exist in `auth.users`.
@@ -82,8 +87,8 @@ Choose **Auto Confirm User** when creating these synthetic demo users so no emai
 
 ## Verification & Troubleshooting
 
-- **Test Suite**: Run `npm ci --ignore-scripts --prefix supabase/tests`, then `npm test --prefix supabase/tests` to run the PostgreSQL/RLS checks against PGlite (64 passed in the latest run). This engine supplies test doubles for Supabase Auth/Storage schemas; it does not verify those hosted services or websocket delivery.
-- **Android verification**: Final `assembleDebug`, all 47 unit tests, and `lintDebug` passed (zero lint errors, 66 warnings). An isolated API 34 emulator verified installation, local administrator access and inbox read interaction (badge 2 to 1). See `docs/PROJECT_CHANGES_AND_STATUS.md` for exact evidence and hosted limitations.
+- **Test Suite**: Run `npm ci --ignore-scripts --prefix supabase/tests`, then `npm test --prefix supabase/tests` to run the PostgreSQL/RLS checks against PGlite (111 passed in the staff-workflow regression suite). This engine supplies test doubles for Supabase Auth/Storage schemas; it does not verify those hosted services or websocket delivery.
+- **Historical Android verification (earlier build, not current ivory)**: Earlier `assembleDebug`, all 82 unit tests, and `lintDebug` passed (zero lint errors, 70 warnings). An isolated API 34 emulator verified installation, local administrator access and inbox read interaction (badge 2 to 1). See `docs/PROJECT_CHANGES_AND_STATUS.md` for exact evidence and hosted limitations.
 - **Unconfigured State**: If `supabase.local.properties` is missing or contains dummy keys, the app clearly alerts you that configuration is required, while preserving full functionality in **Local Demo** mode.
 - **Session Caches**: Cloud source data is cleared on sign-in/logout and repository collectors clear their cloud caches. This is covered by focused Android tests when they pass; see the status notes for the current result.
 
@@ -96,22 +101,22 @@ Then use two devices/emulators:
 
 1. Sign in as teacher on device A and parent on device B. Create an assignment for 10-A; confirm it appears on B without reopening the page and that B receives its own inbox row.
 2. Save a roll call, switch its session slot, save again and verify both records remain after sign-out/sign-in. Simulate network loss: no success banner should appear for an unconfirmed write; retry after reconnecting.
-3. Save draft marks. Student/parent must not see drafts. Publish the report; recheck access. Change term and verify distinct marks.
+3. Teacher/principal → Modules/More → Results → Marks & publication. Select the student, enter the term/subject/marks, and Save private draft. Verify student/parent cannot read it. Review & publish, recheck the linked family and inbox, then explicitly unpublish before correcting marks. Change term and verify separate marks. Hosted rollback-only database acceptance passed; actual Android two-account transport still requires device acceptance.
 4. Attach a small PDF to a teacher assignment. Parent/student in that class should open it; a different school/session/account must be denied. Wait/re-sign links; durable references should continue working. Files are limited to 10 MB and PDF/PNG/JPEG/DOCX.
 5. Mark a parent notification read. Student's copy must remain unread. Verify inbox persists after signing in again.
-6. View fees; no checkout or fee balance write may occur. No Android push permission, FCM token or Firebase configuration is needed.
+6. View fees. Without payment deployment, checkout must fail honestly and no fee balance may change. When enabled, test checkout must credit only after server-verified capture. No Android push permission, FCM token or Firebase configuration is needed.
 7. Sign out and switch roles. No prior account's records may remain. Reopen the app and verify the local demo still works without any cloud configuration.
 
 ## Scope and limitations
 
 - Local demo remains the default. Supabase is opt-in and is not a production migration or an import of Firebase data.
 - SQL contains all nine requested roles. Android currently supports its existing principal/admin/teacher/student/parent dashboards; other roles fail sign-in clearly until dedicated routing is implemented. The seed provisions four separate accounts.
-- Enrollment, account provisioning and parent links remain operator-managed in the cloud demo. Library circulation and leave approval UI writes are not enabled; data reads come from PostgreSQL and unsupported actions fail rather than mutating local samples.
-- Fees are read-only. No payment integration, device push, paid service, or Edge Function is implemented. Edge Functions are reserved for future secure server work.
+- Enrollment is supported through the principal/admin form and migration 7; Auth account provisioning and parent links remain operator-managed. Library circulation and leave approval UI writes are not enabled; data reads come from PostgreSQL and unsupported actions fail rather than mutating local samples.
+- Android cannot directly credit fees. Razorpay TEST schema/function and correctly named secrets are now configured; unsigned user/webhook probes reject with 401/400. Captured checkout and webhook delivery remain unverified. AI remains undeployed. Device push is not configured. See RAZORPAY_SETUP.md and ../docs/SOURCE_RECONCILIATION.md.
 - Auth sessions stay in memory and can refresh while the app is running; process restart requires sign-in. No offline write queue is provided.
 - Live flows currently load the demo dataset into memory without pagination. Test reconnect/access changes explicitly; this design is for the small demo, not production scale. Re-sign in after changing roles/class membership from the dashboard.
 - Some existing UI headings describe the earlier demo cycle. Loaded record collections and financial balances in cloud mode come from Supabase; unsupported GPA/rank values are labelled unavailable.
-- The Firebase and Razorpay SDK source/dependencies are retained for comparison. App Google Services/.env plugins are not applied, Firebase auto-init provider is removed, messaging service is disabled and demo checkout is guarded.
+- Firebase SDKs, adapters, FCM service, deployment configuration, rules and legacy Functions package have been removed. Supabase and local demo remain; optional Razorpay checkout still requires server activation.
 - A failed file upload can leave an unused metadata row; an uploaded file whose subsequent assignment save fails can be an orphan. Review/delete these through the project operator; no broad client delete policy is granted.
 - Cloud RLS, file service behavior and Realtime must still be verified against your hosted project. A successful Android build or local PostgreSQL suite alone does not establish that.
 

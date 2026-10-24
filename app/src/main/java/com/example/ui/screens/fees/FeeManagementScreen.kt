@@ -1,5 +1,7 @@
 package com.example.ui.screens.fees
 
+import kotlinx.coroutines.launch
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,278 +34,116 @@ import com.example.ui.theme.*
 import java.util.Locale
 
 @Composable
-fun FeeManagementScreen(
-  repository: ErpDataRepository,
+fun FeeManagementScreen(repository: ErpDataRepository,
   onShowPaymentModal: (studentName: String, amountDue: Long) -> Unit,
-  onPayRazorpay: (String, String, Long) -> Unit = { _, name, amount -> onShowPaymentModal(name, amount) },
-  onCheckRazorpay: (String) -> Unit = {}
-) {
-  val invoices by repository.invoices.collectAsState()
-  val currentUser by repository.currentUser.collectAsState()
-  val dataMode by repository.dataMode.collectAsState()
-
-  var selectedFilter by remember { mutableStateOf("Pending") }
-  val filters = listOf("Pending", "All Invoices", "Overdue", "Partial", "Paid")
-
-  // Selected invoice for payment dialog
-  var selectedInvoiceForPayment by remember { mutableStateOf<LedgerInvoice?>(null) }
-
-  val totalBilled = invoices.sumOf { it.totalAmount }
-  val totalCollected = invoices.sumOf { it.paidAmount }
-  val totalReceivables = invoices.sumOf { it.pendingAmount }
-  val collectionPercentage = if (totalBilled > 0) ((totalCollected.toDouble() / totalBilled.toDouble()) * 100.0).toInt() else 0
-
-  val filteredInvoices = remember(invoices, selectedFilter) {
-    when (selectedFilter) {
-      "Pending" -> invoices.filter { it.pendingAmount>0 }
-      "Overdue" -> invoices.filter { it.status == FeeStatus.OVERDUE }
-      "Partial" -> invoices.filter { it.status == FeeStatus.PARTIAL }
-      "Paid" -> invoices.filter { it.status == FeeStatus.PAID }
-      else -> invoices
+  onPayRazorpay: (String,String,Long) -> Unit = {_,name,amount -> onShowPaymentModal(name,amount)},
+  onCheckRazorpay: (String) -> Unit = {}) {
+  val allInvoices by repository.invoices.collectAsState()
+  val allFees by repository.feeRecords.collectAsState()
+  val selectedStudent by repository.selectedStudentId.collectAsState()
+  val students by repository.students.collectAsState()
+  val user by repository.currentUser.collectAsState()
+  val mode by repository.dataMode.collectAsState()
+  val cloud=mode==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val family=user.role in setOf(UserRole.PARENT,UserRole.STUDENT)
+  val child=students.firstOrNull {it.id==selectedStudent}
+  val invoices=if(family)allInvoices.filter {it.studentId==child?.id} else allInvoices
+  val fees=if(family)allFees.filter {it.studentId==child?.id} else allFees
+  var filter by remember(user.id) {mutableStateOf("Pending")}
+  var expanded by remember(user.id) {mutableStateOf<String?>(null)}
+  var filterMenu by remember {mutableStateOf(false)}
+  val unpaid=invoices.filter {it.pendingAmount>0}
+  val paid=invoices.filter {it.status==FeeStatus.PAID}
+  val visible=when(filter){"Pending"->unpaid;"Paid"->paid;"Overdue"->invoices.filter {it.status==FeeStatus.OVERDUE};"Partial"->invoices.filter {it.status==FeeStatus.PARTIAL};else->invoices}
+  val history=fees.flatMap {fee -> fee.transactions.map {fee to it}}
+  val list=androidx.compose.foundation.lazy.rememberLazyListState()
+  val scope=rememberCoroutineScope()
+  LazyColumn(Modifier.fillMaxSize().testTag("fee_management_screen"),state=list,contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {WorkspacePageHeader("Fees & payments")
+      if(child!=null&&family)Text("${child.name} · Class ${child.fullClass}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
-  }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(GlassBgTransparent)
-      .testTag("fee_management_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    // 1. NET REVENUE REALIZATION HERO CARD (Dark Onyx Surface, 22dp corners)
-    item {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.hero))
-          .background(ScholaOnyx)
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.hero))
-          .padding(Spacing.cardPaddingLarge)
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "BURSAR & FINANCIAL LEDGER",
-                color = ScholaOnyxMuted,
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = TypeTokens.trackingMicroLabel
-              )
-              Text(
-                text = "Net Revenue Realization",
-                color = ScholaOnyxText,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-              )
-            }
-            Surface(
-              shape = RoundedCornerShape(Radius.pill),
-              color = ScholaGoldContainer
-            ) {
-              Text(
-                text = "$collectionPercentage% Collected",
-                color = ScholaGoldText,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-              )
-            }
+    item {Surface(shape=RoundedCornerShape(Radius.md),color=SemanticColors.peachContainer) {
+      Column(Modifier.fillMaxWidth().padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        Row(Modifier.fillMaxWidth()) {
+          Column(Modifier.weight(1f)) {
+            Text("Outstanding",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
+            Text(feeCurrency(unpaid.sumOf {it.pendingAmount}),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SemanticColors.onPeach)
           }
+          Text(if(cloud) "TEST mode" else "Local sample",style=MaterialTheme.typography.labelSmall,color=SemanticColors.onPeach)
+        }
+        Text(if(user.role in setOf(UserRole.STUDENT,UserRole.PARENT)) "Your school invoices" else "School invoices",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
+        Button(onClick={
+          if(unpaid.size==1) unpaid.first().let {onPayRazorpay(it.id,it.studentName,it.pendingAmount)}
+          else {filter="Pending";scope.launch {list.animateScrollToItem(3)}}
+        },enabled=unpaid.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm)) {Text(if(unpaid.size==1) "Pay" else "View invoices")}
+      }
+    }}
+    item {
+      TabRow(selectedTabIndex=if(filter=="Paid")1 else 0,containerColor=MaterialTheme.colorScheme.background) {
+        Tab(selected=filter!="Paid",onClick={filter="Pending"},text={Text("Pending (${unpaid.size})")})
+        Tab(selected=filter=="Paid",onClick={filter="Paid"},text={Text("Paid (${paid.size})")})
+      }
+      Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+        Text("Invoices · $filter",Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+        Box {
+          TextButton(onClick={filterMenu=true}) {Text("Filter");Icon(Icons.Default.ExpandMore,null)}
+          DropdownMenu(filterMenu,{filterMenu=false}) {listOf("Pending","Paid","All invoices","Overdue","Partial").forEach {value ->
+            DropdownMenuItem(text={Text(value)},onClick={filter=value;filterMenu=false})
+          }}
+        }
+      }
+    }
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching invoices",message="There are no invoices in this view.")}
+    items(visible,key={it.id}) {invoice ->
+      SchoolGroup {
+        Row(Modifier.fillMaxWidth().testTag("invoice_row_${invoice.id}").clickable {expanded=if(expanded==invoice.id)null else invoice.id}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Icon(Icons.Default.ReceiptLong,null,tint=MaterialTheme.colorScheme.primary)
+          Column(Modifier.weight(1f)) {
+            Text(invoice.title.substringBefore(" & "),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+            Text("Due ${invoice.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+          Column(horizontalAlignment=Alignment.End) {
+            Text(feeCurrency(if(invoice.pendingAmount>0)invoice.pendingAmount else invoice.totalAmount),style=MaterialTheme.typography.titleSmall)
+            StatusBadge(invoice.status.label)
 
-          Spacer(modifier = Modifier.height(Spacing.s4))
-
-          // Collection Progress Bar
-          LinearProgressIndicator(
-            progress = { (collectionPercentage / 100f).coerceIn(0f, 1f) },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(10.dp)
-              .clip(RoundedCornerShape(Radius.pill)),
-            color = ScholaTerracotta,
-            trackColor = ScholaOnyxBorder
-          )
-
-          Spacer(modifier = Modifier.height(Spacing.s4))
-
-          // Metrics row: Billed Total, Collected, Outstanding Receivables
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Column {
-              Text("BILLED TOTAL", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalBilled / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ScholaOnyxText)
+          }
+          Icon(if(expanded==invoice.id)Icons.Default.ExpandLess else Icons.Default.ChevronRight,"Invoice details",Modifier.size(Spacing.lg16))
+        }
+        androidx.compose.animation.AnimatedVisibility(visible=expanded==invoice.id) {
+          Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            HorizontalDivider()
+            Text(invoice.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+            Text(invoice.invoiceNumber,style=MaterialTheme.typography.labelMedium)
+            Text("${invoice.studentName} · ${invoice.cohort}",style=MaterialTheme.typography.bodyMedium)
+            Text(invoice.description,style=MaterialTheme.typography.bodyMedium)
+            fees.firstOrNull {it.id==invoice.id}?.let {record ->
+              SchoolDetailRow("Tuition",feeCurrency(record.tuitionFee));SchoolDetailRow("Exams",feeCurrency(record.examFee))
+              SchoolDetailRow("Transport",feeCurrency(record.transportFee));SchoolDetailRow("Lab / library",feeCurrency(record.labLibraryFee))
+              SchoolDetailRow("Scholarship",feeCurrency(record.discountScholarship))
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text("COLLECTED", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalCollected / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusSuccessText)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-              Text("RECEIVABLES", style = MaterialTheme.typography.labelSmall, color = ScholaOnyxMuted, letterSpacing = TypeTokens.trackingMicroLabel, fontSize = 12.sp)
-              Text("₹${totalReceivables / 100000L}k", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = StatusDangerText)
-            }
+            Text("${feeCurrency(invoice.paidAmount)} paid of ${feeCurrency(invoice.totalAmount)}",style=MaterialTheme.typography.bodySmall)
+            Text("Issued ${invoice.issueDate} · ${invoice.paymentChannel}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusBadge(status=invoice.status.label)
+            if(invoice.pendingAmount>0) Button(onClick={onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth().testTag("pay_invoice_${invoice.id}"),shape=RoundedCornerShape(Radius.sm)){Text("Pay")}
+            else if(cloud) Button(onClick={onPayRazorpay(invoice.id,invoice.studentName,0L)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm)){Text("Receipt")}
+            if(cloud) TextButton(onClick={onCheckRazorpay(invoice.id)}) {Text(if(invoice.pendingAmount>0) "Check status" else "Receipt")}
           }
         }
       }
     }
-
-    // 2. STATUS FILTER CHIPS
-    item {
-      LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-      ) {
-        items(filters) { flt ->
-          val isSelected = selectedFilter == flt
-          Surface(
-            shape = RoundedCornerShape(Radius.pill),
-            color = if (isSelected) ScholaTerracotta else ScholaSurface,
-            modifier = Modifier
-              .clip(RoundedCornerShape(Radius.pill))
-              .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
-              .clickable { selectedFilter = flt }
-          ) {
-            Text(
-              text = flt,
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold,
-              color = if (isSelected) Color.White else ScholaTextPrimary,
-              modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
-            )
-          }
+    item {Spacer(Modifier.height(Spacing.md12));Text("Payment history",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)}
+    if(history.isEmpty()) item {Text("No recorded payments. Receipts appear after server-confirmed capture.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+    items(history,key={(fee,tx)->"${fee.id}_${tx.transactionId}"}) {(fee,tx)->
+      SchoolGroup {
+        Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+          Row(Modifier.fillMaxWidth()) {Text(fee.studentName,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall);Text(feeCurrency(tx.amount),style=MaterialTheme.typography.titleSmall)}
+          Text("${tx.date} · ${tx.status}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          Text(tx.receiptNo,style=MaterialTheme.typography.labelSmall)
+          if(cloud) TextButton(onClick={onCheckRazorpay(fee.id)}) {Text("Check invoice receipt")}
         }
       }
     }
-
-    // 3. LEDGER INVOICE CARDS
-    item {
-      SectionHeader(title = "Ledger Invoices (${filteredInvoices.size})")
-    }
-
-    if (filteredInvoices.isEmpty()) {
-      item {
-        EmptyStateView(
-          title = "No Invoices Matching Filter",
-          message = "No financial records found in '$selectedFilter'."
-        )
-      }
-    } else {
-      items(filteredInvoices, key = { it.id }) { invoice ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-          ) {
-            Column(modifier = Modifier.weight(1f)) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                  text = invoice.studentName,
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = ScholaTextPrimary
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "(${invoice.cohort})",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = ScholaMuted,
-                  fontSize = 12.sp
-                )
-              }
-              Text(
-                text = "${invoice.invoiceNumber} • ${invoice.title}",
-                style = MaterialTheme.typography.bodySmall,
-                color = ScholaTextSecondary,
-                fontSize = 12.sp
-              )
-              Text(
-                text = "Due: ${invoice.dueDate} • Channel: ${invoice.paymentChannel}",
-                style = MaterialTheme.typography.labelSmall,
-                color = ScholaMuted,
-                fontSize = 12.sp
-              )
-            }
-
-            ScholaPillBadge(status = invoice.status.label)
-          }
-
-          Spacer(modifier = Modifier.height(Spacing.s3))
-
-          // Payment Progress Bar
-          LinearProgressIndicator(
-            progress = { invoice.progressFraction },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(6.dp)
-              .clip(RoundedCornerShape(Radius.pill)),
-            color = if (invoice.status == FeeStatus.OVERDUE) StatusDangerText else ScholaTerracotta,
-            trackColor = ScholaBorder
-          )
-
-          Spacer(modifier = Modifier.height(Spacing.s3))
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = "₹${invoice.paidAmount / 100L} paid of ₹${invoice.totalAmount / 100L}",
-              style = MaterialTheme.typography.bodySmall,
-              color = ScholaMuted,
-              fontSize = 12.sp
-            )
-
-            if (invoice.pendingAmount > 0 && dataMode==com.example.data.datasource.DataMode.SUPABASE_DEMO) {
-              Column(horizontalAlignment = Alignment.End) {
-                AppButton(text="Razorpay Test", onClick={ onPayRazorpay(invoice.id, invoice.studentName, invoice.pendingAmount) })
-                TextButton(onClick={ onCheckRazorpay(invoice.id) }) { Text("Check payment status") }
-              }
-            } else if (invoice.pendingAmount > 0) {
-              AppButton(
-                text = "Razorpay Test (₹${invoice.pendingAmount / 100L})",
-                onClick = { onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount) },
-                containerColor = ScholaTerracotta,
-                fontSize = 12.sp,
-                minHeight = 38.dp
-              )
-            } else {
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = StatusSuccessBg
-              ) {
-                Row(
-                  modifier = Modifier.padding(horizontal = Spacing.s2, vertical = 4.dp),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Icon(Icons.Default.Check, contentDescription = null, tint = StatusSuccessText, modifier = Modifier.size(14.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Settled in Full", color = StatusSuccessText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Payment Collection Dialog with Presets & Channels
-  if (selectedInvoiceForPayment != null) {
-    ScholaPaymentCollectionDialog(
-      invoice = selectedInvoiceForPayment!!,
-      onDismiss = { selectedInvoiceForPayment = null },
-      onConfirmPayment = { amount, channel ->
-        repository.processInvoicePayment(selectedInvoiceForPayment!!.id, amount, channel)
-        selectedInvoiceForPayment = null
-      }
-    )
+    item {Text("Billed ${feeCurrency(invoices.sumOf {it.totalAmount})} · Collected ${feeCurrency(invoices.sumOf {it.paidAmount})}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   }
 }
 
@@ -330,7 +170,7 @@ fun ScholaPaymentCollectionDialog(
         Text(
           text = "Scholar: ${invoice.studentName} (${invoice.invoiceNumber})",
           style = MaterialTheme.typography.bodySmall,
-          color = ScholaMuted
+          color = MaterialTheme.colorScheme.onSurfaceVariant
         )
       }
     },
@@ -345,29 +185,29 @@ fun ScholaPaymentCollectionDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Total Demanded:", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
+            Text("Total Demanded:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("₹${invoice.totalAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
           }
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Outstanding Balance:", style = MaterialTheme.typography.bodySmall, color = ScholaMuted)
-            Text("₹${invoice.pendingAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = StatusDangerText)
+            Text("Outstanding Balance:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("₹${invoice.pendingAmount / 100L}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = SemanticColors.onDanger)
           }
         }
 
         // Quick Presets Row
-        Text("Quick Preset Amount:", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+        Text("Quick Preset Amount:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
           listOf("Full Due", "50% Split", "Custom").forEach { preset ->
             val isSelected = selectedPreset == preset
             Surface(
               shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) ScholaTerracotta else ScholaSurface,
+              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
               modifier = Modifier
                 .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) ScholaTerracotta else ScholaBorder, RoundedCornerShape(Radius.pill))
+                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
                 .clickable {
                   selectedPreset = preset
                   customAmountInput = when (preset) {
@@ -379,10 +219,10 @@ fun ScholaPaymentCollectionDialog(
             ) {
               Text(
                 text = preset,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
+                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = 6.dp)
               )
             }
           }
@@ -398,21 +238,21 @@ fun ScholaPaymentCollectionDialog(
         )
 
         // Payment Channel Chips (Stripe ACH, Wire, Apple Pay)
-        Text("Payment Processing Channel:", style = MaterialTheme.typography.labelSmall, color = ScholaMuted)
+        Text("Payment Processing Channel:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
           channels.forEach { ch ->
             val isSelected = selectedChannel == ch
             Surface(
               shape = RoundedCornerShape(Radius.sm),
-              color = if (isSelected) ScholaSlateNavy else ScholaSurface,
+              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
               modifier = Modifier
                 .clip(RoundedCornerShape(Radius.sm))
-                .border(1.dp, if (isSelected) ScholaSlateNavy else ScholaBorder, RoundedCornerShape(Radius.sm))
+                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.sm))
                 .clickable { selectedChannel = ch }
             ) {
               Text(
                 text = ch,
-                color = if (isSelected) Color.White else ScholaTextPrimary,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
@@ -428,16 +268,20 @@ fun ScholaPaymentCollectionDialog(
           val amt = (customAmountInput.toLongOrNull() ?: (invoice.pendingAmount / 100L)) * 100L
           onConfirmPayment(amt, selectedChannel)
         },
-        colors = ButtonDefaults.buttonColors(containerColor = ScholaTerracotta)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
       ) {
         Text("Process Payment", fontWeight = FontWeight.Bold)
       }
     },
     dismissButton = {
       TextButton(onClick = onDismiss) {
-        Text("Cancel", color = ScholaMuted)
+        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
     },
-    containerColor = ScholaSurface
+    containerColor = MaterialTheme.colorScheme.surface
   )
 }
+
+private fun feeCurrency(paise: Long): String = java.text.NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-IN")).apply {
+  currency = java.util.Currency.getInstance("INR")
+}.format(java.math.BigDecimal.valueOf(paise, 2))

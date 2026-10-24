@@ -32,13 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.data.model.TimetableSlot
-import com.example.ui.theme.ScholaBorder
-import com.example.ui.theme.ScholaLinen
-import com.example.ui.theme.ScholaMuted
-import com.example.ui.theme.ScholaSurface
-import com.example.ui.theme.ScholaTerracotta
-import com.example.ui.theme.ScholaTextPrimary
-import com.example.ui.theme.ScholaTextSecondary
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.max
@@ -105,14 +98,14 @@ fun ScheduleLiveClock(minutes: Int, modifier: Modifier = Modifier) {
       modifier = Modifier
         .size(7.dp)
         .clip(CircleShape)
-        .background(ScholaTerracotta.copy(alpha = dotAlpha))
+        .background(MaterialTheme.colorScheme.primary.copy(alpha = dotAlpha))
     )
     Spacer(modifier = Modifier.width(6.dp))
     Text(
       text = formatMeridiem(minutes),
       style = MaterialTheme.typography.labelSmall,
       fontWeight = FontWeight.Bold,
-      color = ScholaTerracotta
+      color = MaterialTheme.colorScheme.primary
     )
   }
 }
@@ -123,18 +116,19 @@ fun ScheduleTimelineRow(
   slot: TimetableSlot,
   status: ScheduleRowStatus,
   modifier: Modifier = Modifier,
-  backgroundFill: Color = ScholaSurface,
+  backgroundFill: Color = MaterialTheme.colorScheme.surface,
   showDivider: Boolean = false,
   dividerStartX: Dp = 114.dp
 ) {
   val subjectColor = Color(slot.subjectColorHex)
   val isCurrent = status == ScheduleRowStatus.CURRENT
   val isDone = status == ScheduleRowStatus.COMPLETED
-  val accent = if (isCurrent) ScholaTerracotta else subjectColor
+  val accent = if (isCurrent) MaterialTheme.colorScheme.primary else subjectColor
 
+  val borderColor = MaterialTheme.colorScheme.outlineVariant
   Row(
     modifier = modifier.drawBehind {
-      val trackColor = if (isDone || isCurrent) accent else ScholaBorder
+      val trackColor = if (isDone || isCurrent) accent else borderColor
       val trackX = 79.dp.toPx()
       drawLine(
         color = trackColor,
@@ -159,15 +153,15 @@ fun ScheduleTimelineRow(
         fontWeight = FontWeight.Bold,
         color = when (status) {
           ScheduleRowStatus.CURRENT -> accent
-          ScheduleRowStatus.COMPLETED -> ScholaMuted
-          ScheduleRowStatus.UPCOMING -> ScholaTextPrimary
+          ScheduleRowStatus.COMPLETED -> MaterialTheme.colorScheme.onSurfaceVariant
+          ScheduleRowStatus.UPCOMING -> MaterialTheme.colorScheme.onSurface
         }
       )
       Text(
         text = stripMeridiem(slot.endTime),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Medium,
-        color = if (isDone) ScholaMuted else ScholaMuted
+        color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
 
@@ -199,7 +193,7 @@ fun ScheduleTimelineRow(
           text = slot.subject,
           style = MaterialTheme.typography.titleSmall,
           fontWeight = FontWeight.Bold,
-          color = if (isCurrent) accent else ScholaTextPrimary,
+          color = if (isCurrent) accent else MaterialTheme.colorScheme.onSurface,
           modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(6.dp))
@@ -215,7 +209,7 @@ fun ScheduleTimelineRow(
             text = "P${slot.periodNumber}",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = ScholaMuted
+            color = MaterialTheme.colorScheme.onSurfaceVariant
           )
         }
       }
@@ -224,12 +218,12 @@ fun ScheduleTimelineRow(
         text = slot.teacherName,
         style = MaterialTheme.typography.bodySmall,
         fontWeight = FontWeight.Medium,
-        color = ScholaTextSecondary
+        color = MaterialTheme.colorScheme.onSurfaceVariant
       )
       Text(
         text = slot.roomNumber,
         style = MaterialTheme.typography.labelSmall,
-        color = ScholaMuted
+        color = MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
   }
@@ -237,7 +231,7 @@ fun ScheduleTimelineRow(
   if (showDivider) {
     HorizontalDivider(
       modifier = Modifier.padding(start = dividerStartX, end = 16.dp),
-      color = ScholaBorder,
+      color = MaterialTheme.colorScheme.outlineVariant,
       thickness = 1.dp
     )
   }
@@ -248,7 +242,7 @@ fun ScheduleTimelineRow(
 private fun TimelineNode(
   status: ScheduleRowStatus,
   subjectColor: Color,
-  backgroundFill: Color = ScholaLinen,
+  backgroundFill: Color = MaterialTheme.colorScheme.background,
   modifier: Modifier = Modifier
 ) {
   Box(modifier = modifier.size(14.dp), contentAlignment = Alignment.Center) {
@@ -265,7 +259,7 @@ private fun TimelineNode(
           .size(12.dp)
           .clip(CircleShape)
           .background(backgroundFill)
-          .border(1.5.dp, ScholaBorder, CircleShape)
+          .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
       )
 
       ScheduleRowStatus.CURRENT -> {
@@ -330,7 +324,7 @@ fun ScheduleBlockRow(
   val subjectColor = Color(slot.subjectColorHex)
   val isCurrent = status == ScheduleRowStatus.CURRENT
   val isDone = status == ScheduleRowStatus.COMPLETED
-  val accent = if (isCurrent) ScholaTerracotta else subjectColor
+  val accent = if (isCurrent) MaterialTheme.colorScheme.primary else subjectColor
   val blockShape = RoundedCornerShape(18.dp)
 
   Row(
@@ -350,15 +344,15 @@ fun ScheduleBlockRow(
         fontWeight = FontWeight.Bold,
         color = when (status) {
           ScheduleRowStatus.CURRENT -> accent
-          ScheduleRowStatus.COMPLETED -> ScholaMuted
-          ScheduleRowStatus.UPCOMING -> ScholaTextPrimary
+          ScheduleRowStatus.COMPLETED -> MaterialTheme.colorScheme.onSurfaceVariant
+          ScheduleRowStatus.UPCOMING -> MaterialTheme.colorScheme.onSurface
         }
       )
       Text(
         text = stripMeridiem(slot.endTime),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Medium,
-        color = if (isDone) ScholaMuted else ScholaMuted
+        color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant
       )
     }
 
@@ -372,7 +366,7 @@ fun ScheduleBlockRow(
       TimelineNode(
         status = status,
         subjectColor = subjectColor,
-        backgroundFill = ScholaLinen
+        backgroundFill = MaterialTheme.colorScheme.background
       )
     }
 
@@ -384,8 +378,8 @@ fun ScheduleBlockRow(
         .weight(1f)
         .alpha(1f)
         .clip(blockShape)
-        .background(ScholaSurface, blockShape)
-        .border(1.dp, if (isCurrent) accent.copy(alpha = 0.6f) else ScholaBorder, blockShape)
+        .background(MaterialTheme.colorScheme.surface, blockShape)
+        .border(1.dp, if (isCurrent) accent.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant, blockShape)
         .drawBehind {
           drawRect(
             color = if (isCurrent) accent else subjectColor.copy(alpha = 0.4f),
@@ -400,7 +394,7 @@ fun ScheduleBlockRow(
           text = slot.subject,
           style = MaterialTheme.typography.titleSmall,
           fontWeight = FontWeight.Bold,
-          color = if (isCurrent) accent else ScholaTextPrimary,
+          color = if (isCurrent) accent else MaterialTheme.colorScheme.onSurface,
           modifier = Modifier.weight(1f)
         )
         if (isCurrent) {
@@ -410,7 +404,7 @@ fun ScheduleBlockRow(
             text = "P${slot.periodNumber}",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = ScholaMuted
+            color = MaterialTheme.colorScheme.onSurfaceVariant
           )
         }
       }
@@ -419,14 +413,14 @@ fun ScheduleBlockRow(
         text = slot.teacherName,
         style = MaterialTheme.typography.bodySmall,
         fontWeight = FontWeight.Medium,
-        color = ScholaTextSecondary
+        color = MaterialTheme.colorScheme.onSurfaceVariant
       )
       Spacer(modifier = Modifier.height(7.dp))
       Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
           imageVector = Icons.Filled.Place,
           contentDescription = "Room",
-          tint = if (isCurrent) accent else ScholaMuted,
+          tint = if (isCurrent) accent else MaterialTheme.colorScheme.onSurfaceVariant,
           modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(5.dp))
@@ -434,7 +428,7 @@ fun ScheduleBlockRow(
           text = slot.roomNumber,
           style = MaterialTheme.typography.labelMedium,
           fontWeight = FontWeight.SemiBold,
-          color = if (isCurrent) accent else ScholaTextSecondary
+          color = if (isCurrent) accent else MaterialTheme.colorScheme.onSurfaceVariant
         )
       }
     }
