@@ -48,9 +48,9 @@ fun AttendanceScreen(
   val canEdit = currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
   val classAttendanceMap by repository.classAttendance.collectAsState()
 
-  val cohorts = students.map { "Grade ${it.classGrade}-${it.division}" }.distinct().sorted()
+  val cohorts = students.map { "Class ${it.classGrade}-${it.division}" }.distinct().sorted()
   var selectedCohort by remember(currentUser.id, initialClassGrade, initialDivision) {
-    mutableStateOf(if (initialClassGrade != null && initialDivision != null) "Grade $initialClassGrade-$initialDivision" else "")
+    mutableStateOf(if (initialClassGrade != null && initialDivision != null) "Class $initialClassGrade-$initialDivision" else "")
   }
   LaunchedEffect(cohorts) { if (selectedCohort !in cohorts) selectedCohort = cohorts.firstOrNull().orEmpty() }
   var saving by remember(currentUser.id) { mutableStateOf(false) }
@@ -62,7 +62,7 @@ fun AttendanceScreen(
   var saveError by remember { mutableStateOf<String?>(null) }
 
   val classStudents = remember(students, selectedCohort) {
-    students.filter { "Grade ${it.classGrade}-${it.division}" == selectedCohort }
+    students.filter { "Class ${it.classGrade}-${it.division}" == selectedCohort }
   }
   val today = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
   var selectedDate by remember(currentUser.id) { mutableStateOf(today) }
@@ -136,7 +136,7 @@ fun AttendanceScreen(
                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SemanticColors.onSuccess)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                  text = "Roll call successfully recorded & verified for $selectedCohort ($selectedSessionSlot)!",
+                  text = "Attendance saved · $selectedCohort",
                   style = MaterialTheme.typography.bodySmall,
                   fontWeight = FontWeight.Bold,
                   color = SemanticColors.onSuccess
@@ -146,7 +146,7 @@ fun AttendanceScreen(
           }
 
           if (canEdit) AppButton(
-            text = if (saving) "Saving attendance…" else "Save attendance · $presentCount present, $absentCount absent",
+            text = if (saving) "Saving…" else "Save attendance",
             onClick = {
               showSuccessNotification = false
               saveError = null
@@ -225,7 +225,7 @@ fun AttendanceScreen(
 
       // Counts scroll independently; the bulk action never squeezes their labels.
       item {
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
             listOf("$presentCount Present", "$absentCount Absent", "$lateCount Late", "$excusedCount Excused").forEach { summary ->
               Surface(Modifier.weight(1f), shape = RoundedCornerShape(Radius.sm), color = MaterialTheme.colorScheme.surfaceVariant) {
@@ -247,10 +247,10 @@ fun AttendanceScreen(
 
       item {
         OutlinedTextField(studentQuery, { studentQuery = it }, Modifier.fillMaxWidth().testTag("register_search"),
-          label = { Text("Search name, roll or admission number") }, singleLine = true,
+          label = { Text("Search students") }, singleLine = true,
           leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.sm),
           colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant))
-        Text(if (canEdit) "${visibleStudents.size} of ${classStudents.size} students · Save applies to the entire class" else "Saved records for the selected date and session",
+        Text(if (canEdit) "${visibleStudents.size} of ${classStudents.size} students · Entire class saved" else "Saved records for the selected date and session",
           Modifier.padding(top = Spacing.sm8), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
       // 3. STUDENT ROLL CALL CARDS
@@ -262,7 +262,7 @@ fun AttendanceScreen(
         Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.md), color = MaterialTheme.colorScheme.surface,
           border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
           BoxWithConstraints(Modifier.padding(Spacing.sm8)) {
-            val stacked = maxWidth < 320.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+            val stacked = maxWidth < 300.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
             val identity: @Composable () -> Unit = {
               Column {
                 Text(student.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)

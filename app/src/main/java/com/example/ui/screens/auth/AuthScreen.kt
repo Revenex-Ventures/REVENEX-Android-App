@@ -45,7 +45,7 @@ import com.example.ui.theme.*
 /** A portal is an entry hint, never an authorization decision. */
 private enum class Portal(val label: String, val detail: String) {
   PRINCIPAL("Principal", "School leadership"),
-  ADMIN("School Administrator", "School operations"),
+  ADMIN("Administrator", "School operations"),
   TEACHER("Teacher", "Teaching and classwork"),
   FAMILY("Student / Guardian", "Learning and school updates")
 }
@@ -93,12 +93,12 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
               if(demo) {
                 Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
                   Text("Explore a school day",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                  Text("Choose a sample persona. Local Demo works offline and keeps school sign-in separate.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                  Text("Choose a role. Sample data works offline.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DemoRolePicker(selectedRole,{selectedRole=it},busy)
                 Button(onClick={if(!busy){busy=true;if(mode!=DataMode.DEMO)repository.setDataMode(DataMode.DEMO);repository.switchRole(selectedRole){busy=false;onLoginSuccess()}}},enabled=!busy,
                   modifier=Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).testTag("submit_login_button"),shape=RoundedCornerShape(Radius.input)) {
-                  Text(if(busy)"Opening school…" else "Enter ${selectedRole.displayName} Dashboard")
+                  Text(if(busy)"Opening…" else "Continue")
                 }
                 Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(Radius.md)) {
                   Row(Modifier.padding(Spacing.lg16),horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
@@ -131,13 +131,13 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
                     if(busy){CircularProgressIndicator(Modifier.size(Spacing.xl20),strokeWidth=2.dp);Spacer(Modifier.width(Spacing.sm8))}
                     Text(if(busy)"Signing in…" else "Sign in")
                   }
-                  TextButton(onClick={help=true},enabled=!busy){Text("Need help signing in?")}
+                  TextButton(onClick={help=true},enabled=!busy){Text("Sign-in help")}
                 }
                 HorizontalDivider()
                 Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
                   Text("Just exploring?",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
                   OutlinedButton(onClick={demo=true;portalName=null;password="";error=null},enabled=!busy,modifier=Modifier.fillMaxWidth().testTag("try_demo"),shape=RoundedCornerShape(Radius.input)){Text("Try demo")}
-                  Text("Your school sets your role and access after sign-in.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                  Text("Access is assigned by your school.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
               }
             }
@@ -166,7 +166,7 @@ private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
         }
         Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
           Text("Welcome to Revenex",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-          Text("Choose your portal for school sign-in with Supabase.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          Text("Choose how to continue.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
           Portal.entries.forEach { portal ->
@@ -202,7 +202,7 @@ private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
 private fun DemoRolePicker(selectedRole: UserRole,onSelected: (UserRole)->Unit,busy: Boolean) {
   val roles=listOf(UserRole.ADMIN,UserRole.PRINCIPAL,UserRole.TEACHER,UserRole.STUDENT,UserRole.PARENT)
   val large=LocalDensity.current.fontScale>1.25f
-  fun title(role: UserRole)=when(role){UserRole.ADMIN->"School Administrator";UserRole.PRINCIPAL->"Principal / Academic Leader";UserRole.TEACHER->"Teacher / Faculty";UserRole.STUDENT->"Student";else->"Parent / Guardian"}
+  fun title(role: UserRole)=when(role){UserRole.ADMIN->"Administrator";UserRole.PRINCIPAL->"Principal";UserRole.TEACHER->"Teacher";UserRole.STUDENT->"Student";else->"Parent / Guardian"}
   fun detail(role: UserRole)=when(role){UserRole.ADMIN->"Admissions, people & operations";UserRole.PRINCIPAL->"School overview & decisions";UserRole.TEACHER->"Classes, tasks & results";UserRole.STUDENT->"Lessons, assignments & fees";else->"Child updates & school accounts"}
   @Composable fun Persona(role: UserRole,modifier: Modifier=Modifier) {
     val chosen=selectedRole==role

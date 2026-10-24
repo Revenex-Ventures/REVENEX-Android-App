@@ -52,7 +52,7 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
           Text("School overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
           Text(today.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        TextButton(onClick = { onNavigateTo(Screen.OperationsHub.route) }) { Text("School modules") }
+        TextButton(onClick = { onNavigateTo(Screen.OperationsHub.route) }) { Text("Modules") }
       }
       Spacer(Modifier.height(Spacing.md12))
       Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
@@ -64,16 +64,26 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
     item {
       SchoolGroup {
         Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          Text("Weekly attendance", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-          Text("Recorded registers · this week", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Weekly attendance", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            attendance?.let { StatusBadge(String.format(Locale.US,"%.0f%%",it)) }
+          }
+          Text("This week · saved registers", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+            Column(Modifier.height(Presentation.chartHeight), verticalArrangement = Arrangement.SpaceBetween) {
+              listOf("100%","75%","50%","25%","0%").forEach { Text(it,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
             week.forEach { (day, rate) ->
               Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.height(96.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                  if (rate != null) Box(Modifier.width(Spacing.xl24).fillMaxHeight((rate / 100f).coerceIn(0f,1f)).background(MaterialTheme.colorScheme.secondaryContainer))
-                  Text(rate?.let { "${it.toInt()}%" } ?: "—", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                Box(Modifier.height(Presentation.chartHeight).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                  Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.SpaceBetween) {
+                    repeat(5) { HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant) }
+                  }
+                  if (rate != null) Box(Modifier.width(Spacing.xl24).fillMaxHeight((rate / 100f).coerceIn(0f,1f))
+                    .background(SemanticColors.blueContainer))
+                  if(rate == null) Text("—",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(day.format(DateTimeFormatter.ofPattern("EEE")), style = MaterialTheme.typography.labelSmall)
+                Text(day.format(DateTimeFormatter.ofPattern("EEE")),style=MaterialTheme.typography.labelSmall)
               }
             }
           }
@@ -81,14 +91,14 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
         }
       }
     }
-    item { SchoolSection("Today's actions", "All modules", { onNavigateTo(Screen.OperationsHub.route) }) {
+    item { SchoolSection("Today's actions", "View all", { onNavigateTo(Screen.OperationsHub.route) }) {
       SchoolGroup {
         SchoolRow("Leave requests", "Awaiting a decision", Icons.Default.EventBusy, { onNavigateTo(Screen.Leaves.route) }, leaves.count { it.status == LeaveStatus.PENDING }.toString())
         HorizontalDivider()
         SchoolRow("Unpaid invoices", "Review outstanding balances", Icons.Default.ReceiptLong, { onNavigateTo(Screen.Fees.route) }, invoices.count { it.pendingAmount > 0 }.toString())
       }
     } }
-    item { SchoolSection("Upcoming events", "School notices", { onNavigateTo(Screen.Notices.route) }) {
+    item { SchoolSection("Upcoming events", "View all", { onNavigateTo(Screen.Notices.route) }) {
       SchoolGroup {
         val upcoming=events.filter {dashboardEventIsUpcoming(it.date)}
         if (upcoming.isEmpty()) Text("No upcoming school events available.", Modifier.padding(Spacing.md12), style = MaterialTheme.typography.bodySmall)

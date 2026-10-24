@@ -62,7 +62,10 @@ class PresentationRebuildGateTest {
     } else {
       compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
     }
-    assertEquals(Screen.Attendance.route,destination)
+    if (role == UserRole.TEACHER) {
+      val cohort = repo.teachers.value.firstOrNull { it.email.equals(repo.currentUser.value.email,true) }?.assignedClasses?.firstOrNull() ?: repo.currentUser.value.associatedClass
+      assertEquals(Screen.Attendance.createRoute(cohort.substringBeforeLast("-"),cohort.substringAfterLast("-")),destination)
+    } else assertEquals(Screen.Attendance.route,destination)
     if (role == UserRole.PRINCIPAL) {
       compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Manage school")); capture(name+"_management")
       compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Recent activity")); capture(name+"_activity")
@@ -89,8 +92,8 @@ class PresentationRebuildGateTest {
     }
     capture("attendance_light")
     compose.onNodeWithTag("attendance_matrix_view").performScrollToIndex(3)
-    val firstClass = repo.students.value.map { "Grade ${it.classGrade}-${it.division}" }.distinct().sorted().first()
-    val first = repo.students.value.filter { "Grade ${it.classGrade}-${it.division}" == firstClass }.minBy { it.rollNumber }
+    val firstClass = repo.students.value.map { "Class ${it.classGrade}-${it.division}" }.distinct().sorted().first()
+    val first = repo.students.value.filter { "Class ${it.classGrade}-${it.division}" == firstClass }.minBy { it.rollNumber }
     compose.onNodeWithTag("btn_absent_${first.rollNumber}").performScrollTo().performClick()
     compose.onNodeWithTag("btn_absent_${first.rollNumber}").assertIsSelected()
     compose.onNodeWithTag("btn_present_${first.rollNumber}").assertIsNotSelected()

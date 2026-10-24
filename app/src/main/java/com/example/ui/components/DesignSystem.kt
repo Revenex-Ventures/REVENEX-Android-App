@@ -194,8 +194,8 @@ data class ScholaDockItem(
 fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemSelected:(String)->Unit,modifier:Modifier=Modifier) {
   val largeText=LocalDensity.current.fontScale>1.3f
   fun destinationLabel(label: String): String = when (label) {
-    "Attendance" -> "Roll call"
-    "Admissions" -> "Students"
+    "Attendance" -> "Attendance"
+    "Admissions" -> "People"
     "Homework" -> "Tasks"
     "Resources" -> "Notes"
     "Timetable" -> "Schedule"

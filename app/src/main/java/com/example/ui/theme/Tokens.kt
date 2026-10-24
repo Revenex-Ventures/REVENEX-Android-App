@@ -117,8 +117,8 @@ object EntryTokens {
   val wordmarkOffset = 52.dp
   val wordmarkMaxWidth = 360.dp
   val brandStageHeight = 192.dp
-  val compactMark = 26.dp
-  val compactName = 124.dp
+  val compactMark = 20.dp
+  val compactName = 88.dp
   val formWidth = 480.dp
   val tabletBreakpoint = 720.dp
   val inputHeight = 56.dp
@@ -154,4 +154,13 @@ object RoleAccent {
     UserRole.PARENT -> PastelPowderContainer
     null -> ScholaSlateContainer
   }
+}
+
+/** Approved-board proportions; large text can grow beyond these minima. */
+object Presentation {
+  val sectionHeading = 32.dp
+  val rowHeight = 56.dp
+  val chartHeight = 112.dp
+  val timelineTimeWidth = 64.dp
+  val timelineStem = 28.dp
 }

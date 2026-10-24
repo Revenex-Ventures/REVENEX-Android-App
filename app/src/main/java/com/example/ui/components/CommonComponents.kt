@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,9 +52,10 @@ fun SchoolSection(title: String, action: String? = null, onAction: () -> Unit = 
   Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
       Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-      if (action != null) TextButton(onClick = onAction, contentPadding = PaddingValues(horizontal = Spacing.sm8)) {
-        Text(action, style = MaterialTheme.typography.labelMedium)
-      }
+      if (action != null) Text(action,
+        modifier = Modifier.clickable(role = Role.Button, onClick = onAction)
+          .heightIn(min = Presentation.sectionHeading).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.sm8),
+        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     }
     content()
   }
@@ -71,7 +73,7 @@ fun SchoolGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.
 @Composable
 fun SchoolRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit,
   trailing: String? = null, modifier: Modifier = Modifier) {
-  Row(modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 64.dp).padding(Spacing.md12),
+  Row(modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = Presentation.rowHeight).padding(horizontal = Spacing.md12, vertical = Spacing.sm8),
     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
     val (well,ink)=when(icon.name.substringAfterLast('.')) {
       "Assignment","Assessment","Grade","Description","MenuBook","EditNote" -> SemanticColors.lavenderContainer to SemanticColors.onLavender
@@ -151,7 +153,7 @@ fun ScholaTopAppBar(
       Box {
         IconButton(onClick = { menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) { Icon(Icons.Outlined.AccountCircle, "Account and settings") }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-          DropdownMenuItem(text = { Text("Settings & profile") }, onClick = { menu = false; onProfileClick() })
+          DropdownMenuItem(text = { Text("Settings") }, onClick = { menu = false; onProfileClick() })
           DropdownMenuItem(text = { Text("Sign out") }, onClick = { menu = false; onLogoutClick() })
         }
       }

@@ -66,7 +66,7 @@ class LaunchEntryTest {
     val repo=repo();var entered=false
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
     compose.onNodeWithTag("portal_teacher").performScrollTo().performClick()
-    compose.onNodeWithTag("supabase_entry_label").performScrollTo().assertTextEquals("School sign-in · Supabase")
+    compose.onNodeWithTag("supabase_entry_label").performScrollTo().assertTextEquals("School sign-in Â· Supabase")
     compose.onNodeWithTag("submit_supabase_login").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
     compose.onNodeWithTag("role_select_teacher").assertDoesNotExist()
     assertFalse(entered)
@@ -82,7 +82,7 @@ class LaunchEntryTest {
     assertEquals(UserRole.PARENT,repo.currentUser.value.role)
   }
   @Test fun actualRoutedAppOpensTeacherDashboardAfterLocalDemoSelection() {
-    repo()
+    val repository=repo()
     compose.setContent {ScholaTheme(false){ScholaErpApp(false,false,"",{_,_->},{})}}
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
     compose.onNodeWithTag("role_select_teacher").performScrollTo().performClick()
@@ -91,6 +91,13 @@ class LaunchEntryTest {
     compose.waitUntil(10000) {compose.onAllNodesWithTag("teacher_dashboard_list").fetchSemanticsNodes().isNotEmpty()}
     capture("routed_teacher_dashboard_light")
     compose.onNodeWithTag("portal_teacher").assertDoesNotExist()
+    val actor=repository.currentUser.value
+    val cohort=repository.teachers.value.firstOrNull {it.email.equals(actor.email,true)||it.name.equals(actor.name,true)}?.assignedClasses?.firstOrNull() ?: actor.associatedClass
+    assertTrue(cohort.isNotBlank())
+    compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
+    compose.waitUntil(10000) {compose.onAllNodesWithTag("attendance_matrix_view").fetchSemanticsNodes().isNotEmpty()}
+    compose.onNodeWithText("Class $cohort").assertExists()
+    capture("routed_teacher_class_attendance")
   }
   @Test fun introInitializesContentConcurrentlyAndDoesNotReplayOnRecomposition() {
     compose.mainClock.autoAdvance=false
