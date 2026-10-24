@@ -206,11 +206,11 @@ fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemS
     Column {
       if(largeText) Text(destinationLabel(items.firstOrNull {it.route==currentRoute}?.label.orEmpty()),Modifier.padding(horizontal=Spacing.md12,vertical=Spacing.xs4),style=MaterialTheme.typography.labelLarge)
       Row(Modifier.fillMaxWidth()) {
-        items.forEach {item->
+        items.forEachIndexed { index,item->
           val selected=currentRoute==item.route
           val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
           Column(Modifier.weight(1f).semantics { this.selected = selected }.clickable(role=Role.Tab,onClickLabel=item.label){onItemSelected(item.route)}.heightIn(min=64.dp).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
-            val featured=item.label in setOf("Homework","Attendance")
+            val featured=items.size==5 && index==2 && item.label in setOf("Homework","Attendance")
             if(featured) Surface(shape=CircleShape,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer) {
               Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.padding(Spacing.sm8).size(24.dp),tint=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
             } else Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(24.dp),tint=ink)
