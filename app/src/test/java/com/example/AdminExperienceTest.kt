@@ -14,11 +14,11 @@ class AdminExperienceTest {
   fun administrator_has_a_distinct_operational_workspace() {
     val items = NavConfig.getBottomNavItems(UserRole.ADMIN)
 
-    assertEquals("Control", items.first().label)
-    assertTrue(items.any { it.label == "Admissions" })
-    assertTrue(items.any { it.label == "Schedule" })
+    assertEquals("Home", items.first().label)
+    assertTrue(items.any { it.label == "People" })
+    assertTrue(items.any { it.label == "Academics" })
     assertTrue(items.any { it.label == "Finance" })
-    assertTrue(items.any { it.label == "Modules" })
+    assertTrue(items.any { it.label == "More" })
   }
 
   @Test

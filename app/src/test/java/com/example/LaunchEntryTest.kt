@@ -66,7 +66,7 @@ class LaunchEntryTest {
     val repo=repo();var entered=false
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
     compose.onNodeWithTag("portal_teacher").performScrollTo().performClick()
-    compose.onNodeWithTag("supabase_entry_label").performScrollTo().assertTextEquals("School sign-in Â· Supabase")
+    compose.onNodeWithTag("supabase_entry_label").performScrollTo().assertTextEquals("School sign-in · Supabase")
     compose.onNodeWithTag("submit_supabase_login").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
     compose.onNodeWithTag("role_select_teacher").assertDoesNotExist()
     assertFalse(entered)

@@ -31,7 +31,7 @@ fun AdminDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String) -
   val session = if(cloud) runCatching {repository.supabaseDataSource.sessionId()}.getOrDefault("") else "Local sample session"
   var contextOpen by remember {mutableStateOf(false)}
   if(contextOpen) AlertDialog(onDismissRequest={contextOpen=false},title={Text("School context")},text={Column {
-    Text(if(cloud) "School ID: ${actor.schoolId}" else "Revenex Public School Â· sample")
+    Text(if(cloud) "School ID: ${actor.schoolId}" else "Revenex Public School · sample")
     Text("Session: ${session.ifBlank { "Not loaded" }}")
   }},confirmButton={TextButton(onClick={contextOpen=false}){Text("Done")}})
   val today = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
@@ -40,7 +40,7 @@ fun AdminDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String) -
     item {
       Text("School operations", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
       TextButton(onClick={contextOpen=true},contentPadding=PaddingValues(Spacing.xs4)) {
-        Text(if(cloud) "School ID â€¦${actor.schoolId.takeLast(6)} Â· Session â€¦${session.takeLast(6)}" else "Revenex Public School Â· Local sample session",style=MaterialTheme.typography.bodySmall)
+        Text(if(cloud) "School ID …${actor.schoolId.takeLast(6)} · Session …${session.takeLast(6)}" else "Revenex Public School · Local sample session",style=MaterialTheme.typography.bodySmall)
       }
       Spacer(Modifier.height(Spacing.md12))
       Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
@@ -78,7 +78,7 @@ fun AdminDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String) -
     } } }
     item { SchoolSection("Recent activity","View all",{onNavigateTo(Screen.Notices.route)}) { SchoolGroup {
       if(audit.isEmpty()) Text("No recorded activity.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-      audit.take(3).forEach { SchoolRow(it.actionSummary,"${it.actorName} Â· ${it.timestamp}",Icons.Default.History,{onNavigateTo(Screen.Notices.route)}) }
+      audit.take(3).forEach { SchoolRow(it.actionSummary,"${it.actorName} · ${it.timestamp}",Icons.Default.History,{onNavigateTo(Screen.Notices.route)}) }
     } } }
   }
 }
