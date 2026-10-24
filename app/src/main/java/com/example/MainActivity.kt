@@ -239,7 +239,8 @@ fun ScholaErpApp(
   val currentRoute = navBackStackEntry?.destination?.route
   val clearAccountNavigation: () -> Unit = {
     (WorkspaceDirectory.destinations.map {it.route} + listOf(Screen.Dashboard.route,Screen.Academics.route,
-      Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.Auth.route)).distinct().forEach {
+      Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.Auth.route))
+      .distinct().filter { navController.graph.findNode(it) != null }.forEach {
       navController.clearBackStack(it)
     }
   }
@@ -504,6 +505,14 @@ fun ScholaErpApp(
       }
 
       // Bursar & Financial Ledger
+      composable(Screen.PrincipalAttendance.route) {
+        if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+          PrincipalAttendanceScreen(repository, onBack = { navController.popBackStack() })
+        } else {
+          EmptyStateView("Attendance overview unavailable", "Open your own attendance from the class portal.")
+        }
+      }
+
       composable(Screen.Fees.route) {
         FeeManagementScreen(
           repository = repository,

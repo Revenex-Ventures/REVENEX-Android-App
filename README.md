@@ -1,6 +1,8 @@
+> Active presentation rebuild: [implementation and evidence](docs/APPROVED_BOARD_IMPLEMENTATION.md), [every routed screen](docs/APPROVED_SCREEN_CHECKLIST.md). Earlier delivery reports below are historical; use the final build record in these notes for current artifacts.
+
 > Current upgrade: [implementation, hosted evidence and remaining limits](docs/ADMIN_UPGRADE_DELIVERY.md), [latest APK/build verification](docs/CURRENT_DELIVERY.md), [screen checklist](docs/CURRENT_SCREEN_CHECKLIST.md), and [admin module matrix](docs/ADMIN_REFERENCE_MATRIX.md). Read these before historical delivery reports. The current Kotlin/Compose app uses ivory/orange light mode, coordinated dark mode and persisted Light/Dark/System appearance.
 
-> Supabase is the active cloud demo backend; Firebase is removed. Migration 10 adds confirmed draft marks/publication and administrator leave decisions. A hosted rollback-only permission test passed; actual two-device and captured Razorpay TEST acceptance remain separate. Payments must be server verified. AI remains undeployed; automatic deployment is gated. Existing school data was preserved.
+> Supabase is the active cloud demo backend; Firebase is removed. Migration 10 adds confirmed draft marks/publication and administrator leave decisions. A hosted rollback-only permission test passed; actual two-device and captured Razorpay TEST acceptance remain separate. Payments must be server verified. Current hosted AI availability has not been reverified; automatic deployment remains gated. Existing school data was preserved.
 
 # REVENEX SCHOOL ERP — ENTERPRISE EDITION
 
@@ -49,7 +51,7 @@ Use a dedicated synthetic demo project. Configure only the URL and **publishable
 
 ### 📝 3. Results and evaluations
 * Existing results/report views respect published-data permissions.
-* Staff marks-entry/publication backend methods exist, but no reachable Android editor/publication control is implemented. Do not demo this as a completed entry workflow.
+* Staff Results now opens a reachable draft marks editor with student/term selection, save confirmation, review/publish and unpublish controls. PostgreSQL RPC/RLS remains authoritative; hosted two-account publication acceptance is still required.
 * Hosted attachment delivery and publication notifications require setup and acceptance tests.
 
 ### 💳 4. Demo Fee Ledger
@@ -94,9 +96,9 @@ Demo builds use checked-in public defaults from `secrets.defaults.properties` an
 
 ## Current checks and artifact
 
-The latest tested application source is c29ecd226524ff608a6b944b18ad33660174eef0. [CI run 39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed **85 Android tests**, lint (0 errors / 69 warnings), Firebase removal and APK boundary gates, 105 PostgreSQL checks and 31 server handler tests. Historical 81/82 counts belong to earlier builds.
+Historical pre-rebuild verification: application source c29ecd226524ff608a6b944b18ad33660174eef0. [CI run 39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed **85 Android tests**, lint (0 errors / 69 warnings), Firebase removal and APK boundary gates, 105 PostgreSQL checks and 31 server handler tests. Historical 81/82 counts belong to earlier builds.
 
-Downloaded latest APK: `app/build/final-delivery/apk/app-debug.apk`. Exact hash, final light/dark galleries and remaining device/payment blockers are in [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). A standard new local Gradle build still uses `app/build/outputs/apk/debug/app-debug.apk`.
+Historical downloaded APK: `app/build/final-delivery/apk/app-debug.apk`. Exact hash, final light/dark galleries and remaining device/payment blockers are in [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). A standard new local Gradle build still uses `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 📈 Next verification steps
 

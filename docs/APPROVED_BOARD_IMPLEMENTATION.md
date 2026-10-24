@@ -67,3 +67,27 @@ Directories use compact identity rows and a continuous student collection, retai
 A separate demo-data inconsistency was found: Home/fee records and legacy invoice fixtures had different balances. Invoices now project from the existing fee records in both modes, so Home, Finance, reports and payment history share the same authoritative amounts. This is an in-memory projection correction, not a Supabase reseed. Family Finance is scoped to the selected child. Full invoice identity and fee heads are available in its expanded review, whose Pay action carries the exact record ID; the server still derives and validates payable amounts independently.
 
 Focused tests cover ledger identity/amount consistency, selected-child pending counts, invoice-to-checkout identifiers, People navigation and retained family timetable destinations. Final results remain pending until this slice completes CI and render review.
+
+
+## Navigation and secondary refinements — 25 October
+
+The 008dd79 directory slice compiled but failed two new journey tests (132 total): navigation returned to an old directory, and invoice review sampled a ledger before its test setup ran. The navigation fix anchors primary switches at Dashboard, clears saved navigation on account exit, and retains semantic selection for nested routes. Its actual routed Admin People → Faculty → Students → Academics → Assignments → Back → Activity test passes in run 40120732339.
+
+Source 6170da1 / run 40120732339 compiled 134 tests with one remaining invoice fixture timeout. This is not a successful release check. The fixture is now controlled by its explicit Main dispatcher and asserts the parent and linked child before inspecting invoices (509c6eb); the final run must be read before delivery. No assertion was removed or ignored.
+
+Fresh production-body renders from 6170da1 were inspected for Principal, Teacher, Attendance, Reports, draft marks and Assistant. The first three preserve the requested compact structure. Missing weekdays, a next listed lesson rather than invented today's lessons, unavailable event rows and initials rather than fabricated portraits are deliberate evidence-based differences from the illustrative board. The fee metric now reflects the canonical fee ledger (not the historical separate invoice fixture).
+
+Secondary refinements include responsive marks pairs, short publication/report actions, labeled document/transport/inventory metadata, actual assignment search results, parsed chronological report dates and attendance-only period filters. Financial totals remain explicitly scoped to the loaded academic session. AI availability is checked on request; the banner does not assert unconfigured service status before a response. Artificial reply delay is removed and conversation scrolling respects reduced motion.
+
+See APPROVED_SCREEN_CHECKLIST.md for every routed presentation and nested-state boundaries. Hosted read/write, payment capture and device-push verification are not inferred from these layout tests.
+
+
+## Runtime gate and final navigation correction
+
+Source 14c5a0d / CI 40122210945 passes all 134 Android tests (zero skipped/failures/errors), both APK builds and lint (0 errors, 78 warnings per variant). Server checks pass, including 111 PostgreSQL schema/RLS assertions. Local assembleDebug/assembleReview and full tests/lint/Firebase-removal checks also passed with ANDROID_HOME pointed to the existing SDK.
+
+The invoice fixture's actual failure was shared singleton test state: its selected child and canonical invoice IDs matched, but an earlier suite action had already settled the invoice. The focused test passed alone. It now uses a fresh in-memory repository and cancels its own scope; no production singleton or hosted data is reset.
+
+Actual installed-app inspection then caught a sign-out crash: cleanup attempted an unregistered principal_attendance route. Cleanup now considers only registered destinations, and the existing Attendance overview module has its missing NavHost destination registered for Principal/Admin. An extended regression journey covers module overview and Settings sign-out. The 14c5a0d APK is therefore superseded and is not the final recommended build, despite its green CI.
+
+Runtime evidence so far: real account/photo entry and explicitly labeled Supabase login, separate local demo, Principal and Teacher portals, stored Dark after process restart, Class 10-A attendance selection/save (4 present/2 absent confirmed in Local Demo). One emulator System UI wait prompt occurred at startup. No hosted Auth, captured Razorpay payment, physical phone or push delivery is claimed.

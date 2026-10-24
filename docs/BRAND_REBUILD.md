@@ -1,3 +1,5 @@
+> Historical record. The active approved-board implementation and final evidence are in `docs/APPROVED_BOARD_IMPLEMENTATION.md` and `docs/APPROVED_SCREEN_CHECKLIST.md`. Artifact/source claims below belong to their stated earlier builds.
+
 # Revenex brand and presentation rebuild
 
 ## Reference decisions

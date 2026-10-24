@@ -40,5 +40,18 @@ class ApprovedNavigationJourneyTest {
   compose.onNodeWithTag("section_action_recent_activity").assertTouchHeightIsEqualTo(48.dp).performClick()
   compose.onNodeWithText("School activity").assertExists()
   compose.onNodeWithText("Audit log").assertExists()
+  compose.onAllNodesWithContentDescription("Back").onFirst().performClick()
+  compose.onNodeWithTag("admin_dashboard_list").assertExists()
+  compose.onNodeWithContentDescription("More").performClick()
+  compose.onNodeWithTag("operations_hub_screen").performScrollToNode(hasTestTag("workspace_principal_attendance"))
+  compose.onNodeWithTag("workspace_principal_attendance").performClick()
+  compose.onNodeWithTag("principal_attendance_overview").assertExists()
+  compose.onAllNodesWithContentDescription("Back").onFirst().performClick()
+  compose.onAllNodesWithContentDescription("Back").onFirst().performClick()
+  compose.onNodeWithContentDescription("Account and settings").performClick()
+  compose.onNodeWithText("Settings").performClick()
+  compose.onNodeWithText("Sign out").performScrollTo().performClick()
+  compose.onNodeWithText("Welcome to Revenex").assertExists()
+  compose.onNodeWithTag("admin_dashboard_list").assertDoesNotExist()
  }
 }

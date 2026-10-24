@@ -1,3 +1,5 @@
+> Historical record. The active approved-board implementation and final evidence are in `docs/APPROVED_BOARD_IMPLEMENTATION.md` and `docs/APPROVED_SCREEN_CHECKLIST.md`. Artifact/source claims below belong to their stated earlier builds.
+
 # Presentation rebuild acceptance checklist
 
 Baseline source: ce80da2 (application c79f4ae). The earlier delivery is rejected for layout acceptance. No earlier screenshot is evidence of this rebuild.
