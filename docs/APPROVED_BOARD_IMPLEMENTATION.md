@@ -30,3 +30,11 @@ Gate acceptance remains pending until fresh render comparison and CI results are
 ## Evidence rules
 
 Comparisons crop the actual attached Principal/Teacher/Attendance panels. Target is scaled proportionally to 393dp width and letterboxed rather than distorted; current captures use 393×852dp, 1× font. A four-state register and honest missing-weekday/holiday states are deliberate functional differences. Later narrow/large-font/tablet renders are separate from this primary visual gate. Compose fixtures, actual NavHost tests, emulator captures and hosted-device acceptance are reported separately.
+
+## First gate review evidence
+
+CI 40100074198 / source 3fda633 passed Android and server checks. Fresh 393×852dp target/current comparisons were inspected for Principal, Teacher and Attendance. Four-state register, missing weekday bars, initials instead of unavailable portraits, and a real next listed weekday instead of invented lessons are intentional data/functional differences. Generic oversized hero hierarchy is absent.
+
+The render caught a new typography regression: the collected total wrapped its final zero. A focused correction uses compact Indian currency units for this dashboard metric, with the exact amount retained in its accessibility description and full Finance view. This correction awaits the next render; the gate is not described as pixel-identical. Board Admin/Login panels do not exist, so their captures are evaluated against its common components and prior auth reference.
+
+Hosted read-only setup check (24 October): public tables without RLS = 0; profiles = 4; the four named workflow RPCs (enroll_student, save_draft_mark, set_result_publication, decide_leave) exist. This checks setup presence, not private Auth success or correctness of every hosted policy. No SQL mutation or migration was run.

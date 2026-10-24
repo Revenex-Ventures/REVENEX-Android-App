@@ -542,3 +542,16 @@ fun SchoolCompactMetric(value: String,label: String,icon: ImageVector,modifier: 
   }
  }
 }
+
+/** Compact dashboard total; full invoice amounts remain available in Finance. */
+fun compactSchoolMoney(paise: Long): String {
+  val rupees=java.math.BigDecimal.valueOf(paise,2)
+  val magnitude=rupees.abs()
+  val unit=when {
+    magnitude >= java.math.BigDecimal("10000000") -> java.math.BigDecimal("10000000") to "Cr"
+    magnitude >= java.math.BigDecimal("100000") -> java.math.BigDecimal("100000") to "L"
+    magnitude >= java.math.BigDecimal("1000") -> java.math.BigDecimal("1000") to "k"
+    else -> return "₹"+rupees.stripTrailingZeros().toPlainString()
+  }
+  return "₹"+rupees.divide(unit.first,1,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+unit.second
+}

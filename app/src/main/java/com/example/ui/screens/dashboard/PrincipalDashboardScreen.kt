@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.*
@@ -57,8 +59,8 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
       Spacer(Modifier.height(Spacing.md12))
       Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
         SchoolMetric(students.size.toString(), "Students", Icons.Default.Groups, Modifier.weight(1f)) { onNavigateTo(Screen.Students.route) }
-        SchoolMetric(attendance?.let { String.format(Locale.US,"%.0f%%",it) } ?: "—", "This week", Icons.Default.FactCheck, Modifier.weight(1f), SchoolMetricTone.POSITIVE) { onNavigateTo(Screen.PrincipalAttendance.route) }
-        SchoolMetric(collected, "Collected", Icons.Default.CurrencyRupee, Modifier.weight(1f), SchoolMetricTone.FINANCE) { onNavigateTo(Screen.Fees.route) }
+        SchoolMetric(attendance?.let { String.format(Locale.US,"%.0f%%",it) } ?: "—", "Attendance", Icons.Default.FactCheck, Modifier.weight(1f), SchoolMetricTone.POSITIVE) { onNavigateTo(Screen.PrincipalAttendance.route) }
+        SchoolMetric(compactSchoolMoney(invoices.sumOf { it.paidAmount }), "Collected", Icons.Default.CurrencyRupee, Modifier.weight(1f).semantics { contentDescription = "$collected collected" }, SchoolMetricTone.FINANCE) { onNavigateTo(Screen.Fees.route) }
       }
     }
     item {
