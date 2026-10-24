@@ -225,6 +225,7 @@ class ErpDataRepository private constructor() {
   val selectedStudentId: StateFlow<String> = _selectedStudentId.asStateFlow()
 
   fun setSelectedStudentId(id: String) {
+    if(_dataMode.value==DataMode.SUPABASE_DEMO) supabaseDataSource.selectStudentForPresentation(id)
     _selectedStudentId.value = id
   }
 

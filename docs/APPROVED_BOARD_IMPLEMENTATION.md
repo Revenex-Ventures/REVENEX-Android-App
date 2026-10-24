@@ -38,3 +38,12 @@ CI 40100074198 / source 3fda633 passed Android and server checks. Fresh 393×852
 The render caught a new typography regression: the collected total wrapped its final zero. A focused correction uses compact Indian currency units for this dashboard metric, with the exact amount retained in its accessibility description and full Finance view. This correction awaits the next render; the gate is not described as pixel-identical. Board Admin/Login panels do not exist, so their captures are evaluated against its common components and prior auth reference.
 
 Hosted read-only setup check (24 October): public tables without RLS = 0; profiles = 4; the four named workflow RPCs (enroll_student, save_draft_mark, set_result_publication, decide_leave) exist. This checks setup presence, not private Auth success or correctness of every hosted policy. No SQL mutation or migration was run.
+
+## Focused connected-workflow corrections
+
+- Teacher attendance navigation carries its displayed cohort through the existing authorized route; the actual NavHost test now asserts the selected class.
+- Writes/RPC confirmations are bound to an initiating session revision. Enrollment, attendance, assignment/notice saves, marks publication and leave decisions cannot report success or reload into another account after logout/re-authentication. A server request already sent may still commit; the error tells the user to check the original account before retrying. No rollback or automatic duplicate retry is invented.
+- Guardian assignment status is projected for the selected permitted child, not always the first child loaded at login. The source rejects unavailable child selections and still relies on PostgreSQL RLS for authorization. The UI limits a guardian assignment list to the selected child's class. No role, school or permission is accepted from portal selection.
+- New focused tests cover successful confirmation, account switch during persistence, logout during refresh, server rejection, signed-out submission, and separate child completion. These are local lifecycle/projection tests, not a hosted two-device login simulation.
+
+No schema migration, database reset, reseed, permission relaxation or payment-settlement change is introduced by these fixes. Existing server-derived amounts, signature checks and duplicate-safe settlement remain in place.

@@ -70,12 +70,19 @@ internal fun summarizeSupabaseStudent(student: Student, fees: List<FeeRecord>, a
   )
 }
 
+/** Submission status is child-specific, even when a guardian can read several children. */
+internal fun assignmentForStudent(assignment: HomeworkAssignment, submissions: List<SupabaseRow>, studentId: String): HomeworkAssignment {
+  val done=studentId.isNotBlank() && submissions.any {it.assignment_id==assignment.id && it.student_id==studentId && it.completed}
+  return assignment.copy(isCompletedByStudent=done,submissionStatus=if(done)"Submitted" else "Pending")
+}
+
 /** No sample fallback. PostgreSQL RLS, not these filters, is the authorization boundary. */
 class SupabaseDataSource : ErpDataSource {
   private val client get() = SupabaseProvider.client
   private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
   private val rows = MutableStateFlow<Map<String,List<SupabaseRow>>>(emptyMap())
   private val user = MutableStateFlow(signedOutUser())
+  private val presentationStudent = MutableStateFlow("")
   val syncState = MutableStateFlow(BackendSyncState())
   private var liveJob: Job? = null
   private var authenticated = false
@@ -118,7 +125,7 @@ class SupabaseDataSource : ErpDataSource {
     SupabaseProvider.configuration.validate()
     liveJob?.cancelAndJoin()
     sessionRevision.incrementAndGet()
-    rows.value=emptyMap(); authenticated=false;user.value=signedOutUser();activeSession=""
+    rows.value=emptyMap();presentationStudent.value=""; authenticated=false;user.value=signedOutUser();activeSession=""
     runCatching { client.realtime.removeAllChannels() }
     client.auth.clearSession()
     syncState.value=BackendSyncState(true,"Signing in and loading school data…")
@@ -212,17 +219,17 @@ class SupabaseDataSource : ErpDataSource {
       ?: error("No accessible class section matches this selection.")
   }
   private inline fun <reified T:Any> payload(value:T): JsonElement = Json.parseToJsonElement(moshi.adapter(T::class.java).toJson(value))
+  private suspend fun <T> confirmedChange(persist: suspend () -> T, reload: suspend () -> Unit): T =
+    confirmInSession({sessionRevision.get()},{authenticated},persist,reload)
   private suspend fun write(table: String, body: JsonObject) {
     requireSession();val revision=sessionRevision.get()
     syncState.value=BackendSyncState(true,"Saving to school database…")
     try {
-      client.from(table).upsert(body)
-      if(sessionRevision.get()!=revision) return
-      refresh(table)
+      confirmedChange({client.from(table).upsert(body)},{refresh(table)})
       syncState.value=BackendSyncState(message="Saved to school database")
     } catch(e:Exception) {
       if(e is CancellationException) throw e
-      if(sessionRevision.get()!=revision) return
+      if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.")
       syncState.value=BackendSyncState(message="Save failed. No local success was assumed. Check access and network, then retry.",failed=true)
       throw IllegalStateException(syncState.value.message)
     }
@@ -237,7 +244,7 @@ class SupabaseDataSource : ErpDataSource {
   override suspend fun login(email:String,role:UserRole,name:String):Unit=error("Use your Supabase email and password.")
   override suspend fun logout() = lifecycleLock.withLock {
     sessionRevision.incrementAndGet()
-    liveJob?.cancelAndJoin();liveJob=null;authenticated=false;rows.value=emptyMap();user.value=signedOutUser();activeSession=""
+    liveJob?.cancelAndJoin();liveJob=null;authenticated=false;rows.value=emptyMap();presentationStudent.value="";user.value=signedOutUser();activeSession=""
     syncState.value=BackendSyncState()
     runCatching { client.realtime.removeAllChannels() }
     runCatching { withTimeout(5000) { client.auth.signOut(io.github.jan.supabase.auth.SignOutScope.LOCAL) } }
@@ -255,16 +262,17 @@ class SupabaseDataSource : ErpDataSource {
     requireSession()
     require(user.value.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) { "Only the principal or school administrator can enroll students." }
     require(feeAmount in 0L..1000000000L) { "Invalid fee amount." }
-    syncState.value=BackendSyncState(true,"Saving enrollment to Supabase�")
+    val revision=sessionRevision.get()
+    syncState.value=BackendSyncState(true,"Saving enrollment to Supabase…")
     try {
-      client.postgrest.rpc("enroll_student",buildJsonObject {
+      confirmedChange({ client.postgrest.rpc("enroll_student",buildJsonObject {
         put("p_id",student.id);put("p_section",section(student.classGrade,student.division))
         put("p_payload",payload(student));put("p_fee_amount",feeAmount)
-      })
-      listOf("students","fee_records","notifications","audit_logs").forEach { refresh(it) }
+      }) }, { listOf("students","fee_records","notifications","audit_logs").forEach { refresh(it) } })
       syncState.value=BackendSyncState(message="Student enrolled in school database. School inbox updated.")
     } catch(e:Exception) {
       if(e is CancellationException) throw e
+      if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.")
       syncState.value=BackendSyncState(message="Enrollment could not be confirmed. Check the student directory before retrying; verify class, duplicate admission number, access and migration 7.",failed=true)
       throw IllegalStateException(syncState.value.message)
     }
@@ -298,15 +306,18 @@ class SupabaseDataSource : ErpDataSource {
     val batch=studentList.map { st -> JsonObject(boundary("${st.studentId}_${activeSession}_${date}_$slot",sec,st.studentId)+mapOf(
       "attendance_date" to JsonPrimitive(date),"session_slot" to JsonPrimitive(slot),"status" to JsonPrimitive(st.status.name),"payload" to payload(st))) }
     syncState.value=BackendSyncState(true,"Saving attendance…")
-    try { client.from("attendance").upsert(batch);refresh("attendance");syncState.value=BackendSyncState(message="Attendance saved") }
-    catch(e:Exception) { if(e is CancellationException) throw e;syncState.value=BackendSyncState(message="Attendance was not saved. Check access and network.",failed=true);throw IllegalStateException(syncState.value.message) }
+    val revision=sessionRevision.get()
+    try { confirmedChange({client.from("attendance").upsert(batch)},{refresh("attendance")});syncState.value=BackendSyncState(message="Attendance saved") }
+    catch(e:Exception) { if(e is CancellationException) throw e;if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.");syncState.value=BackendSyncState(message="Attendance was not saved. Check access and network.",failed=true);throw IllegalStateException(syncState.value.message) }
   }
-  override fun getAssignmentsFlow():Flow<List<HomeworkAssignment>> = rows.map { all ->
-    all["assignments"].orEmpty().map { row ->
-      val a=decode<HomeworkAssignment>(row)
-      val done=all["assignment_submissions"].orEmpty().any { it.assignment_id==row.id && it.student_id==user.value.associatedStudentId && it.completed }
-      a.copy(isCompletedByStudent=done,submissionStatus=if(done) "Submitted" else "Pending")
-    }
+  fun selectStudentForPresentation(id: String) {
+    requireSession()
+    check(user.value.role==UserRole.PARENT && table("students").any {it.id==id}) {"Student is not available to this account."}
+    presentationStudent.value=id
+  }
+  override fun getAssignmentsFlow():Flow<List<HomeworkAssignment>> = combine(rows,presentationStudent,user) {all,selected,actor ->
+    val child=if(actor.role==UserRole.PARENT && all["students"].orEmpty().any {it.id==selected}) selected else actor.associatedStudentId
+    all["assignments"].orEmpty().map { row -> assignmentForStudent(decode<HomeworkAssignment>(row),all["assignment_submissions"].orEmpty(),child) }
   }
   override suspend fun createAssignment(assignment:HomeworkAssignment)=save("assignments",assignment.id,assignment,section(assignment.classGrade,assignment.division))
   override suspend fun toggleAssignmentCompletion(assignmentId:String) {
@@ -331,11 +342,10 @@ class SupabaseDataSource : ErpDataSource {
   }
   override suspend fun saveStudentMarks(studentId:String,term:String,subjectName:String,obtainedMarks:Int,maxMarks:Int) {
     requireSession()
-    client.postgrest.rpc("save_draft_mark", buildJsonObject {
+    confirmedChange({ client.postgrest.rpc("save_draft_mark", buildJsonObject {
       put("p_student",studentId); put("p_term",term.trim()); put("p_subject",subjectName.trim())
       put("p_obtained",obtainedMarks); put("p_maximum",maxMarks)
-    })
-    refresh("marks")
+    }) }, { refresh("marks") })
   }
   override suspend fun saveCheckedPaper(studentId:String,term:String,subjectName:String,checkedPaperUrl:String) {
     updateMarkAttachments(table("marks").filter { it.student_id==studentId && it.term==term && it.subject==subjectName },"checkedPaperUrl",checkedPaperUrl)
@@ -350,10 +360,9 @@ class SupabaseDataSource : ErpDataSource {
   }
   override suspend fun publishReportCard(studentId:String,term:String,published:Boolean) {
     requireSession()
-    client.postgrest.rpc("set_result_publication", buildJsonObject {
+    confirmedChange({ client.postgrest.rpc("set_result_publication", buildJsonObject {
       put("p_student",studentId); put("p_term",term); put("p_published",published)
-    })
-    refresh("marks")
+    }) }, { refresh("marks") })
   }
   override fun getExamSchedulesFlow()=models<ExamSchedule>("exams")
   override fun getTimetableFlow()=models<TimetableSlot>("timetables")
@@ -390,8 +399,7 @@ class SupabaseDataSource : ErpDataSource {
   }
   override suspend fun updateLeaveStatus(leaveId:String,status:LeaveStatus,approverRemark:String) {
     requireSession()
-    client.postgrest.rpc("decide_leave",buildJsonObject { put("p_id",leaveId);put("p_status",status.name);put("p_remark",approverRemark) })
-    refresh("leave_requests")
+    confirmedChange({client.postgrest.rpc("decide_leave",buildJsonObject { put("p_id",leaveId);put("p_status",status.name);put("p_remark",approverRemark) })},{refresh("leave_requests")})
   }
   override fun getTransportRoutesFlow()=models<TransportRoute>("transport_routes")
   override fun getLibraryBooksFlow()=models<LibraryBook>("library_books")
