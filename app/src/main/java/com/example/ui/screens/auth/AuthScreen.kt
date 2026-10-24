@@ -131,7 +131,7 @@ fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
                   TextField(email,{email=it;error=null},Modifier.fillMaxWidth().testTag("login_email"),label={Text("Email")},singleLine=true,enabled=!busy,leadingIcon={Icon(Icons.Default.AlternateEmail,null)},
                     trailingIcon={if(email.isNotBlank())IconButton(onClick={email=""},enabled=!busy){Icon(Icons.Default.Close,"Clear email")}},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email,imeAction=ImeAction.Next),shape=RoundedCornerShape(Radius.input),colors=fieldColors)
-                  TextField(password,{password=it;error=null},Modifier.fillMaxWidth().testTag("login_password"),label={Text("Password")},singleLine=true,enabled=!busy,leadingIcon={Icon(Icons.Default.LockOutline,null)},
+                  TextField(password,{password=it;error=null},Modifier.fillMaxWidth().testTag("login_password"),label={Text("Password")},singleLine=true,enabled=!busy,leadingIcon={Icon(Icons.Default.Lock,null)},
                     visualTransformation=if(visible)VisualTransformation.None else PasswordVisualTransformation(),trailingIcon={IconButton(onClick={visible=!visible},enabled=!busy){Icon(if(visible)Icons.Default.VisibilityOff else Icons.Default.Visibility,if(visible)"Hide password" else "Show password")}},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={signIn()}),shape=RoundedCornerShape(Radius.input),colors=fieldColors)
                   error?.let {message->Surface(color=MaterialTheme.colorScheme.errorContainer,shape=RoundedCornerShape(Radius.sm)){Text(message,Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)}}
@@ -224,12 +224,13 @@ private fun DemoRolePicker(selectedRole: UserRole,onSelected: (UserRole)->Unit,b
     }
   }
   BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val singleColumn=maxWidth<320.dp||large
     Column(verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-      if(maxWidth<360.dp||large) roles.forEach{Persona(it)}
+      if(singleColumn) roles.forEach{Persona(it)}
       else roles.chunked(2).forEach { pair->
         Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
           pair.forEach {Persona(it,Modifier.weight(1f))}
-          if(pair.size==1)Spacer(Modifier.weight(1f))
+
         }
       }
     }

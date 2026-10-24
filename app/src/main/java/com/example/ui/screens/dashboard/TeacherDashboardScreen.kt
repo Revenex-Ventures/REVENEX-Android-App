@@ -75,9 +75,9 @@ fun TeacherDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
     } }
     item { SchoolSection(if (cohort.isBlank()) "Class overview" else "Class $cohort overview", "View class", { onNavigateTo(Screen.Students.route) }) {
       Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        SchoolMetric(register?.presentCount?.toString() ?: "—", "Present", Icons.Default.CheckCircle, Modifier.weight(1f), SchoolMetricTone.POSITIVE) { onNavigateTo(Screen.Attendance.route) }
-        SchoolMetric(register?.absentCount?.toString() ?: "—", "Absent", Icons.Default.PersonOff, Modifier.weight(1f), SchoolMetricTone.DANGER) { onNavigateTo(Screen.Attendance.route) }
-        SchoolMetric(pupils.size.toString(), "Students", Icons.Default.Groups, Modifier.weight(1f)) { onNavigateTo(Screen.Students.route) }
+        SchoolCompactMetric(register?.presentCount?.toString() ?: "—", "Present", Icons.Default.CheckCircle, Modifier.weight(1f), SchoolMetricTone.POSITIVE) { onNavigateTo(Screen.Attendance.route) }
+        SchoolCompactMetric(register?.absentCount?.toString() ?: "—", "Absent", Icons.Default.PersonOff, Modifier.weight(1f), SchoolMetricTone.DANGER) { onNavigateTo(Screen.Attendance.route) }
+        SchoolCompactMetric(pupils.size.toString(), "Students", Icons.Default.Groups, Modifier.weight(1f)) { onNavigateTo(Screen.Students.route) }
       }
       if (register == null) Text("Today's register has not been saved.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } }

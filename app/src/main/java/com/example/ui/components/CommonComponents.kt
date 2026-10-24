@@ -73,8 +73,15 @@ fun SchoolRow(title: String, subtitle: String, icon: ImageVector, onClick: () ->
   trailing: String? = null, modifier: Modifier = Modifier) {
   Row(modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 64.dp).padding(Spacing.md12),
     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-    Surface(shape = RoundedCornerShape(Radius.sm), color = MaterialTheme.colorScheme.secondaryContainer) {
-      Icon(icon, null, Modifier.padding(Spacing.sm8).size(20.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+    val (well,ink)=when(icon.name.substringAfterLast('.')) {
+      "Assignment","Assessment","Grade","Description","MenuBook","EditNote" -> SemanticColors.lavenderContainer to SemanticColors.onLavender
+      "Payments","Payment","CurrencyRupee","ReceiptLong","AccountBalanceWallet" -> SemanticColors.butterContainer to SemanticColors.onButter
+      "CalendarMonth","CheckCircle","HowToReg","EventAvailable" -> SemanticColors.successContainer to SemanticColors.onSuccess
+      "Campaign","Notifications","Event" -> SemanticColors.peachContainer to SemanticColors.onPeach
+      else -> SemanticColors.blueContainer to SemanticColors.onBlue
+    }
+    Surface(shape=RoundedCornerShape(Radius.sm),color=well) {
+      Icon(icon,null,Modifier.padding(Spacing.sm8).size(20.dp),tint=ink)
     }
     Column(Modifier.weight(1f)) {
       Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
@@ -519,4 +526,17 @@ fun SchoolFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composable 
   FilterChip(selected = selected, onClick = onClick, label = label, modifier = modifier, enabled = enabled,
     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
       selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer))
+}
+
+
+@Composable
+fun SchoolCompactMetric(value: String,label: String,icon: ImageVector,modifier: Modifier=Modifier,
+ tone: SchoolMetricTone=SchoolMetricTone.NEUTRAL,onClick: ()->Unit) {
+ val (well,ink)=when(tone){SchoolMetricTone.POSITIVE->SemanticColors.successContainer to SemanticColors.onSuccess;SchoolMetricTone.DANGER->SemanticColors.dangerContainer to SemanticColors.onDanger;SchoolMetricTone.FINANCE->SemanticColors.butterContainer to SemanticColors.onButter;else->SemanticColors.blueContainer to SemanticColors.onBlue}
+ Surface(modifier.clickable(onClick=onClick),shape=RoundedCornerShape(Radius.md),color=MaterialTheme.colorScheme.surface,border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+  Row(Modifier.padding(Spacing.sm8).heightIn(min=Spacing.xxxl48),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+   Surface(color=well,shape=RoundedCornerShape(Radius.sm)){Icon(icon,null,Modifier.padding(Spacing.xs4).size(Spacing.xl20),tint=ink)}
+   Column(Modifier.weight(1f)){Text(value,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  }
+ }
 }

@@ -210,7 +210,10 @@ fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemS
           val selected=currentRoute==item.route
           val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
           Column(Modifier.weight(1f).semantics { this.selected = selected }.clickable(role=Role.Tab,onClickLabel=item.label){onItemSelected(item.route)}.heightIn(min=64.dp).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
-            Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(24.dp),tint=ink)
+            val featured=item.label in setOf("Homework","Attendance")
+            if(featured) Surface(shape=CircleShape,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer) {
+              Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.padding(Spacing.sm8).size(24.dp),tint=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
+            } else Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(24.dp),tint=ink)
             if(!largeText) Text(destinationLabel(item.label),style=MaterialTheme.typography.labelSmall,color=ink,maxLines=1,overflow=TextOverflow.Ellipsis)
           }
         }
@@ -539,12 +542,7 @@ fun RevenexLogoCrest(
       .background(backgroundColor),
     contentAlignment = Alignment.Center
   ) {
-    Icon(
-      imageVector = Icons.Default.AccountBalance,
-      contentDescription = "Schola Crest",
-      tint = tint,
-      modifier = Modifier.size(size * 0.6f)
-    )
+    Image(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_monogram),"Revenex RV logo",Modifier.size(size*.72f))
   }
 }
 

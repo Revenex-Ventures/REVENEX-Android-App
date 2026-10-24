@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -269,20 +270,8 @@ private fun TabletNavigationRail(
     ) {
       // Top Crest Emblem
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-Box(
-            modifier = Modifier
-              .size(44.dp)
-              .clip(RoundedCornerShape(Radius.md))
-              .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.AccountBalance,
-              contentDescription = "REVENEX",
-              tint = MaterialTheme.colorScheme.onPrimary,
-              modifier = Modifier.size(24.dp)
-            )
-          }
+androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(
+          if(MaterialTheme.colorScheme.background.luminance()<.5f)com.example.R.drawable.revenex_monogram else com.example.R.drawable.revenex_monogram_ink),"Revenex RV logo",Modifier.size(Spacing.xxl32))
 
         Spacer(modifier = Modifier.height(Spacing.s4))
 
@@ -385,41 +374,7 @@ private fun DesktopNavigationDrawer(
     ) {
       // Top section: Crest Branding + ⌘K trigger pill + nav links
       Column {
-        // Institutional Header
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier.padding(bottom = Spacing.s4)
-        ) {
-Box(
-              modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(Radius.md))
-                .background(MaterialTheme.colorScheme.primary),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.AccountBalance,
-                contentDescription = "REVENEX crest",
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(24.dp)
-              )
-            }
-          Spacer(modifier = Modifier.width(Spacing.s3))
-          Column {
-            Text(
-              text = "REVENEX",
-              color = MaterialTheme.colorScheme.onSurface,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "School ERP demonstration",
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              style = MaterialTheme.typography.bodySmall,
-              fontSize = 10.sp
-            )
-          }
-        }
+        RevenexBrand(Modifier.padding(bottom=Spacing.lg16))
 
         // ⌘K Search Pill Trigger
         Surface(

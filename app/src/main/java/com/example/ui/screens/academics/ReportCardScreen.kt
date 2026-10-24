@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,6 +42,10 @@ import com.example.data.model.ReportCard
 import com.example.data.model.Student
 import com.example.data.model.SubjectScore
 import com.example.data.repository.ErpDataRepository
+import com.example.ui.components.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.LocalDensity
 import com.example.ui.components.Avatar
 import com.example.ui.components.StatusBadge
 import com.example.ui.theme.*
@@ -84,26 +89,8 @@ fun ReportCardScreen(
     }
   }
 
-  if (student == null) {
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(Spacing.s4),
-      contentAlignment = Alignment.Center
-    ) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
-        Spacer(modifier = Modifier.height(Spacing.s4))
-        Text("No Student Profile Found", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(modifier = Modifier.height(Spacing.s2))
-        Text(
-          "No student record is available to display report card marks.",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          textAlign = TextAlign.Center
-        )
-      }
-    }
+  if(student==null) {
+    EmptyStateView("No Student Profile Found","No student record is available to display report card marks.")
     return
   }
 
@@ -182,69 +169,23 @@ fun ReportCardScreen(
 
 // ── Profile hub: identity card + aligned account options ─────────────────────
 @Composable
-private fun ProfileHub(
-  student: Student,
-  summaryLabel: String = "",
-  summaryValue: String = "",
-  onPickPhoto: () -> Unit,
-  onOpenDetails: () -> Unit,
-  onOpenReports: () -> Unit,
-  onOpenLeaving: () -> Unit,
-  onOpenBonafide: () -> Unit,
-  onOpenMarks: (() -> Unit)? = null
-) {
-  LazyColumn(
-    modifier = Modifier.fillMaxSize(),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(14.dp)
-  ) {
-    item {
-      ProfileHeaderCard(student = student, onPickPhoto = onPickPhoto, onEditDetails = onOpenDetails)
-    }
-
-    if (onOpenMarks != null) item { TextButton(onClick = onOpenMarks) { Text("Manage marks & publication") } }
-    item { SectionLabel("Academic") }
-
-    item {
-      ProfileMenuCard(
-        icon = Icons.Filled.ReceiptLong,
-        title = "Academic Performance",
-        subtitle = "Year-wise marks, grades & PDF report",
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        summaryLabel = summaryLabel,
-        summaryValue = summaryValue,
-        onClick = onOpenReports
-      )
-    }
-
-    item { SectionLabel("Certificates") }
-
-    item {
-      ProfileMenuCard(
-        icon = Icons.Filled.Article,
-        title = "Leaving Certificate",
-        subtitle = "School leaving / transfer certificate",
-        containerColor = SemanticColors.warningContainer,
-        contentColor = SemanticColors.onWarning,
-        onClick = onOpenLeaving
-      )
-    }
-
-    item {
-      ProfileMenuCard(
-        icon = Icons.Filled.VerifiedUser,
-        title = "Bonafide Certificate",
-        subtitle = "Proof of current enrolment",
-        containerColor = SemanticColors.successContainer,
-        contentColor = SemanticColors.onSuccess,
-        onClick = onOpenBonafide
-      )
-    }
-  }
+private fun ProfileHub(student: Student,summaryLabel: String="",summaryValue: String="",onPickPhoto: ()->Unit,
+ onOpenDetails: ()->Unit,onOpenReports: ()->Unit,onOpenLeaving: ()->Unit,onOpenBonafide: ()->Unit,onOpenMarks: (()->Unit)?=null) {
+ LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+  item {WorkspacePageHeader("Student profile")}
+  item {ProfileHeaderCard(student,onPickPhoto,onOpenDetails)}
+  item {SchoolSection("Academic records") {SchoolGroup {
+    SchoolRow("Academic Performance",listOf(summaryLabel,summaryValue).filter{it.isNotBlank()}.joinToString(" · ").ifBlank{"Marks, grades and report downloads"},Icons.Default.Assessment,onOpenReports)
+    if(onOpenMarks!=null){HorizontalDivider();SchoolRow("Manage marks & publication","Drafts, review and family visibility",Icons.Default.EditNote,onOpenMarks)}
+  }}}
+  item {SchoolSection("Personal information") {SchoolGroup {SchoolRow("Personal Details","Identity, guardian and contact details",Icons.Default.PersonOutline,onOpenDetails)}}}
+  item {SchoolSection("Documents & certificates") {SchoolGroup {
+    SchoolRow("Leaving Certificate","Availability depends on school setup",Icons.Default.Description,onOpenLeaving)
+    HorizontalDivider();SchoolRow("Bonafide Certificate","School identity and enrolment record",Icons.Default.Badge,onOpenBonafide)
+  }}}
+ }
 }
 
-// ── Section label for grouped menu ───────────────────────────────────────────
 @Composable
 private fun SectionLabel(text: String) {
   Text(
@@ -259,100 +200,22 @@ private fun SectionLabel(text: String) {
 
 // ── Aligned menu card: icon + title + subtitle + (summary chip | chevron) ─────
 @Composable
-private fun ProfileMenuCard(
-  icon: ImageVector,
-  title: String,
-  subtitle: String,
-  containerColor: Color,
-  contentColor: Color,
-  summaryLabel: String = "",
-  summaryValue: String = "",
-  onClick: () -> Unit
-) {
-  Card(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = containerColor)
-  ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .clickable(onClick = onClick)
-        .padding(16.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Box(
-        modifier = Modifier
-          .size(46.dp)
-          .clip(RoundedCornerShape(14.dp))
-          .background(contentColor.copy(alpha = 0.14f)),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(23.dp))
-      }
-      Spacer(modifier = Modifier.width(14.dp))
-      Column(modifier = Modifier.weight(1f)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = contentColor)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-      if (summaryValue.isNotBlank()) {
-        Column(horizontalAlignment = Alignment.End) {
-          Text(summaryLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          Spacer(modifier = Modifier.height(4.dp))
-          Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-            Text(
-              text = summaryValue,
-              color = MaterialTheme.colorScheme.onPrimaryContainer,
-              fontWeight = FontWeight.Bold,
-              style = MaterialTheme.typography.labelMedium,
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-          }
-        }
-      } else {
-        Icon(
-          Icons.Filled.ChevronRight,
-          contentDescription = null,
-          tint = contentColor.copy(alpha = 0.6f),
-          modifier = Modifier.size(22.dp)
-        )
-      }
-    }
-  }
+private fun ProfileMenuCard(icon: ImageVector,title: String,subtitle: String,containerColor: Color,contentColor: Color,
+ summaryLabel: String="",summaryValue: String="",onClick: ()->Unit) {
+ SchoolGroup {SchoolRow(title,listOf(subtitle,summaryLabel,summaryValue).filter{it.isNotBlank()}.joinToString(" · "),icon,onClick)}
 }
 
-// ── Shared sub-page scaffold: back bar + scrollable content ──────────────────
 @Composable
-private fun SubPageScaffold(
-  title: String,
-  onBack: () -> Unit,
-  content: @Composable ColumnScope.() -> Unit
-) {
-  Column(modifier = Modifier.fillMaxSize()) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(MaterialTheme.colorScheme.surface)
-        .padding(horizontal = 6.dp, vertical = 8.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      IconButton(onClick = onBack) {
-        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
-      }
-      Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-    }
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .verticalScroll(rememberScrollState())
-        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-      content = content
-    )
+private fun SubPageScaffold(title: String,onBack: ()->Unit,content: @Composable ColumnScope.()->Unit) {
+ Column(Modifier.fillMaxSize().imePadding()) {
+  Row(Modifier.fillMaxWidth().heightIn(min=Spacing.xxxl48).padding(horizontal=Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
+    IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}
+    Text(title,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
   }
+  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.lg16),content=content)
+ }
 }
 
-// ── Personal details page ─────────────────────────────────────────────────────
 @Composable
 private fun DetailsPage(
   student: Student,
@@ -394,8 +257,8 @@ private fun ReportsPage(
   SubPageScaffold(title = "Academic Reports", onBack = onBack) {
     // 1. Year selector — aligned chips
     Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(8.dp)
+      modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+      horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)
     ) {
       years.forEach { year ->
         FilterChip(
@@ -406,12 +269,11 @@ private fun ReportsPage(
             selectedContainerColor = MaterialTheme.colorScheme.primary,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
           ),
-          modifier = Modifier.weight(1f)
         )
       }
     }
 
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(Spacing.md12))
 
     // 2. Professional report (selected year)
     Text(if (activeReport.published) "Published report" else "Draft report · staff access", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -567,71 +429,14 @@ private fun BonafideCertificatePage(
 
 // ── Shared certificate paper (fixed light document look) ─────────────────────
 @Composable
-private fun CertificatePaper(
-  title: String,
-  content: @Composable ColumnScope.() -> Unit
-) {
-  Column(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(18.dp))
-      .background(MaterialTheme.colorScheme.surface)
-      .border(1.2.dp, RevenexNavy.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
-  ) {
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(MaterialTheme.colorScheme.primary),
-      contentAlignment = Alignment.Center
-    ) {
-      Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(vertical = 14.dp)
-      ) {
-        Text(
-          text = "REVENEX PUBLIC SCHOOL",
-          style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onPrimary,
-          letterSpacing = 1.sp
-        )
-        Text(
-          text = "Affiliated to CBSE • Affiliation No. 2130167",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-        )
-        Text(
-          text = "Sector 21, New Delhi - 110075",
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-        )
-      }
-    }
-
-    Text(
-      text = title,
-      style = MaterialTheme.typography.titleMedium,
-      fontWeight = FontWeight.Bold,
-      color = RevenexNavy,
-      letterSpacing = 2.sp,
-      textAlign = TextAlign.Center,
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(top = 16.dp)
-    )
-    Box(
-      modifier = Modifier
-        .padding(top = 8.dp)
-        .align(Alignment.CenterHorizontally)
-        .width(64.dp)
-        .height(3.dp)
-        .clip(RoundedCornerShape(2.dp))
-        .background(ScholaGold)
-    )
-    Spacer(modifier = Modifier.height(14.dp))
-    content()
-    Spacer(modifier = Modifier.height(6.dp))
+private fun CertificatePaper(title: String,content: @Composable ColumnScope.()->Unit) {
+ SchoolGroup {
+  Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+   Text(title,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+   Text("Local Demo · sample school document",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
   }
+  HorizontalDivider();content()
+ }
 }
 
 @Composable
@@ -670,11 +475,11 @@ private fun CertificateFooter(issueDate: String) {
     verticalAlignment = Alignment.Bottom
   ) {
     Column {
-      Text("Place: New Delhi", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text("Sample school record", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       Text("Date: $issueDate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Column(horizontalAlignment = Alignment.End) {
-      Text("Dr. Arvind Sharma", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+      Text("School office", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
       Text("Principal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       Spacer(modifier = Modifier.height(6.dp))
       Text("(School Seal)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -702,107 +507,25 @@ private fun CertificateDownloadButton(onClick: () -> Unit) {
 
 // ── Profile header: picture (tappable) + identity ────────────────────────────
 @Composable
-private fun ProfileHeaderCard(
-  student: Student,
-  onPickPhoto: () -> Unit,
-  onEditDetails: () -> Unit = {}
-) {
-  val accent = MaterialTheme.colorScheme.primary
-  Card(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
-  ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(modifier = Modifier.size(64.dp)) {
-          Box(
-            modifier = Modifier
-              .fillMaxSize()
-              .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.surface)
-              .border(1.dp, accent.copy(alpha = 0.25f), CircleShape)
-              .clickable(onClick = onPickPhoto),
-            contentAlignment = Alignment.Center
-          ) {
-            Avatar(
-              name = student.name,
-              size = 56.dp,
-              imagePath = student.avatarUrl.ifBlank { null },
-              background = accent,
-              textColor = MaterialTheme.colorScheme.onPrimary
-            )
-          }
-          // Camera badge — drawn outside the clipped avatar so it is never cut off.
-          Box(
-            modifier = Modifier
-              .align(Alignment.BottomEnd)
-              .size(32.dp)
-              .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.primary)
-              .border(2.dp, Color.White, CircleShape),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              Icons.Filled.CameraAlt,
-              contentDescription = "Change photo",
-              tint = Color.White,
-              modifier = Modifier.size(16.dp)
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = student.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-          )
-          Spacer(modifier = Modifier.height(2.dp))
-          Text(
-            text = "Class ${student.fullClass} • Roll #${student.rollNumber}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          Text(
-            text = "Adm. No. ${student.admissionNumber}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontWeight = FontWeight.SemiBold
-          )
-          Spacer(modifier = Modifier.height(8.dp))
-          StatusBadge(status = student.status)
-        }
-      }
-
-      // Edit pencil — overlays the top-right of the card
-      IconButton(
-        onClick = onEditDetails,
-        modifier = Modifier
-          .align(Alignment.TopEnd)
-          .padding(6.dp)
-      ) {
-        Icon(
-          Icons.Filled.Edit,
-          contentDescription = "Edit details",
-          tint = MaterialTheme.colorScheme.onPrimaryContainer,
-          modifier = Modifier.size(18.dp)
-        )
-      }
-    }
+private fun ProfileHeaderCard(student: Student,onPickPhoto: ()->Unit,onEditDetails: ()->Unit={}) {
+ SchoolGroup {
+  Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+   Box(Modifier.clickable(onClick=onPickPhoto)) {Avatar(student.name,size=Spacing.xxxl48,imagePath=student.avatarUrl.ifBlank{null})}
+   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+    Text(student.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    Text("Class ${student.fullClass} · Roll ${student.rollNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("Admission ${student.admissionNumber}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   }
+   IconButton(onClick=onEditDetails){Icon(Icons.Default.Edit,"Edit details")}
   }
+  HorizontalDivider()
+  Row(Modifier.padding(horizontal=Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
+    Text(student.status,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
+    TextButton(onClick=onPickPhoto){Text("Change photo")}
+  }
+ }
 }
 
-// ── Editable personal details ────────────────────────────────────────────────
 @Composable
 private fun EditableProfileCard(
   student: Student,
@@ -847,20 +570,20 @@ private fun EditableProfileCard(
       )
       Spacer(modifier = Modifier.height(10.dp))
 
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
         OutlinedTextField(
           value = dob,
           onValueChange = { dob = it; saved = false },
           label = { Text("Date of Birth") },
           singleLine = true,
-          modifier = Modifier.weight(1f)
+          modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
           value = bloodGroup,
           onValueChange = { bloodGroup = it; saved = false },
           label = { Text("Blood Group") },
           singleLine = true,
-          modifier = Modifier.weight(1f)
+          modifier = Modifier.fillMaxWidth()
         )
       }
       Spacer(modifier = Modifier.height(10.dp))
@@ -921,172 +644,39 @@ private fun EditableProfileCard(
 
 // ── Student report sheet (simple, real result-card format) ───────────────────
 @Composable
-private fun ProfessionalReportView(
-  report: ReportCard,
-  student: Student
-) {
-  val totalMax = report.scores.sumOf { it.maxMarks }
-  val totalObt = report.scores.sumOf { it.obtainedMarks }
-  val pct = if (totalMax > 0) totalObt * 100.0 / totalMax else 0.0
-
-  Column(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(18.dp))
-      .background(MaterialTheme.colorScheme.surface)
-      .border(1.2.dp, RevenexNavy.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
-  ) {
-    // ── 1. School header band
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(MaterialTheme.colorScheme.primary),
-      contentAlignment = Alignment.Center
-    ) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 16.dp)) {
-        Text(
-          text = "REVENEX PUBLIC SCHOOL",
-          style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onPrimary,
-          letterSpacing = 1.sp
-        )
-        Text(
-          text = "Affiliated to Central Board of Secondary Education",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-        )
-        Text(
-          text = "STUDENT ACADEMIC REPORT",
-          style = MaterialTheme.typography.labelMedium,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onPrimary,
-          modifier = Modifier.padding(top = 4.dp)
-        )
-        Text(
-          text = "${report.term}   •   Academic Year ${report.academicYear}",
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-        )
-      }
-    }
-
-    // ── 2. Student particulars (simple label/value grid)
-    Row(modifier = Modifier.fillMaxWidth()) {
-      ReportField("Student Name", report.studentName, Modifier.weight(2f))
-      ReportField("Class", "${report.classGrade}-${report.division}", Modifier.weight(1f))
-    }
-    Row(modifier = Modifier.fillMaxWidth()) {
-      ReportField("Roll No.", "${report.rollNumber}", Modifier.weight(1f))
-      ReportField("Adm. No.", student.admissionNumber, Modifier.weight(1f))
-      ReportField("Attendance", "${String.format(Locale.US, "%.1f", report.attendanceRate)}%", Modifier.weight(1f))
-    }
-
-    // ── 3. Marks table
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(MaterialTheme.colorScheme.primary)
-        .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-      Text("SUBJECT", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.weight(2.2f))
-      Text("MAX", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-      Text("OBTAINED", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-      Text("GRADE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
-    }
-
-    report.scores.forEachIndexed { index, score ->
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(if (index % 2 == 0) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant)
-          .padding(horizontal = 12.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(score.subjectName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(2.2f))
-        Text("${score.maxMarks}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-        Text("${score.obtainedMarks}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = RevenexBlue, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-        Surface(
-          shape = RoundedCornerShape(5.dp),
-          color = SemanticColors.successContainer,
-          modifier = Modifier.weight(0.8f)
-        ) {
-          Text(score.grade, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = SemanticColors.onSuccess, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 2.dp))
-        }
-      }
-    }
-
-    // ── 4. Grand total + overall grade
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(MaterialTheme.colorScheme.primary)
-        .padding(horizontal = 12.dp, vertical = 10.dp),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Column {
-        Text("GRAND TOTAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
-        Text(
-          "$totalObt / $totalMax   (${String.format(Locale.US, "%.1f", pct)}%)",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onPrimary
-        )
-      }
-      Text("GRADE ${report.overallGrade}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-    }
-
-    // ── 5. Rank
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 10.dp),
-      horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-      Column {
-        Text("CLASS RANK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("#${report.rankInClass} / ${report.totalStudents}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-      }
-      Column(horizontalAlignment = Alignment.End) {
-        Text("OVERALL GRADE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(report.overallGrade, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-      }
-    }
-
-    // ── 6. Principal remark
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 4.dp)
-    ) {
-      Text("PRINCIPAL'S REMARKS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      Spacer(modifier = Modifier.height(3.dp))
-      Text(
-        text = "\u201C${report.principalRemark}\u201D",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface
-      )
-    }
-
-    // ── 7. Signatures
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 14.dp),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.Bottom
-    ) {
-      Column {
-        Text("Issue Date: ${report.issueDate}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Digitally issued by Revenex", style = MaterialTheme.typography.labelSmall, color = SemanticColors.onSuccess, fontWeight = FontWeight.Bold)
-      }
-      Column(horizontalAlignment = Alignment.End) {
-        Text("Dr. Arvind Sharma", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-        Text("Principal & Academic Director", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-    }
+private fun ProfessionalReportView(report: ReportCard,student: Student) {
+ val maximum=report.scores.sumOf{it.maxMarks};val obtained=report.scores.sumOf{it.obtainedMarks}
+ val percentage=if(maximum>0)obtained*100.0/maximum else 0.0
+ SchoolGroup {
+  Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+   Text(report.studentName,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+   Text("${report.term} · ${report.academicYear}",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   Text("Class ${report.classGrade}-${report.division} · Roll ${report.rollNumber} · ${student.admissionNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   Row(horizontalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
+    listOf("Total" to "$obtained / $maximum","Percentage" to String.format(Locale.US,"%.1f%%",percentage),"Grade" to report.overallGrade).forEach{(label,value)->Column(Modifier.weight(1f)) {
+     Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+     Text(value,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    }}
+   }
   }
+  HorizontalDivider()
+  Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(Spacing.md12),horizontalArrangement=Arrangement.SpaceBetween) {
+   Text("Subject",style=MaterialTheme.typography.labelLarge);Text("Marks · Grade",style=MaterialTheme.typography.labelLarge)
+  }
+  report.scores.forEach {score->
+   Row(Modifier.fillMaxWidth().padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    Text(score.subjectName,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
+    Text("${score.obtainedMarks} / ${score.maxMarks}",style=MaterialTheme.typography.titleSmall)
+    Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(Radius.xs)){Text(score.grade,Modifier.padding(Spacing.sm8),style=MaterialTheme.typography.labelMedium)}
+   };HorizontalDivider()
+  }
+  Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+   Text("Attendance: ${String.format(Locale.US,"%.1f",report.attendanceRate)}%",style=MaterialTheme.typography.bodySmall)
+   Text(if(report.rankInClass>0)"Class rank: ${report.rankInClass} / ${report.totalStudents}" else "Class rank not provided",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   if(report.principalRemark.isNotBlank()){Text("School remarks",style=MaterialTheme.typography.labelLarge);Text(report.principalRemark,style=MaterialTheme.typography.bodyMedium)}
+   if(report.issueDate.isNotBlank())Text("Record date: ${report.issueDate}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+ }
 }
 
 @Composable
@@ -1220,9 +810,9 @@ private object CertificatePdfRenderer {
     // Institutional header (black + orange rule)
     c.drawRect(0f, 0f, W.toFloat(), 108f, solid(ONYX))
     c.drawRect(0f, 108f, W.toFloat(), 112f, solid(ORANGE))
-    centered(c, "REVENEX PUBLIC SCHOOL", 44f, text(WHITE, 22f, bold = true, spacing = 0.4f))
-    centered(c, "Affiliated to CBSE • Affiliation No. 2130167", 68f, text(WHITE, 10f))
-    centered(c, "Sector 21, New Delhi - 110075", 84f, text(WHITE, 9f))
+    centered(c, "SCHOOL ACADEMIC RECORD", 44f, text(WHITE, 22f, bold = true, spacing = 0.4f))
+    centered(c, "Local Demo · sample document", 68f, text(WHITE, 10f))
+    centered(c, "Prepared with Revenex School ERP", 84f, text(WHITE, 9f))
 
     // Title + orange underline
     centered(c, title, 158f, text(INK, 15f, bold = true, spacing = 1.5f))
@@ -1250,7 +840,7 @@ private object CertificatePdfRenderer {
 
     y = maxOf(y + 30f, 620f)
     c.drawLine(M.toFloat(), y, M + 190f, y, text(INK, 0f))
-    c.drawText("Dr. Arvind Sharma", M.toFloat(), y + 18f, text(INK, 11f, bold = true))
+    c.drawText("School office", M.toFloat(), y + 18f, text(INK, 11f, bold = true))
     c.drawText("Principal & Academic Director", M.toFloat(), y + 33f, text(MUTED, 9f))
 
     c.drawLine((W - M) - 190f, y, W - M.toFloat(), y, text(INK, 0f))
@@ -1259,7 +849,7 @@ private object CertificatePdfRenderer {
     c.drawText("(School Seal)", (W - M) - 190f, y + 50f, text(MUTED, 9f))
 
     centered(c, "This is a computer-generated document and does not require a physical signature.", 792f, text(MUTED, 8f))
-    centered(c, "REVENEX PUBLIC SCHOOL • reckoning excellence since 2006", 806f, text(MUTED, 7f))
+    centered(c, "Prepared with Revenex School ERP", 806f, text(MUTED, 7f))
   }
 
   private fun wrapped(c: android.graphics.Canvas, text: String, x: Float, y: Float, maxWidth: Float, p: Paint, lineHeight: Float): Float {
@@ -1333,8 +923,8 @@ private object ReportPdfRenderer {
     // Header band
     c.drawRect(0f, 0f, W.toFloat(), 118f, paintSolid(NAVY))
     c.drawRect(0f, 118f, W.toFloat(), 121f, paintSolid(GOLD))
-    drawCentered(c, "REVENEX PUBLIC SCHOOL", 44f, paintText(WHITE, 24f, bold = true, spacing = 0.5f))
-    drawCentered(c, "Affiliated to Central Board of Secondary Education (CBSE)", 64f, paintText(WHITE, 10f))
+    drawCentered(c, "SCHOOL ACADEMIC RECORD", 44f, paintText(WHITE, 24f, bold = true, spacing = 0.5f))
+    drawCentered(c, "Marks and assessment details from school records", 64f, paintText(WHITE, 10f))
     drawCentered(c, "STATEMENT OF MARKS & EVALUATION", 86f, paintText(GOLD, 11f, bold = true, spacing = 0.5f))
 
     drawCentered(c, report.term.uppercase(Locale.US), 148f, paintText(INK, 14f, bold = true))
@@ -1408,7 +998,7 @@ private object ReportPdfRenderer {
 
     // Signatures
     c.drawLine(M.toFloat(), 690f, M + 200f, 690f, paintText(INK, 0f))
-    c.drawText("Dr. Arvind Sharma", M.toFloat(), 706f, paintText(INK, 10f, bold = true))
+    c.drawText("School office", M.toFloat(), 706f, paintText(INK, 10f, bold = true))
     c.drawText("Principal & Academic Director", M.toFloat(), 719f, paintText(MUTED, 8f))
 
     c.drawLine(W - M - 200f, 690f, W - M.toFloat(), 690f, paintText(INK, 0f))
@@ -1416,7 +1006,7 @@ private object ReportPdfRenderer {
     c.drawText("Class Teacher / Co-ordinator", W - M - 200f, 719f, paintText(MUTED, 8f))
 
     drawCentered(c, "This is a computer-generated document and does not require a physical signature.", 800f, paintText(MUTED, 8f))
-    drawCentered(c, "REVENEX PUBLIC SCHOOL • reckoning excellence since 2006", 814f, paintText(MUTED, 7f))
+    drawCentered(c, "Prepared with Revenex School ERP", 814f, paintText(MUTED, 7f))
   }
 
   private fun tableColumns(): List<Pair<Float, Float>> {

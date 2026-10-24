@@ -35,7 +35,17 @@ fun ProfileScreen(repository: ErpDataRepository, onBack: () -> Unit, onNavigateT
   var help by remember { mutableStateOf(false) }
   Scaffold(topBar={TopAppBar(title={Text("Settings",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}})}) { padding ->
     LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("profile_screen_list"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
-      item { SchoolGroup { SchoolRow(user.name,"${user.role.displayName} · ${user.email}",Icons.Default.AccountCircle,{details=true}) } }
+      item { SchoolGroup {
+        Row(Modifier.fillMaxWidth().clickable{details=true}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+          Avatar(user.name,size=Spacing.xxxl48)
+          Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+            Text(user.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+            Text(user.role.displayName,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(cloud)"School account · Supabase" else "Local Demo",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+          }
+          Icon(Icons.Default.ChevronRight,null)
+        }
+      } }
       item { SchoolGroup {
         SchoolRow("Notifications","Your school inbox",Icons.Default.Notifications,{onNavigateTo(com.example.ui.navigation.Screen.Notifications.route)})
         HorizontalDivider()

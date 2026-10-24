@@ -37,7 +37,7 @@ fun RevenexLaunchHost(showBrand: Boolean,nativeSplashExited: Boolean,
   val progress=remember {Animatable(0f)}
   val contentAlpha=remember {Animatable(if(showBrand)0f else 1f)}
   val view=LocalView.current
-  val lightBars=finished && MaterialTheme.colorScheme.background.luminance()>.5f
+  val lightBars=finished && contentAlpha.value>.5f && MaterialTheme.colorScheme.background.luminance()>.5f
   SideEffect {(view.context as? android.app.Activity)?.let {activity->
     WindowCompat.getInsetsController(activity.window,view).apply {
       isAppearanceLightStatusBars=lightBars;isAppearanceLightNavigationBars=lightBars

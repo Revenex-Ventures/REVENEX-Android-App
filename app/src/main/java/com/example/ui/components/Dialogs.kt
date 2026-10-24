@@ -1145,249 +1145,53 @@ fun ApplyLeaveDialog(
 }
 
 @Composable
-fun FeePaymentDialog(
-  studentName: String,
-  amountDue: Long,
-  isProcessing: Boolean,
-  paymentCompleted: Boolean,
-  razorpayPaymentId: String,
-  onDismiss: () -> Unit,
-  onStartRazorpay: (method: String) -> Unit,
-  receiptNo: String = "",
-  statusMessage: String = "",
-  onCheckStatus: (() -> Unit)? = null
-) {
-  Dialog(
-    onDismissRequest = { if (!isProcessing) onDismiss() },
-    properties = DialogProperties(usePlatformDefaultWidth = false)
-  ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .imePadding()
-        .padding(vertical = Spacing.sm8),
-      shape = RoundedCornerShape(Radius.hero),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .verticalScroll(rememberScrollState())
-          .padding(20.dp)
-      ) {
-        if (!paymentCompleted && amountDue <= 0L) {
-          Text("Receipt & payment status", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-          Text(studentName, style = MaterialTheme.typography.bodyMedium)
-          Text(if (isProcessing) "Checking the school's verified payment record…" else statusMessage.ifBlank { "No verified receipt is loaded. Check status to retrieve your account's payment record." },
-            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = Spacing.md12))
-          if (isProcessing) LinearProgressIndicator(Modifier.fillMaxWidth())
-          onCheckStatus?.let { check -> TextButton(onClick = check, enabled = !isProcessing) { Text("Check payment status") } }
-          TextButton(onClick = onDismiss, enabled = !isProcessing) { Text("Close") }
-        } else if (!paymentCompleted) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "Review test payment",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-              )
-              Text(
-                text = "Student: $studentName",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-            }
-            IconButton(onClick = onDismiss, enabled = !isProcessing) {
-              Icon(Icons.Default.Close, contentDescription = "Close")
-            }
-          }
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          // Razorpay Test Mode Banner
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = SemanticColors.warningContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(10.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Default.Science,
-                contentDescription = null,
-                tint = SemanticColors.onWarning,
-                modifier = Modifier.size(16.dp)
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = "Razorpay Test Mode — No real money will be charged",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = SemanticColors.onWarning
-              )
-            }
-          }
-
-          Spacer(modifier = Modifier.height(12.dp))
-
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(16.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column(Modifier.weight(1f)) {
-                Text(
-                  text = "Total Payable Amount",
-                  style = MaterialTheme.typography.labelMedium,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                  text = "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}",
-                  style = MaterialTheme.typography.headlineMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface
-              ) {
-                Text(
-                  text = "TEST · INR",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-              }
-            }
-          }
-
-          Spacer(modifier = Modifier.height(16.dp))
-
-          Text("Choose an available payment method in Razorpay secure checkout.", style=MaterialTheme.typography.bodySmall)
-          if (statusMessage.isNotBlank() && !isProcessing) Text(statusMessage, style=MaterialTheme.typography.bodySmall)
-          if (!isProcessing && onCheckStatus != null) TextButton(onClick=onCheckStatus) { Text("Check payment status") }
-          Spacer(modifier = Modifier.height(20.dp))
-
-          if (isProcessing) {
-            Column(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-              CircularProgressIndicator(modifier = Modifier.size(36.dp))
-              Spacer(modifier = Modifier.height(8.dp))
-              Text(
-                text = statusMessage.ifBlank { "Preparing secure test checkout…" },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-            }
-          } else {
-            Button(
-              onClick = {
-                onStartRazorpay("Razorpay Test")
-              },
-              modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 50.dp)
-                .testTag("submit_fee_payment_button"),
-              shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-            ) {
-              Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = "Pay ₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)} Securely",
-                fontWeight = FontWeight.Bold
-              )
-            }
-          }
-        } else {
-          // ========== Success / Receipt State ==========
-          Column(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-          ) {
-            Box(
-              modifier = Modifier
-                .size(64.dp)
-                .background(SemanticColors.successContainer, CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = StatusSuccess,
-                modifier = Modifier.size(36.dp)
-              )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-              text = "Payment Received Successfully!",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold,
-              color = SemanticColors.onSuccess
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Receipt details card
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = MaterialTheme.colorScheme.surfaceVariant,
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              Column(modifier = Modifier.padding(14.dp)) {
-                ReceiptRow("Receipt No.", receiptNo)
-                ReceiptRow("Razorpay ID", razorpayPaymentId)
-                ReceiptRow("Student", studentName)
-                ReceiptRow("Amount", "₹${String.format(java.util.Locale.US, "%,.2f", amountDue / 100.0)}")
-                ReceiptRow("Method", "Razorpay Test")
-                ReceiptRow("Status", "Captured · verified (test)")
-              }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-              text = "Receipt saved in the school ledger and in-app inbox.",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-              onClick = onDismiss,
-              modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-              shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-            ) {
-              Text("Done & View Updated Ledger", fontWeight = FontWeight.Bold)
-            }
+fun FeePaymentDialog(studentName: String,amountDue: Long,isProcessing: Boolean,paymentCompleted: Boolean,razorpayPaymentId: String,
+ onDismiss: ()->Unit,onStartRazorpay: (String)->Unit,receiptNo: String="",statusMessage: String="",onCheckStatus: (()->Unit)?=null) {
+ val amount="₹${String.format(java.util.Locale.US,"%,.2f",amountDue/100.0)}"
+ Dialog(onDismissRequest={if(!isProcessing)onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+  CompactFormLayout(header={FormHeading(if(paymentCompleted)"Verified receipt" else if(amountDue<=0L)"Receipt & payment status" else "Review test payment",studentName,!isProcessing,onDismiss)},footer={
+    if(isProcessing) {
+      LinearProgressIndicator(Modifier.fillMaxWidth())
+      Text(statusMessage.ifBlank{"Preparing secure test checkout…"},style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    } else if(paymentCompleted) {
+      Button(onClick=onDismiss,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input)){Text("Done & View Updated Ledger")}
+    } else {
+      if(amountDue>0L)Button(onClick={onStartRazorpay("Razorpay Test")},modifier=Modifier.fillMaxWidth().testTag("submit_fee_payment_button"),shape=RoundedCornerShape(Radius.input)) {
+        Icon(Icons.Default.Lock,null);Spacer(Modifier.width(Spacing.sm8));Text("Pay $amount Securely")
+      }
+      onCheckStatus?.let{check->TextButton(onClick=check,modifier=Modifier.fillMaxWidth()){Text("Check payment status")}}
+      if(amountDue<=0L)TextButton(onClick=onDismiss){Text("Close")}
+    }
+  }) {
+    if(paymentCompleted) {
+      Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+        Icon(Icons.Default.CheckCircle,null,tint=SemanticColors.onSuccess,modifier=Modifier.size(Spacing.xxl32))
+        Text("Payment Received Successfully!",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      }
+      Spacer(Modifier.height(Spacing.lg16))
+      Text(amount,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+      Spacer(Modifier.height(Spacing.lg16));HorizontalDivider();Spacer(Modifier.height(Spacing.sm8))
+      ReceiptRow("Receipt No.",receiptNo);ReceiptRow("Razorpay ID",razorpayPaymentId);ReceiptRow("Student",studentName);ReceiptRow("Amount",amount);ReceiptRow("Method","Razorpay Test");ReceiptRow("Status","Captured · verified (test)")
+      Spacer(Modifier.height(Spacing.lg16));Text("Receipt saved in the school ledger and in-app inbox.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+      if(amountDue>0L) {
+        Text("Outstanding amount",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(amount,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+        Spacer(Modifier.height(Spacing.lg16))
+        Surface(color=SemanticColors.warningContainer,shape=RoundedCornerShape(Radius.sm)) {
+          Row(Modifier.padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
+            Icon(Icons.Default.Science,null,tint=SemanticColors.onWarning)
+            Text("Razorpay Test Mode — No real money will be charged",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onWarning)
           }
         }
+        Spacer(Modifier.height(Spacing.lg16));Text("Choose an available payment method in Razorpay secure checkout.",style=MaterialTheme.typography.bodyMedium)
+      }
+      if(!isProcessing) {
+        Spacer(Modifier.height(Spacing.md12));Text(statusMessage.ifBlank{if(amountDue<=0L)"No verified receipt is loaded. Check status to retrieve your account's payment record." else "Your invoice is updated only after the school payment server confirms capture."},style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
   }
+ }
 }
 
 @Composable

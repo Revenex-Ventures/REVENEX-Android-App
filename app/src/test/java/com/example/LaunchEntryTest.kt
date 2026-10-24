@@ -57,6 +57,8 @@ class LaunchEntryTest {
     capture("teacher_login_dark")
     compose.runOnIdle {dark=false};capture("teacher_login_light")
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
+    capture("demo_picker_light")
+    compose.runOnIdle {dark=true};capture("demo_picker_dark");compose.runOnIdle {dark=false}
     compose.onNodeWithTag("role_select_parent").performScrollTo().assertExists()
     capture("local_demo_light")
   }

@@ -300,7 +300,7 @@ fun ScholaErpApp(
     }
   ) { paddingValues ->
     Column(Modifier.fillMaxSize().padding(paddingValues)) {
-    if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank()) {
+    if (currentRoute != Screen.Auth.route && dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank()) {
       Surface(color=if(backendState.failed) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant) {
         Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
           if(backendState.busy) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
