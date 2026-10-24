@@ -33,6 +33,10 @@ class InvoiceReviewJourneyTest {
   dispatcher.scheduler.runCurrent()
   assertEquals(UserRole.PARENT,repository.currentUser.value.role)
   assertTrue("Parent must have a selected linked child",repository.selectedStudentId.value.isNotBlank())
+  val context = "mode=${repository.dataMode.value}; selected=${repository.selectedStudentId.value}; " +
+    "fees=${repository.feeRecords.value.map {it.id to it.studentId}}; " +
+    "invoices=${repository.invoices.value.map {it.id to it.studentId}}; state=${repository.backendState.value}"
+  assertTrue(context, repository.invoices.value.any {it.pendingAmount>0 && it.studentId==repository.selectedStudentId.value})
   org.robolectric.shadows.ShadowLooper.idleMainLooper()
   var opened="";var amount=0L
   compose.setContent {ScholaTheme(false){FeeManagementScreen(repository,{_,_->},onPayRazorpay={id,_,due->opened=id;amount=due})}}
