@@ -74,16 +74,27 @@ fun SchoolRow(title: String, subtitle: String, icon: ImageVector, onClick: () ->
 }
 
 @Composable
-fun SchoolMetric(value: String, label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+fun SchoolMetric(value: String, label: String, icon: ImageVector, modifier: Modifier = Modifier,
+  tone: SchoolMetricTone = SchoolMetricTone.NEUTRAL, onClick: () -> Unit = {}) {
+  val (well, ink) = when (tone) {
+    SchoolMetricTone.POSITIVE -> SemanticColors.successContainer to SemanticColors.onSuccess
+    SchoolMetricTone.DANGER -> SemanticColors.dangerContainer to SemanticColors.onDanger
+    SchoolMetricTone.FINANCE -> SemanticColors.butterContainer to SemanticColors.onButter
+    SchoolMetricTone.NEUTRAL -> SemanticColors.blueContainer to SemanticColors.onBlue
+  }
   Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Radius.md),
     color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
     Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-      Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+      Surface(color = well, shape = RoundedCornerShape(Radius.xs)) {
+        Icon(icon, null, Modifier.padding(Spacing.xs4).size(20.dp), tint = ink)
+      }
       Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
       Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }
 }
+
+enum class SchoolMetricTone { NEUTRAL, POSITIVE, DANGER, FINANCE }
 
 // ============================================================================
 // 1. SCHOLA TOP APP BAR (Institutional crest, ⌘K search trigger, unread badge)

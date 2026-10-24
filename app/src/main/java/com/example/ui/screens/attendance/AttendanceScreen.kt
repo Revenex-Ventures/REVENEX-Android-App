@@ -197,12 +197,12 @@ fun AttendanceScreen(
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          OutlinedButton(onClick = { showDatePicker = true }, enabled = !saving, modifier = Modifier.weight(1f)) {
+          OutlinedButton(onClick = { showDatePicker = true }, enabled = !saving, modifier = Modifier.weight(1f), shape = RoundedCornerShape(Radius.sm), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
             Icon(Icons.Default.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(Spacing.xs4)); Text(selectedDate)
           }
           var cohortMenu by remember { mutableStateOf(false) }
           Box(Modifier.weight(1f)) {
-            OutlinedButton(onClick = { cohortMenu = true }, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { cohortMenu = true }, enabled = !saving, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.sm), border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
               Text(selectedCohort.ifBlank { "Select class" }, Modifier.weight(1f))
               Icon(Icons.Default.ExpandMore,null,Modifier.size(18.dp))
             }
@@ -213,11 +213,11 @@ fun AttendanceScreen(
             }
           }
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          items(sessionSlots) { slot ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          sessionSlots.forEach { slot ->
             SchoolFilterChip(selected = selectedSessionSlot == slot, onClick = {
               if (!saving) { selectedSessionSlot = slot; showSuccessNotification = false }
-            }, label = { Text(slot) }, enabled = !saving)
+            }, label = { Text(when(slot) { "Morning Roll Call" -> "Morning"; "Senior Practicum" -> "Practicum"; else -> slot }) }, enabled = !saving, modifier = Modifier.weight(1f).heightIn(min = 48.dp))
           }
         }
         if (!editingToday) Text("History is view-only.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -226,11 +226,12 @@ fun AttendanceScreen(
       // Counts scroll independently; the bulk action never squeezes their labels.
       item {
         Column(Modifier.fillMaxWidth()) {
-          LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-            item { ScholaPillBadge(status = "$presentCount Present") }
-            item { ScholaPillBadge(status = "$lateCount Late") }
-            item { ScholaPillBadge(status = "$absentCount Absent") }
-            item { ScholaPillBadge(status = "$excusedCount Excused") }
+          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+            listOf("$presentCount Present", "$absentCount Absent", "$lateCount Late", "$excusedCount Excused").forEach { summary ->
+              Surface(Modifier.weight(1f), shape = RoundedCornerShape(Radius.sm), color = MaterialTheme.colorScheme.surfaceVariant) {
+                Text(summary, Modifier.padding(Spacing.sm8), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+              }
+            }
           }
           if (canEdit) TextButton(modifier = Modifier.align(Alignment.End), enabled = editingToday && !saving &&
             currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER), onClick = {
@@ -247,7 +248,8 @@ fun AttendanceScreen(
       item {
         OutlinedTextField(studentQuery, { studentQuery = it }, Modifier.fillMaxWidth().testTag("register_search"),
           label = { Text("Search name, roll or admission number") }, singleLine = true,
-          leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.input))
+          leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.sm),
+          colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant))
         Text(if (canEdit) "${visibleStudents.size} of ${classStudents.size} students · Save applies to the entire class" else "Saved records for the selected date and session",
           Modifier.padding(top = Spacing.sm8), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }

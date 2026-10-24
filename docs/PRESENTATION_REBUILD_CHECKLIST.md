@@ -61,3 +61,17 @@ Actual render path: MainActivity NavHost → the Composables below → ScholaRes
 - Second isolated-user-cache attempt blocked by the same owner's project file-hash lock.
 - Retrying with isolated user AND project cache; no lock deleted and no unrelated process killed.
 - Render gate: pending. Build/APK: pending. All pages outside the gate remain explicitly incomplete.
+
+## First rendered comparison (56e79dc)
+CI 40057113404 compiled and ran 102 Android tests: 99 passed, three new gate checks failed on lazy/off-screen test queries. This is not a green delivery. Fresh source renders and side-by-side target comparisons are in `app/build/presentation-gate-56e79dc/verification/reports/presentation-rebuild/`.
+
+Inspected Principal, Teacher, Attendance and dark Teacher. The hero hierarchy is removed. Remaining differences identified and being fixed before gate acceptance:
+- Principal had an extra action row pushing the event section down; attendance action moved into the retained management section.
+- Metric icons lacked the reference's semantic pastel wells; added consistent blue/green/red/butter wells.
+- Attendance selectors were overly rounded/dark-bordered and session labels clipped; compact selectors, fine borders and equal-width abbreviated labels now retain the same underlying slot values.
+- The real Attendance route's outer shell would duplicate the toolbar and crowd the anchored save; phone attendance is now a focused task surface with its existing Back callback. Tablet/desktop rail/drawer remains available.
+- Dark headings inherited black LocalContentColor outside Surface; the semantic theme now provides its matching onBackground content color.
+- Missing days, weekend lessons, photos and individual submissions are not invented. No random trend percentages. General upcoming events/submission-history data remains an interface limitation.
+- Tests now scroll the lazy container to a matching node and assert the actual attendance selection, instead of searching off-screen content. The final gate captures Attendance inside the production scaffold too.
+
+All remaining layouts are still pending. No previous gallery or compilation-only result is accepted as visual completion.

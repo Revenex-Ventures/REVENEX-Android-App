@@ -56,8 +56,8 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
       Spacer(Modifier.height(Spacing.md12))
       Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
         SchoolMetric(students.size.toString(), "Students", Icons.Default.Groups, Modifier.weight(1f)) { onNavigateTo(Screen.Students.route) }
-        SchoolMetric(attendance?.let { String.format(Locale.US,"%.0f%%",it) } ?: "—", "This week", Icons.Default.FactCheck, Modifier.weight(1f)) { onNavigateTo(Screen.PrincipalAttendance.route) }
-        SchoolMetric(collected, "Collected", Icons.Default.CurrencyRupee, Modifier.weight(1f)) { onNavigateTo(Screen.Fees.route) }
+        SchoolMetric(attendance?.let { String.format(Locale.US,"%.0f%%",it) } ?: "—", "This week", Icons.Default.FactCheck, Modifier.weight(1f), SchoolMetricTone.POSITIVE) { onNavigateTo(Screen.PrincipalAttendance.route) }
+        SchoolMetric(collected, "Collected", Icons.Default.CurrencyRupee, Modifier.weight(1f), SchoolMetricTone.FINANCE) { onNavigateTo(Screen.Fees.route) }
       }
     }
     item {
@@ -82,8 +82,6 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
     }
     item { SchoolSection("Today's actions", "All modules", { onNavigateTo(Screen.OperationsHub.route) }) {
       SchoolGroup {
-        SchoolRow("Attendance register", "Record or review class attendance", Icons.Default.FactCheck, { onNavigateTo(Screen.Attendance.route) })
-        HorizontalDivider()
         SchoolRow("Leave requests", "Awaiting a decision", Icons.Default.EventBusy, { onNavigateTo(Screen.Leaves.route) }, leaves.count { it.status == LeaveStatus.PENDING }.toString())
         HorizontalDivider()
         SchoolRow("Unpaid invoices", "Review outstanding balances", Icons.Default.ReceiptLong, { onNavigateTo(Screen.Fees.route) }, invoices.count { it.pendingAmount > 0 }.toString())
@@ -97,6 +95,7 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
     } }
     item { SchoolSection("Manage school") {
       SchoolGroup {
+        SchoolRow("Attendance register", "Record or review class attendance", Icons.Default.FactCheck, { onNavigateTo(Screen.Attendance.route) })
         SchoolRow("Enrol student", "Admissions and class allocation", Icons.Default.PersonAdd, onShowAddStudent)
         SchoolRow("Faculty · ${teachers.size}", "Directory and staff setup", Icons.Default.School, { onNavigateTo(Screen.Teachers.route) })
         SchoolRow("Add faculty", "Staff setup", Icons.Default.PersonAddAlt, onShowAddTeacher)

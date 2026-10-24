@@ -107,7 +107,8 @@ fun ScholaTheme(
       }
     }
   }
-  CompositionLocalProvider(LocalAppearance provides preference) {
+  CompositionLocalProvider(LocalAppearance provides preference,
+    androidx.compose.material3.LocalContentColor provides colorScheme.onBackground) {
 
   MaterialTheme(
     colorScheme = colorScheme,

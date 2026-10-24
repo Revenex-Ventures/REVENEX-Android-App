@@ -97,7 +97,7 @@ fun ScholaResponsiveScaffold(
       Scaffold(
         containerColor = GlassBgTransparent,
         topBar = {
-          if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
+          if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route && currentRoute != Screen.Attendance.route) {
             ScholaTopAppBar(
               title = "REVENEX",
               subtitle = "School ERP demonstration",
@@ -112,7 +112,7 @@ fun ScholaResponsiveScaffold(
           }
         },
         bottomBar = {
-          if (isTopLevelRoute && currentRoute != Screen.Auth.route) {
+          if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
               currentRoute = currentRoute,
@@ -157,7 +157,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
+              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route && currentRoute != Screen.Attendance.route) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
@@ -208,7 +208,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
+              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route && currentRoute != Screen.Attendance.route) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",

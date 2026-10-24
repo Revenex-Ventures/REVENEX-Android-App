@@ -31,6 +31,8 @@ import java.io.File
 class PresentationRebuildGateTest {
   @get:Rule val compose = createComposeRule()
   private fun capture(name: String) {
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+    compose.mainClock.advanceTimeBy(300)
     compose.waitForIdle()
     File("build/reports/presentation-rebuild").mkdirs()
     compose.onRoot().captureRoboImage("build/reports/presentation-rebuild/$name.png")
@@ -53,18 +55,19 @@ class PresentationRebuildGateTest {
     val name = "${role.name.lowercase()}_${if(dark) "dark" else "light"}"
     capture(name)
     if (role == UserRole.PRINCIPAL) {
-      compose.onNodeWithText("Today's actions").performScrollTo()
+      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Manage school"))
       capture(name+"_actions")
+      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Attendance register"))
       compose.onNodeWithText("Attendance register").performClick()
     } else {
       compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
     }
     assertEquals(Screen.Attendance.route,destination)
     if (role == UserRole.PRINCIPAL) {
-      compose.onNodeWithText("Manage school").performScrollTo(); capture(name+"_management")
-      compose.onNodeWithText("Recent activity").performScrollTo(); capture(name+"_activity")
+      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Manage school")); capture(name+"_management")
+      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Recent activity")); capture(name+"_activity")
     } else {
-      compose.onNodeWithText("Teaching tools").performScrollTo(); capture(name+"_tools")
+      compose.onNodeWithTag("teacher_dashboard_list").performScrollToNode(hasText("Teaching tools")); capture(name+"_tools")
     }
   }
   @Test fun principalLight() = dashboard(UserRole.PRINCIPAL,false)
@@ -76,13 +79,21 @@ class PresentationRebuildGateTest {
     repo.setDataMode(DataMode.DEMO);repo.switchRole(UserRole.TEACHER)
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     var dark by mutableStateOf(false)
-    compose.setContent { ScholaTheme(dark) { Surface(Modifier.fillMaxSize()) { AttendanceScreen(repo,onBack={}) } } }
+    compose.setContent {
+      val user by repo.currentUser.collectAsState()
+      ScholaTheme(dark) {
+        ScholaResponsiveScaffold(Screen.Attendance.route,user,0,{},{},{},{},{}) {
+          AttendanceScreen(repo,onBack={})
+        }
+      }
+    }
     capture("attendance_light")
     compose.onNodeWithTag("attendance_matrix_view").performScrollToIndex(3)
     val firstClass = repo.students.value.map { "Grade ${it.classGrade}-${it.division}" }.distinct().sorted().first()
     val first = repo.students.value.filter { "Grade ${it.classGrade}-${it.division}" == firstClass }.minBy { it.rollNumber }
     compose.onNodeWithTag("btn_absent_${first.rollNumber}").performScrollTo().performClick()
-    compose.onNodeWithText("1 Absent").assertExists()
+    compose.onNodeWithTag("btn_absent_${first.rollNumber}").assertIsSelected()
+    compose.onNodeWithTag("btn_present_${first.rollNumber}").assertIsNotSelected()
     compose.onNodeWithTag("submit_save_attendance").assertExists().assertIsEnabled()
     compose.runOnIdle { dark = true }
     capture("attendance_dark")
