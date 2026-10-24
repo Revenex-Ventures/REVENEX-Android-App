@@ -2,6 +2,33 @@
 
 Baseline source: ce80da2 (application c79f4ae). The earlier delivery is rejected for layout acceptance. No earlier screenshot is evidence of this rebuild.
 
+## Current acceptance snapshot — 24 October 2026
+
+This section supersedes the historical pending table and older build claims below. Tested application source: `e68b414a99bc3b6aa7fd6a3830d1d18e85c888da`; CI merge: `dc5b45b4bf7d23a611a39afe4a842d99ba6ed46c`; successful run **40095052074**. See [BRAND_REBUILD.md](BRAND_REBUILD.md) for exact artifacts and verification limits.
+
+| Reachable presentation | Implementation / evidence | Remaining acceptance |
+|---|---|---|
+| Launch, photo entry, four portal hints, Supabase login, separate five-persona demo | RV/card artwork, opaque transition, focused form and adaptive picker; fresh Light/Dark, tablet and narrow/large-text renders; routed Teacher demo test | Successful private school-account login on user's device |
+| Principal, Admin, Teacher, Student, Parent | Compact role-specific dashboard composition; fresh Light/Dark renders; no invented schedules/counts | Hosted role-specific data acceptance |
+| Staff register, principal overview/history, family attendance | Aligned register controls, scoped date/class/slot, anchored save; renders and selection/save-state tests | Hosted multi-account persistence |
+| Students/teachers directories and details, faculty profile | Grouped identity/academic/contact/document presentation; narrow/tablet renders | Real uploaded documents/device downloads |
+| Timetable, assignments/resources, exams/results | Selectors, concise task/detail rows, existing attachment/submission actions; Light/Dark renders | Hosted submission/attachment acceptance |
+| Staff marks editor / family academic reports | Searchable student selection, draft/publish/review, full report/export controls; fresh nested renders and publish workflow tests | Hosted two-account draft visibility |
+| Fees, payment review/pending/error/verified receipt | Compact balances/invoices/history and scroll-safe dialog; Light/Dark renders and receipt/payment contract tests | Real signed-in Razorpay TEST capture and receipt reconciliation |
+| Notices/inbox/notification navigation | Compact categorized rows, unread state, existing destinations; render and interaction tests | Hosted recipient-specific/reconnect acceptance; device push is not configured |
+| Operations hub, leave, transport, library, inventory, reports | Grouped workspaces, scoped records/charts/tables and honest boundaries; fresh secondary renders | Existing cloud-module limitations retained |
+| Search / AI / settings | Compact query/dialog/chat feedback, actual account/context, persistent Light/Dark/System; renders and preference tests | Live AI depends on existing server configuration |
+| Admission/faculty/notice/assignment/leave forms, sheets/dialogs | Shared scroll/IME-safe form structure, busy/error/confirm actions; nested Light/Dark and large-text checks | Physical-device keyboard/accessibility acceptance |
+| Family profile / personal details / academic report / sample certificates | Old nested hierarchy replaced; actual data groups and explicit sample-document status; fresh Light/Dark renders and Back tests | Real-school certificate authority is not fabricated |
+
+**Checks:** 119 Android tests passed, 0 failures/errors/skips; debug and review builds/lint succeeded (0 lint errors, 78 warnings per variant). Server policy/security CI passed; deployment job skipped on this PR. APK private-configuration/Firebase boundary checks passed. 142 PNG artifacts were downloaded, of which 131 are in current presentation/launch/redesign/brand-revision suites. Curated galleries exclude legacy preview screenshots. Compose/Robolectric captures are distinguished from emulator runtime captures; they are not hosted/device proof.
+
+No backend reset, reseed, migration replay, permission relaxation or payment-settlement change was made for this rebuild. Original callbacks remain. Missing data is displayed honestly rather than manufactured to match the target picture.
+
+## Historical implementation log (superseded snapshots)
+
+The following initial inventory and incremental logs are retained for provenance. Their pending states, old logos, test totals and APKs are not the current delivery.
+
 ## Gate and specification
 Principal → Teacher → Attendance must be rendered and compared before remaining layouts are extended. Target is the supplied nine-screen image (`codex-clipboard-16848336-cca3-4ce3-95f8-8b9a931f66ae.png`). 393 × 852dp, font scale 1.0 is the primary render viewport; target cells are scaled proportionally for comparison, never stretched. Physical-device/keyboard tests remain distinct.
 

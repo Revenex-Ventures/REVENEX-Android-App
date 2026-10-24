@@ -23,4 +23,44 @@ A read-only request to the configured project's `/auth/v1/settings` returned HTT
 
 The normal APK keeps package `com.example`. Updating an older differently signed APK still requires its original signing key. An additional `review` build uses `com.example.review` and launcher label **Revenex ERP Review** so it can be installed alongside the old app without deleting its data. Both share the same source, Supabase public configuration and backend security rules; review does not create a separate school/database. No private signing key is put in source or chat. Future updates to an installed review package also need a consistent signing certificate.
 
-CI builds and lints both packages, runs the regular UI/unit workflow tests and verifies both APKs exclude private/server configuration and Firebase dependencies. Final source/artifact/screenshot results will be recorded after verification; pending checks are not declared complete.
+CI builds and lints both packages, runs the regular UI/unit workflow tests and verifies both APKs exclude private/server configuration and Firebase dependencies. Final source/artifact/screenshot results are recorded below; local tests and hosted acceptance are deliberately distinguished.
+
+## Final tested application snapshot
+
+- Source branch commit: `e68b414a99bc3b6aa7fd6a3830d1d18e85c888da`.
+- CI synthetic merge commit used to produce APKs: `dc5b45b4bf7d23a611a39afe4a842d99ba6ed46c`.
+- [Successful CI run 40095052074](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/40095052074): Android build/tests/lint and server security/policy jobs succeeded. Deployment was skipped by the PR branch guard; this was not a backend deployment.
+- Exact Android command: `./gradlew -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Proborazzi.test.record=true assembleDebug assembleReview testDebugUnitTest lintDebug lintReview verifyNoFirebaseDependencies --console=plain`.
+- **119 Android tests; 0 failures, 0 errors, 0 skipped.** Includes real routed Teacher demo, portal hints, explicit Supabase entry, parent identity, no animation replay, reduced motion, tablet/narrow-large-text, preference persistence/System behavior, marks publish workflow, nested report navigation and receipt state contracts.
+- Both lint variants: **0 errors/fatal; 78 warnings each**. Warnings remain (dependency updates, existing resource/icon/vector and style findings); lint is not warning-free.
+- APK private/server configuration checks ran on both variants. No Firebase dependency or private payment/model/service-role key was introduced.
+- 142 PNG artifacts downloaded; 131 in current launch/presentation/redesign/brand-revision suites. Curated galleries exclude the legacy preview suite. These are Compose/Robolectric renders with synthetic data, not proof of hosted transactions.
+
+### Local delivery files
+
+All paths below are relative to the project root `D:/VS Code/Revenex Android`:
+
+| Artifact | Path | SHA-256 |
+|---|---|---|
+| Side-by-side Review APK (25,119,202 bytes) | `app/build/brand-rebuild-delivery/apk/Revenex-ERP-Review.apk` | `b0e0690e71f0e2c0abaddd1ab45589b72383b8fc9c7bf1021c640d4690177acd` |
+| Normal APK (25,955,581 bytes) | `app/build/brand-rebuild-delivery/apk/app-debug.apk` | `fe80ae91a3969d669bc8e922ce35ff1c817edceef697d3721dca69cb75c0f174` |
+| All current rendered screens | `app/build/brand-rebuild-delivery/screenshots.html` | Individual full-resolution PNG links |
+| Focused galleries | `app/build/brand-rebuild-delivery/{entry,portals,workflows,dark}-gallery.jpg` | Fresh CI renders |
+| Machine-readable evidence | `app/build/brand-rebuild-delivery/verification.json` | Source/build/test/lint/APK hashes |
+| Emulator captures | `app/build/brand-rebuild-delivery/runtime/` | Separate from fixture renders |
+
+Review identity verified with aapt: `com.example.review`, version `1.0-review`, activity `com.example.MainActivity`, launcher **Revenex ERP Review**. APK signature verification passed; signer SHA-256 `2950aae8a6d49f5021798096387c94bd6a1b30661ebc8af2a8cd3f430b2e17f5`. Both normal and Review installed successfully together on the isolated API34 emulator using `adb install -r`. No uninstall, data clear, account reset or database operation was used. No physical user device was connected during these checks.
+
+### Verified scope and remaining limits
+
+Actual emulator checks reached the new photo entry, Teacher Supabase sign-in, separate demo selection and Teacher dashboard; Settings is reachable through account menu → Settings & profile. Dark selection persisted across process restart to the dark entry screen. The emulator also showed Android System UI/system-process responsiveness dialogs; recording delays are not a reliable app-performance benchmark. Do not interpret synthetic render success as complete physical-device acceptance.
+
+Still requires the user's private device interaction: successful assigned Supabase school login/profile authorization, hosted cross-account writes/inbox reconciliation, and a complete Razorpay TEST captured payment/verified receipt/balance/webhook acceptance. No successful school login, captured payment, production readiness or device push is claimed here. Local Demo remains offline/sample-only and does not perform a real payment. The cloud path remains the existing Supabase integration; role entry is a hint, never authorization.
+
+### Main changed presentation files
+
+`ui/screens/auth/AuthScreen.kt`, `RevenexLaunchHost.kt`; `ui/components/DesignSystem.kt`, `CommonComponents.kt`, `ResponsiveScaffold.kt`, `Dialogs.kt`, `CommandPalette.kt`; `ui/screens/dashboard/TeacherDashboardScreen.kt`; `ui/screens/profile/ProfileScreen.kt`; `ui/screens/academics/ReportCardScreen.kt`, `StaffMarksWorkspace.kt`; theme `Tokens.kt`; native brand/startup resources. Focused MainActivity launch/banner integration and optional Review build/CI packaging are task-required exceptions to the usual UI-only file list. Existing backend logic, permissions and settlement were preserved.
+
+### Actual continuous recording
+
+`app/build/brand-rebuild-delivery/runtime/actual-launch-entry.mp4` is a **108.96-second, uncut, silent API34 emulator capture**: launcher Review icon → native RV splash → RV/REVENEX reveal → dark photo/portal entry → explicitly labelled Supabase Teacher sign-in → Try demo → Teacher persona → actual Teacher dashboard. The last decoded frame was inspected and contains the dashboard, not a preview or loading screen. This is a Local Demo completion; it does not represent a successful cloud authentication. Slow emulator startup/automation pauses are retained rather than edited away or presented as a performance measurement. Fresh Light/Dark rendered galleries are separate from this runtime evidence.

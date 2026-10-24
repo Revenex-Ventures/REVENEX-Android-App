@@ -1,3 +1,5 @@
+> Historical launch delivery: superseded by the official RV/card-artwork rebuild. See [BRAND_REBUILD.md](BRAND_REBUILD.md) for current source, APKs and checks.
+
 # Revenex launch and account entry
 
 ## Implemented flow
