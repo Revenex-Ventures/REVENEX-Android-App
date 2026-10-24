@@ -86,13 +86,13 @@ class PresentationRebuildGateTest {
       val user by repo.currentUser.collectAsState()
       ScholaTheme(dark) {
         ScholaResponsiveScaffold(Screen.Attendance.route,user,0,{},{},{},{},{}) {
-          AttendanceScreen(repo,onBack={})
+          AttendanceScreen(repo,initialClassGrade="10",initialDivision="A",onBack={})
         }
       }
     }
     capture("attendance_light")
     compose.onNodeWithTag("attendance_matrix_view").performScrollToIndex(3)
-    val firstClass = repo.students.value.map { "Class ${it.classGrade}-${it.division}" }.distinct().sorted().first()
+    val firstClass = "Class 10-A"
     val first = repo.students.value.filter { "Class ${it.classGrade}-${it.division}" == firstClass }.minBy { it.rollNumber }
     compose.onNodeWithTag("btn_absent_${first.rollNumber}").performScrollTo().performClick()
     compose.onNodeWithTag("btn_absent_${first.rollNumber}").assertIsSelected()

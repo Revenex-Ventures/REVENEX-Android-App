@@ -51,7 +51,7 @@ fun WorkspacePageHeader(title: String, modifier: Modifier = Modifier, actions: @
 fun SchoolSection(title: String, action: String? = null, onAction: () -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
   Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+      Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
       if (action != null) Text(action,
         modifier = Modifier.clickable(role = Role.Button, onClick = onAction)
           .heightIn(min = Presentation.sectionHeading).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.sm8),
@@ -109,7 +109,7 @@ fun SchoolMetric(value: String, label: String, icon: ImageVector, modifier: Modi
       Surface(color = well, shape = RoundedCornerShape(Radius.xs)) {
         Icon(icon, null, Modifier.padding(Spacing.xs4).size(20.dp), tint = ink)
       }
-      Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+      Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
       Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }
