@@ -85,6 +85,7 @@ fun ScholaResponsiveScaffold(
     }
   }
 
+  val selectedPrimaryRoute = NavConfig.selectedPrimaryRoute(currentUser.role, currentRoute)
   val isTopLevelRoute = currentRoute in navItems.map { it.route } || currentRoute == Screen.Loading.route
 
   // Own device insets once at the shell boundary. Descendant scaffolds see
@@ -120,7 +121,7 @@ fun ScholaResponsiveScaffold(
           if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               onItemSelected = onNavigateToRoute,
               modifier = Modifier.padding(
                 start = Spacing.s2,
@@ -151,7 +152,7 @@ fun ScholaResponsiveScaffold(
           if (currentRoute != Screen.Auth.route) {
             TabletNavigationRail(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               onItemSelected = onNavigateToRoute,
               onOpenCommandPalette = onOpenCommandPalette,
               currentUser = currentUser
@@ -198,7 +199,7 @@ fun ScholaResponsiveScaffold(
           if (currentRoute != Screen.Auth.route) {
             DesktopNavigationDrawer(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               currentUser = currentUser,
               unreadCount = unreadNotificationsCount,
               onItemSelected = onNavigateToRoute,

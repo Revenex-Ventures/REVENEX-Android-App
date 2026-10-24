@@ -52,6 +52,20 @@ data class BottomNavItem(
 )
 
 object NavConfig {
+  /** Presentation selection only; authorization remains with the backend. */
+  fun selectedPrimaryRoute(role: UserRole, route: String?): String? {
+    val primary = getBottomNavItems(role).map { it.route }
+    if (route in primary) return route
+    return when {
+      route == Screen.Auth.route || route == null -> route
+      route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route) &&
+        role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL) -> Screen.Students.route
+      route == Screen.PrincipalAttendance.route && role == UserRole.PRINCIPAL -> Screen.Attendance.route
+      role == UserRole.ADMIN && route in setOf(Screen.Homework.route, Screen.Timetable.route,
+        Screen.Exams.route, Screen.ReportCard.route, Screen.StudyMaterial.route) -> Screen.Academics.route
+      else -> Screen.OperationsHub.route
+    }
+  }
   fun getBottomNavItems(role: UserRole): List<BottomNavItem> {
     return when (role) {
       UserRole.PRINCIPAL -> listOf(
@@ -79,16 +93,15 @@ object NavConfig {
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
         BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
       )
-      // Parent/Parent-Portal is folded into the Student Portal: a parent accessing via a
-      // guardian link lands in the Student portal. There is no 4th portal.
+      // Shared navigation presentation; parent identity and linked-child scope remain distinct.
       UserRole.PARENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
         BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
       )
     }

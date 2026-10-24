@@ -19,10 +19,13 @@ class InvoiceReviewJourneyTest {
  @Test fun invoiceReviewPreservesItsIdentifierAndOutstandingAmountForCheckout() {
   val repository=ErpDataRepository.getInstance();repository.setDataMode(DataMode.DEMO);repository.switchRole(UserRole.PARENT)
   org.robolectric.shadows.ShadowLooper.idleMainLooper()
-  val selected=repository.selectedStudentId.value
-  val invoice=repository.invoices.value.first {it.pendingAmount>0 && it.studentId==selected}
   var opened="";var amount=0L
   compose.setContent {ScholaTheme(false){FeeManagementScreen(repository,{_,_->},onPayRazorpay={id,_,due->opened=id;amount=due})}}
+  compose.waitUntil(10000) {
+    repository.invoices.value.any {it.pendingAmount>0 && it.studentId==repository.selectedStudentId.value}
+  }
+  val selected=repository.selectedStudentId.value
+  val invoice=repository.invoices.value.first {it.pendingAmount>0 && it.studentId==selected}
   val count=repository.invoices.value.count {it.pendingAmount>0 && it.studentId==selected}
   compose.onNodeWithText("Pending ($count)").assertExists()
   compose.onNodeWithTag("invoice_row_${invoice.id}").performScrollTo().performClick()

@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.example.data.datasource.DataMode
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.theme.*
-import kotlinx.coroutines.delay
+import com.example.ui.components.rememberReducedMotion
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -55,7 +55,7 @@ fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
     mutableStateListOf(
       ChatMessage(
         id = "welcome_${currentUser.id}", sender = "Revenex Guide",
-        text = "Hello ${currentUser.name}. I can offer general study help, guide you to ERP workflows, and summarize only records linked to your account. I will not make changes or invent school information.",
+        text = "Hello ${currentUser.name}. Ask about school tasks or study topics. Replies identify whether they use school records or general guidance.",
         isAssistant = true, timestamp = formatter.format(Date()), source = AssistantReplySource.GENERAL_GUIDANCE
       )
     )
@@ -75,7 +75,6 @@ fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
 
   LaunchedEffect(isTyping, messages.size, currentUser.id, dataMode) {
     if (!isTyping) return@LaunchedEffect
-    delay(180)
     val query = messages.lastOrNull { !it.isAssistant }?.text ?: return@LaunchedEffect
     val reply = if (dataMode==DataMode.SUPABASE_DEMO) {
       com.example.data.datasource.SupabaseAssistantChat.reply(query,messages.dropLast(1).map { (if(it.isAssistant) "assistant" else "user") to it.text }).let { reply ->
@@ -91,8 +90,9 @@ fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
     isTyping = false
   }
 
+  val reducedMotion=rememberReducedMotion()
   val conversation=androidx.compose.foundation.lazy.rememberLazyListState()
-  LaunchedEffect(messages.size,isTyping) {if(messages.size>1) conversation.animateScrollToItem(messages.size)}
+  LaunchedEffect(messages.size,isTyping) {if(messages.size>1) if(reducedMotion) conversation.scrollToItem(messages.size) else conversation.animateScrollToItem(messages.size)}
   Scaffold(
     containerColor=MaterialTheme.colorScheme.background,
     topBar={Surface(color=MaterialTheme.colorScheme.surface) {Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
@@ -120,8 +120,8 @@ fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
 private fun AssistantModeBanner(isDemo: Boolean) {
   Surface(shape=RoundedCornerShape(Radius.sm),color=MaterialTheme.colorScheme.secondaryContainer) {
     Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
-      Text(if(isDemo)"Demo data mode" else "Live AI unavailable",style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.SemiBold)
-      Text(if(isDemo)"School summaries use local sample data." else "A secure provider has not been configured. School facts will not be guessed.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
+      Text(if(isDemo)"Demo data mode" else "School account",style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.SemiBold)
+      Text(if(isDemo)"School summaries use local sample data." else "Availability is checked when you send a message. School data is limited to your account.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
     }
   }
 }

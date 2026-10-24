@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.compose.animation.*
@@ -238,9 +237,16 @@ fun ScholaErpApp(
 
   val navBackStackEntry by navController.currentBackStackEntryAsState()
   val currentRoute = navBackStackEntry?.destination?.route
+  val clearAccountNavigation: () -> Unit = {
+    (WorkspaceDirectory.destinations.map {it.route} + listOf(Screen.Dashboard.route,Screen.Academics.route,
+      Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.Auth.route)).distinct().forEach {
+      navController.clearBackStack(it)
+    }
+  }
   LaunchedEffect(currentRoute, dataMode, currentUser.id, backendState.busy) {
     if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isBlank() && !backendState.busy &&
       currentRoute != null && currentRoute != Screen.Auth.route) {
+      clearAccountNavigation()
       navController.navigate(Screen.Auth.route) { popUpTo(navController.graph.id) { inclusive = true }; launchSingleTop = true }
     }
   }
@@ -282,7 +288,7 @@ fun ScholaErpApp(
     onNavigateToRoute = { route ->
       if (currentRoute != route) {
         navController.navigate(route) {
-          popUpTo(navController.graph.findStartDestination().id) {
+          popUpTo(Screen.Dashboard.route) {
             saveState = true
           }
           launchSingleTop = true
@@ -297,6 +303,7 @@ fun ScholaErpApp(
       navController.navigate(route)
     },
     onLogout = {
+      clearAccountNavigation()
       repository.logout()
       navController.navigate(Screen.Auth.route) {
         popUpTo(navController.graph.id) { inclusive = true }
@@ -637,7 +644,9 @@ fun ScholaErpApp(
         ProfileScreen(
           repository = repository,
           onBack = { navController.popBackStack() },
-          onNavigateTo = { route -> navController.navigate(route) {
+          onNavigateTo = { route ->
+          if (route == Screen.Auth.route) clearAccountNavigation()
+          navController.navigate(route) {
             if (route == Screen.Auth.route) popUpTo(navController.graph.id) { inclusive = true }
             launchSingleTop = true
           } }

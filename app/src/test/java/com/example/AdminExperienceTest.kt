@@ -28,6 +28,13 @@ class AdminExperienceTest {
     }
   }
 
+  @Test fun nestedDestinationsRetainTheirPrimarySelection() {
+    assertEquals(Screen.Students.route, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.TeacherDetail.route))
+    assertEquals(Screen.Academics.route, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.Homework.route))
+    assertEquals(Screen.Attendance.route, NavConfig.selectedPrimaryRoute(UserRole.PRINCIPAL, Screen.PrincipalAttendance.route))
+    assertEquals(Screen.OperationsHub.route, NavConfig.selectedPrimaryRoute(UserRole.PARENT, Screen.Notifications.route))
+  }
+
   @Test
   fun demo_administrator_persona_resolves_before_dashboard_navigation() = runBlocking {
     val source = LocalDemoDataSource()
