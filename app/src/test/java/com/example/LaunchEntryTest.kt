@@ -70,6 +70,17 @@ class LaunchEntryTest {
     compose.waitUntil {entered}
     assertEquals(UserRole.PARENT,repo.currentUser.value.role)
   }
+  @Test fun actualRoutedAppOpensTeacherDashboardAfterLocalDemoSelection() {
+    repo()
+    compose.setContent {ScholaTheme(false){ScholaErpApp(false,false,"",{_,_->},{})}}
+    compose.onNodeWithTag("try_demo").performScrollTo().performClick()
+    compose.onNodeWithTag("role_select_teacher").performScrollTo().performClick()
+    compose.onNodeWithTag("submit_login_button").performScrollTo().performClick()
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+    compose.waitUntil(10000) {compose.onAllNodesWithTag("teacher_dashboard_list").fetchSemanticsNodes().isNotEmpty()}
+    capture("routed_teacher_dashboard_light")
+    compose.onNodeWithTag("portal_teacher").assertDoesNotExist()
+  }
   @Test fun introInitializesContentConcurrentlyAndDoesNotReplayOnRecomposition() {
     compose.mainClock.autoAdvance=false
     var ready by mutableStateOf(false);var recomposition by mutableIntStateOf(0)

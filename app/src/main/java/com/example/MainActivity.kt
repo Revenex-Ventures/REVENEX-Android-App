@@ -230,9 +230,19 @@ fun ScholaErpApp(
   val backendState by repository.backendState.collectAsState()
   val dataMode by repository.dataMode.collectAsState()
   val unreadNotificationsCount = notifications.count { !it.isRead }
+  val initialRoute = remember {
+    if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isNotBlank() && !backendState.busy && !backendState.failed)
+      Screen.Dashboard.route else Screen.Auth.route
+  }
 
   val navBackStackEntry by navController.currentBackStackEntryAsState()
   val currentRoute = navBackStackEntry?.destination?.route
+  LaunchedEffect(currentRoute, dataMode, currentUser.id, backendState.busy) {
+    if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isBlank() && !backendState.busy &&
+      currentRoute != null && currentRoute != Screen.Auth.route) {
+      navController.navigate(Screen.Auth.route) { popUpTo(navController.graph.id) { inclusive = true }; launchSingleTop = true }
+    }
+  }
 
   // Global Command Palette (⌘K) Modal State
   var showCommandPalette by remember { mutableStateOf(false) }
@@ -297,10 +307,12 @@ fun ScholaErpApp(
         }
       }
     }
-    key(currentUser.id, dataMode) {
+    // Auth must survive switching from local demo to cloud and loading the profile.
+    // Logout already clears the graph and account-scoped repository state.
+    key(Unit) {
     NavHost(
       navController = navController,
-      startDestination = Screen.Auth.route,
+      startDestination = initialRoute,
       modifier = Modifier.weight(1f),
       enterTransition = {
         val fromAuth = initialState.destination.route == Screen.Auth.route

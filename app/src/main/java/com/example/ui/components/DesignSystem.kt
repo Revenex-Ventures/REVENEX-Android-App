@@ -57,6 +57,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -180,6 +183,13 @@ fun CompactStatTile(
 // 3. COMPACT BOTTOM NAVIGATION
 // ============================================================================
 
+data class ScholaDockItem(
+  val route: String,
+  val label: String,
+  val selectedIcon: ImageVector,
+  val unselectedIcon: ImageVector
+)
+
 @Composable
 fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemSelected:(String)->Unit,modifier:Modifier=Modifier) {
   val largeText=LocalDensity.current.fontScale>1.3f
@@ -199,7 +209,7 @@ fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemS
         items.forEach {item->
           val selected=currentRoute==item.route
           val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-          Column(Modifier.weight(1f).clickable(onClickLabel=item.label){onItemSelected(item.route)}.heightIn(min=64.dp).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
+          Column(Modifier.weight(1f).semantics { this.selected = selected }.clickable(role=Role.Tab,onClickLabel=item.label){onItemSelected(item.route)}.heightIn(min=64.dp).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
             Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(24.dp),tint=ink)
             if(!largeText) Text(destinationLabel(item.label),style=MaterialTheme.typography.labelSmall,color=ink,maxLines=1,overflow=TextOverflow.Ellipsis)
           }
