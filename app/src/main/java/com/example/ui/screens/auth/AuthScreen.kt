@@ -37,177 +37,69 @@ import com.example.ui.theme.*
  * Demo Mode:
  *   - Quick role selector with instant access for testing all personas
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthScreen(
-  repository: ErpDataRepository,
-  onLoginSuccess: () -> Unit
-) {
-  val dataMode by repository.dataMode.collectAsState()
+fun AuthScreen(repository: ErpDataRepository, onLoginSuccess: () -> Unit) {
+  val mode by repository.dataMode.collectAsState()
   var isLoggingIn by remember { mutableStateOf(false) }
-  var errorMessage by remember { mutableStateOf<String?>(null) }
-
-  // Demo mode state
+  var error by remember { mutableStateOf<String?>(null) }
+  var email by remember { mutableStateOf("") }
+  var password by remember { mutableStateOf("") }
   var selectedRole by remember { mutableStateOf(UserRole.PRINCIPAL) }
-
-  var principalEmail by remember { mutableStateOf("") }
-  var principalPassword by remember { mutableStateOf("") }
-
-  Box(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background)
-  ) {
-    Column(
-      modifier = Modifier
-        .widthIn(max = 560.dp)
-        .fillMaxSize()
-        .statusBarsPadding()
-        .navigationBarsPadding()
-        .imePadding()
-        .verticalScroll(rememberScrollState())
-        .padding(horizontal = Spacing.lg16, vertical = Spacing.lg16)
-        .align(Alignment.Center),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center
-    ) {
-      // Header Brand Crest
-      RevenexLogoCrest(
-        modifier = Modifier.size(48.dp),
-        tint = MaterialTheme.colorScheme.primary
-      )
-
-      Spacer(modifier = Modifier.height(12.dp))
-
-      Text(
-        text = "Welcome to Revenex",
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        letterSpacing = 1.sp
-      )
-
-      Text(
-        text = "Your school day, organized.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-        textAlign = TextAlign.Center
-      )
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      // Mode Switcher Banner (Demo vs Production)
-      Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.fillMaxWidth()
-      ) {
-        Row(
-          modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-              imageVector = if (dataMode == DataMode.DEMO) Icons.Default.Science else Icons.Default.CloudSync,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-              text = dataMode.label,
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurface,
-              fontWeight = FontWeight.Bold
-            )
-          }
-          FilterChip(
-            enabled = !isLoggingIn,
-            selected = dataMode == DataMode.SUPABASE_DEMO,
-            onClick = {
-              val nextMode = if (dataMode == DataMode.DEMO) DataMode.SUPABASE_DEMO else DataMode.DEMO
-              repository.setDataMode(nextMode)
-              errorMessage = null
-            },
-            label = {
-              Text(
-                text = if (dataMode == DataMode.DEMO) "Use Supabase" else "Local demo",
-                fontSize = 12.sp
-              )
-            },
-            colors = FilterChipDefaults.filterChipColors(
-              labelColor = MaterialTheme.colorScheme.onSurface,
-              selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-              selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-          )
-        }
+  var demoSheet by remember { mutableStateOf(false) }
+  var help by remember { mutableStateOf(false) }
+  val signIn: () -> Unit = {
+    if (!isLoggingIn && email.isNotBlank() && password.isNotBlank()) {
+      isLoggingIn = true; error = null
+      if (mode != DataMode.SUPABASE_DEMO) repository.setDataMode(DataMode.SUPABASE_DEMO)
+      repository.loginWithSupabase(email.trim(),password) { ok, message ->
+        isLoggingIn = false
+        if (ok) { password = ""; onLoginSuccess() } else error = message
       }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      // Login Card
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elev.e1)
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(Spacing.lg16)
-        ) {
-          if (dataMode == DataMode.DEMO) {
-            // ========== DEMO MODE: Quick Role Selector ==========
-            DemoModeLoginContent(
-              selectedRole = selectedRole,
-              onRoleSelected = { role ->
-                // Merge PARENT → STUDENT in demo mode (same portal)
-                selectedRole = if (role == UserRole.PARENT) UserRole.STUDENT else role
-                errorMessage = null
-              },
-              isLoggingIn = isLoggingIn,
-              errorMessage = errorMessage,
-              onLogin = {
-                isLoggingIn = true
-                repository.switchRole(selectedRole) {
-                  isLoggingIn = false
-                  onLoginSuccess()
-                }
-              }
-            )
-          } else if (dataMode == DataMode.SUPABASE_DEMO) {
-            Text("Supabase school demo", style = MaterialTheme.typography.titleMedium)
-            Text("Use your assigned school account. Your role is loaded securely after sign-in.", style = MaterialTheme.typography.bodySmall)
-            OutlinedTextField(value=principalEmail,onValueChange={ principalEmail=it;errorMessage=null },label={Text("Email")},singleLine=true,enabled=!isLoggingIn,modifier=Modifier.fillMaxWidth())
-            OutlinedTextField(value=principalPassword,onValueChange={ principalPassword=it;errorMessage=null },label={Text("Password")},visualTransformation=PasswordVisualTransformation(),singleLine=true,enabled=!isLoggingIn,modifier=Modifier.fillMaxWidth())
-            errorMessage?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
-            Button(onClick={
-              isLoggingIn=true
-              repository.loginWithSupabase(principalEmail,principalPassword) { ok,error ->
-                isLoggingIn=false
-                if(ok) { principalPassword="";onLoginSuccess() } else errorMessage=error
-              }
-            },enabled=!isLoggingIn && principalEmail.isNotBlank() && principalPassword.isNotBlank(),modifier=Modifier.fillMaxWidth()) {
-              Text(if(isLoggingIn) "Signing in…" else "Sign in")
-            }
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(14.dp))
-
-      Spacer(modifier = Modifier.height(10.dp))
-
-      Text(
-        text = "Revenex School ERP • Demonstration build",
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-        textAlign = TextAlign.Center
-      )
     }
   }
+  Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding(), contentAlignment = Alignment.Center) {
+      Column(Modifier.widthIn(max=480.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(Spacing.xl20),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xl24)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          Icon(Icons.Default.AutoStories,null,tint=MaterialTheme.colorScheme.primary)
+          Text("REVENEX",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          Text("Welcome to your school",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+          Text("Sign in to your assigned account. Your school and access are verified securely.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+          OutlinedTextField(email,{email=it;error=null},Modifier.fillMaxWidth(),label={Text("Email")},singleLine=true,enabled=!isLoggingIn,
+            keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Email,imeAction=androidx.compose.ui.text.input.ImeAction.Next),shape=RoundedCornerShape(Radius.sm))
+          OutlinedTextField(password,{password=it;error=null},Modifier.fillMaxWidth(),label={Text("Password")},singleLine=true,enabled=!isLoggingIn,
+            visualTransformation=PasswordVisualTransformation(), keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Done),
+            keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={signIn()}),shape=RoundedCornerShape(Radius.sm))
+          error?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+          Button(onClick=signIn,enabled=!isLoggingIn && email.isNotBlank() && password.isNotBlank(),shape=RoundedCornerShape(Radius.sm),
+            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("submit_supabase_login")) { Text(if(isLoggingIn) "Signing in…" else "Sign in") }
+          TextButton(onClick={help=true},enabled=!isLoggingIn) { Text("Need help signing in?") }
+        }
+        HorizontalDivider()
+        Column {
+          Text("Explore with sample school data",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          OutlinedButton(onClick={demoSheet=true;error=null},enabled=!isLoggingIn,modifier=Modifier.fillMaxWidth().testTag("try_demo"),shape=RoundedCornerShape(Radius.sm)) { Text("Try demo") }
+        }
+        Text("School ERP · Demonstration build",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+    }
+  }
+  if (demoSheet) ModalBottomSheet(onDismissRequest={if(!isLoggingIn) demoSheet=false}) {
+    Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(Spacing.screenPadding)) {
+      DemoModeLoginContent(selectedRole,{selectedRole=it;error=null},isLoggingIn,error) {
+        isLoggingIn=true
+        if(mode!=DataMode.DEMO) repository.setDataMode(DataMode.DEMO)
+        repository.switchRole(selectedRole) { isLoggingIn=false;demoSheet=false;onLoginSuccess() }
+      }
+    }
+  }
+  if(help) AlertDialog(onDismissRequest={help=false},title={Text("Account help")},text={Text("Use the account assigned by your school. Contact the school administrator for account creation, password recovery or access changes. This demo does not offer self-service password reset.")},confirmButton={TextButton(onClick={help=false}) {Text("Done")}})
 }
 
 // ========================================================================

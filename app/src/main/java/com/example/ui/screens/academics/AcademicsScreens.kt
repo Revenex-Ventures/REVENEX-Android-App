@@ -273,81 +273,62 @@ fun TimetableScreen(
 
 // Homework Screen
 @Composable
-fun HomeworkScreen(
-  repository: ErpDataRepository,
-  onShowCreateAssignment: () -> Unit
-) {
+fun HomeworkScreen(repository: ErpDataRepository, onShowCreateAssignment: () -> Unit) {
   val assignments by repository.assignments.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
-  val scope = rememberCoroutineScope()
-  var subjectFilter by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf("") }
-  var pendingOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf(false) }
-  val subjects = assignments.map { it.subject }.distinct().sorted()
-  val filteredAssignments = assignments.filter { (subjectFilter.isBlank() || it.subject == subjectFilter) && (!pendingOnly || !it.isCompletedByStudent) }
-  var submitting by remember(currentUser.id) { mutableStateOf<String?>(null) }
-  var submissionError by remember(currentUser.id) { mutableStateOf<String?>(null) }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text("Assignments", modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        if (currentUser.role == UserRole.TEACHER || currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
-          Button(onClick = onShowCreateAssignment, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-            Text("Assign", fontWeight = FontWeight.Bold)
-          }
+  val scope=rememberCoroutineScope()
+  var subjectFilter by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) {mutableStateOf("")}
+  var pendingOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) {mutableStateOf(false)}
+  var resources by remember(currentUser.id) {mutableStateOf(false)}
+  var submitting by remember(currentUser.id) {mutableStateOf<String?>(null)}
+  var submissionError by remember(currentUser.id) {mutableStateOf<String?>(null)}
+  val subjects=assignments.map {it.subject}.distinct().sorted()
+  val filtered=assignments.filter {(subjectFilter.isBlank()||it.subject==subjectFilter)&&(!pendingOnly||!it.isCompletedByStudent)}
+  Column(Modifier.fillMaxSize()) {
+    Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.screenPadding),verticalAlignment=Alignment.CenterVertically) {
+      Text("Assignments",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      if(!resources && currentUser.role in setOf(UserRole.TEACHER,UserRole.PRINCIPAL,UserRole.ADMIN)) Button(onClick=onShowCreateAssignment,shape=RoundedCornerShape(Radius.sm)) {Icon(Icons.Default.Add,null);Text("Add")}
+    }
+    TabRow(selectedTabIndex=if(resources)1 else 0,containerColor=MaterialTheme.colorScheme.background) {
+      Tab(selected=!resources,onClick={resources=false},text={Text("Tasks")})
+      Tab(selected=resources,onClick={resources=true},text={Text("Resources")})
+    }
+    if(resources) StudyMaterialScreen(repository)
+    else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      item {
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          item {SchoolFilterChip(subjectFilter.isBlank(),{subjectFilter=""},{Text("All")})}
+          items(subjects) {subject -> SchoolFilterChip(subjectFilter==subject,{subjectFilter=subject},{Text(subject)})}
+        }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+          Text("${filtered.size} tasks",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          SchoolFilterChip(pendingOnly,{pendingOnly=!pendingOnly},{Text("Pending only")})
         }
       }
-    }
-
-    item {
-      LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        item { SchoolFilterChip(subjectFilter.isBlank(), { subjectFilter = "" }, { Text("All subjects") }) }
-        items(subjects) { subject -> SchoolFilterChip(subjectFilter == subject, { subjectFilter = subject }, { Text(subject) }) }
-      }
-      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("${filteredAssignments.size} assignments", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SchoolFilterChip(pendingOnly, { pendingOnly = !pendingOnly }, { Text("Pending only") })
-      }
-    }
-    submissionError?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
-    if (filteredAssignments.isEmpty()) {
-      item { EmptyStateView(title = "No matching assignments", message = "Change the subject or pending filter to see other work.") }
-    } else {
-      items(filteredAssignments, key = { it.id }) { hw ->
-        var expanded by remember(hw.id) { mutableStateOf(false) }
-        AppCard(modifier = Modifier.fillMaxWidth().testTag("assignment_details_${hw.id}"), onClick = { expanded = !expanded }) {
-          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-            Surface(color = SemanticColors.lavenderContainer, shape = RoundedCornerShape(Radius.pill)) {
-              Text(hw.subject, modifier = Modifier.padding(horizontal = Spacing.md12, vertical = Spacing.sm8),
-                style = MaterialTheme.typography.labelMedium, color = SemanticColors.onLavender)
+      submissionError?.let {message -> item {Text(message,color=MaterialTheme.colorScheme.error)}}
+      if(filtered.isEmpty()) item {EmptyStateView(title="No matching assignments",message="Change the subject or status filter to see other work.")}
+      items(filtered,key={it.id}) {hw ->
+        var expanded by remember(hw.id) {mutableStateOf(false)}
+        val well=when {hw.subject.contains("math",true)->SemanticColors.lavenderContainer;hw.subject.contains("science",true)||hw.subject.contains("physics",true)->SemanticColors.successContainer;hw.subject.contains("english",true)->SemanticColors.blueContainer;else->SemanticColors.peachContainer}
+        Surface(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth().testTag("assignment_details_${hw.id}"),shape=RoundedCornerShape(Radius.md),color=well) {
+          Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+              Icon(Icons.Default.Description,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.onSurface)
+              Column(Modifier.weight(1f)) {
+                Text(hw.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+                Text("${hw.subject} · Class ${hw.classGrade}-${hw.division}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Due ${hw.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+              Icon(if(expanded)Icons.Default.ExpandLess else Icons.Default.ChevronRight,if(expanded)"Hide details" else "Show details",Modifier.size(18.dp))
             }
-            Spacer(Modifier.weight(1f))
-            ScholaPillBadge(status = hw.submissionStatus)
-          }
-          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(hw.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-              contentDescription = if (expanded) "Hide instructions" else "View instructions", tint = MaterialTheme.colorScheme.primary)
-          }
-          if (expanded) Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-            Text("Due ${hw.dueDate} · Class ${hw.classGrade}-${hw.division}",
-              style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-          if(hw.attachmentUrl.isNotBlank()) SchoolDocumentButton(hw.attachmentUrl,hw.attachmentName.ifBlank { "Open attachment" })
-          if(currentUser.role==UserRole.STUDENT) {
+            ScholaPillBadge(status=hw.submissionStatus)
+            androidx.compose.animation.AnimatedVisibility(expanded) {
+              Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                HorizontalDivider()
+                Text(hw.instructions,style=MaterialTheme.typography.bodyMedium)
+                Text("${hw.teacherName} · Assigned ${hw.assignedDate} · ${hw.maxPoints} points",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(hw.attachmentUrl.isNotBlank()) SchoolDocumentButton(hw.attachmentUrl,hw.attachmentName.ifBlank {"Open attachment"})
+                if(currentUser.role==UserRole.STUDENT) {
             TextButton(enabled = submitting == null, onClick={
               submitting = hw.id; submissionError = null
               scope.launch {
@@ -359,6 +340,9 @@ fun HomeworkScreen(
               }
             }) {
               Text(if(submitting == hw.id) "Saving…" else if(hw.isCompletedByStudent) "Undo submission" else "Mark submitted")
+            }
+                }
+              }
             }
           }
         }

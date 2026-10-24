@@ -1,5 +1,7 @@
 package com.example.ui.screens.fees
 
+import kotlinx.coroutines.launch
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,243 +34,100 @@ import com.example.ui.theme.*
 import java.util.Locale
 
 @Composable
-fun FeeManagementScreen(
-  repository: ErpDataRepository,
+fun FeeManagementScreen(repository: ErpDataRepository,
   onShowPaymentModal: (studentName: String, amountDue: Long) -> Unit,
-  onPayRazorpay: (String, String, Long) -> Unit = { _, name, amount -> onShowPaymentModal(name, amount) },
-  onCheckRazorpay: (String) -> Unit = {}
-) {
+  onPayRazorpay: (String,String,Long) -> Unit = {_,name,amount -> onShowPaymentModal(name,amount)},
+  onCheckRazorpay: (String) -> Unit = {}) {
   val invoices by repository.invoices.collectAsState()
-  val currentUser by repository.currentUser.collectAsState()
-  val feeRecords by repository.feeRecords.collectAsState()
-  val dataMode by repository.dataMode.collectAsState()
-
-  var selectedFilter by remember { mutableStateOf("Pending") }
-  val filters = listOf("Pending", "All Invoices", "Overdue", "Partial", "Paid")
-
-  // Selected invoice for payment dialog
-  var selectedInvoiceForPayment by remember { mutableStateOf<LedgerInvoice?>(null) }
-
-  val totalBilled = invoices.sumOf { it.totalAmount }
-  val totalCollected = invoices.sumOf { it.paidAmount }
-  val totalReceivables = invoices.sumOf { it.pendingAmount }
-  val collectionPercentage = if (totalBilled > 0) ((totalCollected.toDouble() / totalBilled.toDouble()) * 100.0).toInt() else 0
-
-  val filteredInvoices = remember(invoices, selectedFilter) {
-    when (selectedFilter) {
-      "Pending" -> invoices.filter { it.pendingAmount>0 }
-      "Overdue" -> invoices.filter { it.status == FeeStatus.OVERDUE }
-      "Partial" -> invoices.filter { it.status == FeeStatus.PARTIAL }
-      "Paid" -> invoices.filter { it.status == FeeStatus.PAID }
-      else -> invoices
-    }
-  }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background)
-      .testTag("fee_management_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      Text("Fees & payments", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-      Text(if (currentUser.role in setOf(UserRole.STUDENT, UserRole.PARENT)) "Invoices available to your account" else "School invoice balances and payment review",
-        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    item {
-      Surface(shape = RoundedCornerShape(Radius.lg), color = SemanticColors.peachContainer) {
-        Column(Modifier.fillMaxWidth().padding(Spacing.lg16), verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          Text("Outstanding balance", style = MaterialTheme.typography.labelLarge, color = SemanticColors.onPeach)
-          Text(feeCurrency(totalReceivables), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold, color = SemanticColors.onPeach)
-          Text("${invoices.count { it.pendingAmount > 0 }} unpaid invoices · ${if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) "TEST payments only" else "Local sample data"}", style = MaterialTheme.typography.bodySmall, color = SemanticColors.onPeach)
-        }
-      }
-    }
-    item {
-      Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+  val fees by repository.feeRecords.collectAsState()
+  val user by repository.currentUser.collectAsState()
+  val mode by repository.dataMode.collectAsState()
+  val cloud=mode==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  var filter by remember(user.id) {mutableStateOf("Pending")}
+  var expanded by remember(user.id) {mutableStateOf<String?>(null)}
+  var filterMenu by remember {mutableStateOf(false)}
+  val unpaid=invoices.filter {it.pendingAmount>0}
+  val paid=invoices.filter {it.status==FeeStatus.PAID}
+  val visible=when(filter){"Pending"->unpaid;"Paid"->paid;"Overdue"->invoices.filter {it.status==FeeStatus.OVERDUE};"Partial"->invoices.filter {it.status==FeeStatus.PARTIAL};else->invoices}
+  val history=fees.flatMap {fee -> fee.transactions.map {fee to it}}
+  val list=androidx.compose.foundation.lazy.rememberLazyListState()
+  val scope=rememberCoroutineScope()
+  LazyColumn(Modifier.fillMaxSize().testTag("fee_management_screen"),state=list,contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {Text("Fees & payments",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+    item {Surface(shape=RoundedCornerShape(Radius.md),color=SemanticColors.peachContainer) {
+      Column(Modifier.fillMaxWidth().padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         Row(Modifier.fillMaxWidth()) {
-          Text("Billed", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-          Text(feeCurrency(totalBilled), style = MaterialTheme.typography.titleSmall)
+          Column(Modifier.weight(1f)) {
+            Text("Outstanding amount",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
+            Text(feeCurrency(unpaid.sumOf {it.pendingAmount}),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SemanticColors.onPeach)
+          }
+          Text(if(cloud) "TEST mode" else "Local sample",style=MaterialTheme.typography.labelSmall,color=SemanticColors.onPeach)
         }
-        Row(Modifier.fillMaxWidth()) {
-          Text("Collected", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-          Text(feeCurrency(totalCollected), style = MaterialTheme.typography.titleSmall, color = SemanticColors.onSuccess)
-        }
+        Text(if(user.role in setOf(UserRole.STUDENT,UserRole.PARENT)) "Invoices available to your account" else "School invoices · choose an invoice to review",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
+        Button(onClick={
+          if(unpaid.size==1) unpaid.first().let {onPayRazorpay(it.id,it.studentName,it.pendingAmount)}
+          else {filter="Pending";scope.launch {list.animateScrollToItem(3)}}
+        },enabled=unpaid.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm)) {Text(if(unpaid.size==1) "Pay" else "View pending invoices")}
       }
-    }
-
-    // 2. STATUS FILTER CHIPS
+    }}
     item {
-      LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-      ) {
-        items(filters) { flt ->
-          val isSelected = selectedFilter == flt
-          Surface(
-            shape = RoundedCornerShape(Radius.pill),
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-              .clip(RoundedCornerShape(Radius.pill))
-              .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-              .clickable { selectedFilter = flt }
-          ) {
-            Text(
-              text = flt,
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold,
-              color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-              modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = 6.dp)
-            )
+      TabRow(selectedTabIndex=if(filter=="Paid")1 else 0,containerColor=MaterialTheme.colorScheme.background) {
+        Tab(selected=filter!="Paid",onClick={filter="Pending"},text={Text("Pending (${unpaid.size})")})
+        Tab(selected=filter=="Paid",onClick={filter="Paid"},text={Text("Paid (${paid.size})")})
+      }
+      Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+        Text("Invoices · $filter",Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+        Box {
+          TextButton(onClick={filterMenu=true}) {Text("Filter");Icon(Icons.Default.ExpandMore,null)}
+          DropdownMenu(filterMenu,{filterMenu=false}) {listOf("Pending","Paid","All invoices","Overdue","Partial").forEach {value ->
+            DropdownMenuItem(text={Text(value)},onClick={filter=value;filterMenu=false})
+          }}
+        }
+      }
+    }
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching invoices",message="There are no invoices in this view.")}
+    items(visible,key={it.id}) {invoice ->
+      SchoolGroup {
+        Row(Modifier.fillMaxWidth().clickable {expanded=if(expanded==invoice.id)null else invoice.id}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Icon(Icons.Default.ReceiptLong,null,tint=MaterialTheme.colorScheme.primary)
+          Column(Modifier.weight(1f)) {
+            Text(invoice.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+            Text("${invoice.studentName} · ${invoice.cohort}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Due ${invoice.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+          Column(horizontalAlignment=Alignment.End) {
+            Text(feeCurrency(if(invoice.pendingAmount>0)invoice.pendingAmount else invoice.totalAmount),style=MaterialTheme.typography.titleSmall)
+            if(invoice.pendingAmount>0) TextButton(onClick={onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount)}) {Text("Pay")}
+            else if(cloud) TextButton(onClick={onPayRazorpay(invoice.id,invoice.studentName,0L)}) {Text("Receipt")}
+            else StatusBadge(status="Paid")
+          }
+        }
+        androidx.compose.animation.AnimatedVisibility(visible=expanded==invoice.id) {
+          Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            HorizontalDivider()
+            Text(invoice.invoiceNumber,style=MaterialTheme.typography.labelMedium)
+            Text(invoice.description,style=MaterialTheme.typography.bodyMedium)
+            Text("${feeCurrency(invoice.paidAmount)} paid of ${feeCurrency(invoice.totalAmount)}",style=MaterialTheme.typography.bodySmall)
+            Text("Issued ${invoice.issueDate} · ${invoice.paymentChannel}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusBadge(status=invoice.status.label)
+            if(cloud) TextButton(onClick={onCheckRazorpay(invoice.id)}) {Text(if(invoice.pendingAmount>0) "Check payment status" else "View receipt / status")}
           }
         }
       }
     }
-
-    // 3. LEDGER INVOICE CARDS
-    item {
-      SectionHeader(horizontalPadding = 0.dp, title = "Invoices · $selectedFilter (${filteredInvoices.size})")
-    }
-
-    if (filteredInvoices.isEmpty()) {
-      item {
-        EmptyStateView(
-          title = "No Invoices Matching Filter",
-          message = "No financial records found in '$selectedFilter'."
-        )
-      }
-    } else {
-      items(filteredInvoices, key = { it.id }) { invoice ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-          ) {
-            Column(modifier = Modifier.weight(1f)) {
-              Column {
-                Text(
-                  text = invoice.studentName,
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "(${invoice.cohort})",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  fontSize = 12.sp
-                )
-              }
-              Text(
-                text = "${invoice.invoiceNumber} • ${invoice.title}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-              Text(
-                text = "Due: ${invoice.dueDate} • Channel: ${invoice.paymentChannel}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-            }
-
-            ScholaPillBadge(status = invoice.status.label)
-          }
-
-          Spacer(modifier = Modifier.height(Spacing.s3))
-
-          // Payment Progress Bar
-          LinearProgressIndicator(
-            progress = { invoice.progressFraction },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(6.dp)
-              .clip(RoundedCornerShape(Radius.pill)),
-            color = if (invoice.status == FeeStatus.OVERDUE) SemanticColors.onDanger else MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.outlineVariant
-          )
-
-          Spacer(modifier = Modifier.height(Spacing.s3))
-
-          Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm8)
-          ) {
-            Text(
-              text = "${feeCurrency(invoice.paidAmount)} paid of ${feeCurrency(invoice.totalAmount)}",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              fontSize = 12.sp
-            )
-
-            if (invoice.pendingAmount > 0 && dataMode==com.example.data.datasource.DataMode.SUPABASE_DEMO) {
-              Column(horizontalAlignment = Alignment.End) {
-                AppButton(text="Pay", onClick={ onPayRazorpay(invoice.id, invoice.studentName, invoice.pendingAmount) })
-                TextButton(onClick={ onCheckRazorpay(invoice.id) }) { Text("Check payment status") }
-              }
-            } else if (invoice.pendingAmount > 0) {
-              AppButton(
-                text = "Pay",
-                onClick = { onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                fontSize = 12.sp,
-                minHeight = 48.dp
-              )
-            } else {
-              Column(horizontalAlignment = Alignment.End) {
-              if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) {
-                TextButton(onClick = { onPayRazorpay(invoice.id, invoice.studentName, 0L) }) { Text("View receipt / status") }
-              }
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = SemanticColors.successContainer
-              ) {
-                Row(
-                  modifier = Modifier.padding(horizontal = Spacing.s2, vertical = 4.dp),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Icon(Icons.Default.Check, contentDescription = null, tint = SemanticColors.onSuccess, modifier = Modifier.size(14.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Settled in Full", color = SemanticColors.onSuccess, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-              }
-              }
-            }
-          }
+    item {Spacer(Modifier.height(Spacing.md12));Text("Payment history",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)}
+    if(history.isEmpty()) item {Text("No recorded payments. Receipts appear after server-confirmed capture.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+    items(history,key={(fee,tx)->"${fee.id}_${tx.transactionId}"}) {(fee,tx)->
+      SchoolGroup {
+        Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+          Row(Modifier.fillMaxWidth()) {Text(fee.studentName,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall);Text(feeCurrency(tx.amount),style=MaterialTheme.typography.titleSmall)}
+          Text("${tx.date} · ${tx.status}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          Text(tx.receiptNo,style=MaterialTheme.typography.labelSmall)
+          if(cloud) TextButton(onClick={onCheckRazorpay(fee.id)}) {Text("Check invoice receipt")}
         }
       }
     }
-    item { SectionHeader(horizontalPadding = 0.dp, title = "Payment history") }
-    val history = feeRecords.flatMap { fee -> fee.transactions.map { fee to it } }
-    if (history.isEmpty()) item {
-      Text("No recorded payments. A receipt appears only after server-confirmed capture.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    items(history, key = { (fee, transaction) -> "${fee.id}_${transaction.transactionId}" }) { (fee, transaction) ->
-      Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-        Text(fee.studentName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Text("${feeCurrency(transaction.amount)} · ${transaction.status}", style = MaterialTheme.typography.bodyMedium)
-        Text("${transaction.date} · ${transaction.receiptNo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO) TextButton(onClick = { onCheckRazorpay(fee.id) }) { Text("Check invoice receipt") }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-      }
-    }
-  }
-
-  // Payment Collection Dialog with Presets & Channels
-  if (selectedInvoiceForPayment != null) {
-    ScholaPaymentCollectionDialog(
-      invoice = selectedInvoiceForPayment!!,
-      onDismiss = { selectedInvoiceForPayment = null },
-      onConfirmPayment = { amount, channel ->
-        repository.processInvoicePayment(selectedInvoiceForPayment!!.id, amount, channel)
-        selectedInvoiceForPayment = null
-      }
-    )
+    item {Text("Billed ${feeCurrency(invoices.sumOf {it.totalAmount})} · Collected ${feeCurrency(invoices.sumOf {it.paidAmount})}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   }
 }
 

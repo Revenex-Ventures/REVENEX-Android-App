@@ -32,6 +32,7 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
   val records by repository.classAttendance.collectAsState()
   val leaves by repository.leaveRequests.collectAsState()
   val exams by repository.examSchedules.collectAsState()
+  val events by repository.events.collectAsState()
   val logs by repository.auditLogs.collectAsState()
   val today = LocalDate.now(ZoneId.of("Asia/Kolkata"))
   val monday = today.minusDays((today.dayOfWeek.value - 1).toLong())
@@ -87,15 +88,17 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
         SchoolRow("Unpaid invoices", "Review outstanding balances", Icons.Default.ReceiptLong, { onNavigateTo(Screen.Fees.route) }, invoices.count { it.pendingAmount > 0 }.toString())
       }
     } }
-    item { SchoolSection("Scheduled examinations", "View all", { onNavigateTo(Screen.Exams.route) }) {
+    item { SchoolSection("Upcoming events", "School notices", { onNavigateTo(Screen.Notices.route) }) {
       SchoolGroup {
-        if (exams.isEmpty()) Text("No examinations scheduled.", Modifier.padding(Spacing.md12), style = MaterialTheme.typography.bodySmall)
-        exams.take(2).forEach { exam -> SchoolRow(exam.title, "${exam.startDate} · Class ${exam.classGrade}", Icons.Default.CalendarMonth, { onNavigateTo(Screen.Exams.route) }) }
+        val upcoming=events.filter {dashboardEventIsUpcoming(it.date)}
+        if (upcoming.isEmpty()) Text("No upcoming school events available.", Modifier.padding(Spacing.md12), style = MaterialTheme.typography.bodySmall)
+        upcoming.take(2).forEach { event -> SchoolRow(event.title, "${event.date} · ${event.time} · ${event.location}", Icons.Default.CalendarMonth, { onNavigateTo(Screen.Notices.route) }) }
       }
     } }
     item { SchoolSection("Manage school") {
       SchoolGroup {
         SchoolRow("Attendance register", "Record or review class attendance", Icons.Default.FactCheck, { onNavigateTo(Screen.Attendance.route) })
+        SchoolRow("Examinations", "${exams.size} scheduled examinations", Icons.Default.CalendarMonth, { onNavigateTo(Screen.Exams.route) })
         SchoolRow("Enrol student", "Admissions and class allocation", Icons.Default.PersonAdd, onShowAddStudent)
         SchoolRow("Faculty · ${teachers.size}", "Directory and staff setup", Icons.Default.School, { onNavigateTo(Screen.Teachers.route) })
         SchoolRow("Add faculty", "Staff setup", Icons.Default.PersonAddAlt, onShowAddTeacher)

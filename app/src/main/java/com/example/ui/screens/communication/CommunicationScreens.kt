@@ -273,7 +273,7 @@ fun NotificationsScreen(
     containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       TopAppBar(
-        title = { Text("Notifications", fontWeight = FontWeight.Bold) },
+        title = { Text("Inbox", style=MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -307,21 +307,21 @@ fun NotificationsScreen(
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
           item { SchoolFilterChip(category == null, { category = null }, { Text("All") }) }
           items(notifications.map { it.category }.distinct()) { value ->
-            SchoolFilterChip(category == value.name, { category = value.name }, { Text(value.name.lowercase().replaceFirstChar { it.uppercase() }) })
+            SchoolFilterChip(category == value.name, { category = value.name }, { Text(value.label) })
           }
           item { SchoolFilterChip(unreadOnly, { unreadOnly = !unreadOnly }, { Text("Unread") }) }
         }
-        Text("In-app updates · Device push is not enabled. Updates open their related workspace; individual record links are not available yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
       inboxError?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
       if (filtered.isEmpty()) {
         item { EmptyStateView(title = "No matching updates", message = "School updates appear here. Clear filters to see your full inbox.") }
       }
-      items(filtered, key = { it.id }) { notif ->
-        Column(modifier = Modifier.fillMaxWidth().clickable(
-          enabled = opening == null && !markingAll,
-          onClickLabel = "Open notification"
-        ) {
+      filtered.groupBy { notice ->
+        notice.timestamp.take(10).takeIf {it.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))} ?: "Recent updates"
+      }.forEach { (date,entries) ->
+        item { Text(date,Modifier.padding(top=Spacing.md12,bottom=Spacing.xs4),style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Bold) }
+        items(entries,key={it.id}) { notif ->
+          Surface(onClick={
           opening = notif.id; inboxError = null
           scope.launch {
             try {
@@ -332,52 +332,34 @@ fun NotificationsScreen(
               inboxError = "Could not open this update. Read state is not confirmed; tap again to retry."
             } finally { opening = null }
           }
-        }.padding(vertical = Spacing.md12)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-          ) {
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(if (!notif.isRead) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = when (notif.category) {
-                  NotificationCategory.ATTENDANCE -> Icons.Default.HowToReg
-                  NotificationCategory.FEES -> Icons.Default.AttachMoney
-                  NotificationCategory.EXAMS -> Icons.Default.EventNote
-                  else -> Icons.Default.Notifications
-                },
-                contentDescription = null,
-                tint = if (!notif.isRead) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-
-            Spacer(modifier = Modifier.width(Spacing.s3))
-
-            Column(modifier = Modifier.weight(1f)) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-              ) {
-                Text(notif.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                if (!notif.isRead) {
-                  Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-                }
+          },enabled=opening==null&&!markingAll,color=MaterialTheme.colorScheme.background) {
+            Row(Modifier.fillMaxWidth().padding(vertical=Spacing.md12),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+              val (well,ink)=when(notif.category) {
+                NotificationCategory.FEES->SemanticColors.butterContainer to SemanticColors.onButter
+                NotificationCategory.ATTENDANCE->SemanticColors.successContainer to SemanticColors.onSuccess
+                NotificationCategory.HOMEWORK,NotificationCategory.EXAMS->SemanticColors.lavenderContainer to SemanticColors.onLavender
+                else->SemanticColors.peachContainer to SemanticColors.onPeach
               }
-              Text("${notif.category.name.lowercase().replaceFirstChar { it.uppercase() }} · ${if (opening == notif.id) "Opening…" else if (!notif.isRead) "Unread" else "Read"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-              Text(notif.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(notif.timestamp, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+              Surface(shape=CircleShape,color=well) {Icon(when(notif.category){NotificationCategory.FEES->Icons.Default.CurrencyRupee;NotificationCategory.ATTENDANCE->Icons.Default.HowToReg;NotificationCategory.HOMEWORK->Icons.Default.Description;else->Icons.Default.Campaign},null,Modifier.padding(Spacing.sm8).size(18.dp),tint=ink)}
+              Column(Modifier.weight(1f)) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                  Text(notif.title,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=if(notif.isRead)FontWeight.Medium else FontWeight.Bold)
+                  if(!notif.isRead) Box(Modifier.padding(top=Spacing.xs4).size(6.dp).background(MaterialTheme.colorScheme.primary,CircleShape))
+                }
+                Text(notif.message,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                  Text(notif.category.label,Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,color=ink)
+                  Text(if(opening==notif.id)"Opening…" else notif.timestamp,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if(!notif.isRead) Text("Unread",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+              }
             }
           }
+          HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
       }
+      item { Text("In-app inbox. Device push is not configured. Updates open their related workspace; record-specific links are not available yet.",Modifier.padding(vertical=Spacing.md12),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+
     }
   }
 }
