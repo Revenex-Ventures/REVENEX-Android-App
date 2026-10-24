@@ -38,7 +38,7 @@ fun TeacherDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
   val pupils = students.filter { "${it.classGrade}-${it.division}" == cohort }
   val day = LocalDate.now(ZoneId.of("Asia/Kolkata"))
   val slots = timetable.filter { it.teacherName.equals(user.name,true) && it.dayOfWeek.equals(day.dayOfWeek.name,true) }.sortedBy { it.periodNumber }
-  val nextListedDay=if(slots.isEmpty())(1..7).map{day.plusDays(it)}.firstOrNull{candidate->
+  val nextListedDay=if(slots.isEmpty())(1..7).map{day.plusDays(it.toLong())}.firstOrNull{candidate->
     timetable.any{it.teacherName.equals(user.name,true)&&it.dayOfWeek.equals(candidate.dayOfWeek.name,true)}
   } else null
   val shownSlots=if(slots.isNotEmpty())slots else timetable.filter{it.teacherName.equals(user.name,true)&&it.dayOfWeek.equals(nextListedDay?.dayOfWeek?.name,true)}.sortedBy{it.periodNumber}
