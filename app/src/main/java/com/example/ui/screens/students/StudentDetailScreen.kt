@@ -87,287 +87,97 @@ fun StudentDetailScreen(
  * Reusable Student 360 Detail Pane used both standalone and in Tablet/Desktop split-pane.
  */
 @Composable
-fun Student360DetailPane(
-  student: Student,
-  repository: ErpDataRepository,
-  onPayFee: (studentName: String, amountDue: Long) -> Unit,
-  modifier: Modifier = Modifier
-) {
+fun Student360DetailPane(student: Student, repository: ErpDataRepository,
+  onPayFee: (studentName: String, amountDue: Long) -> Unit, modifier: Modifier = Modifier) {
   val invoices by repository.invoices.collectAsState()
-  val cloudDemo = com.example.data.datasource.AppEnvironment.currentMode == com.example.data.datasource.DataMode.SUPABASE_DEMO
-  val reportCards by repository.reportCards.collectAsState()
-  val gradebookEntries by repository.gradebookEntries.collectAsState()
-
-  val studentInvoice = invoices.firstOrNull { it.studentId == student.id }
-  val studentReportCard = reportCards.firstOrNull { it.studentId == student.id }
-  val studentGrades = gradebookEntries.filter { it.studentId == student.id || it.cohort == student.fullClass }
-
-  var selectedTab by remember { mutableStateOf(0) }
-  val tabs = listOf("Overview", "Attendance", "Ledger", "Transcript")
-
-  LazyColumn(
-    modifier = modifier
-      .fillMaxSize()
-      .testTag("student_360_detail_pane"),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3),
-    contentPadding = PaddingValues(bottom = Spacing.xl24)
-  ) {
-    // 1. HERO IDENTITY SURFACE (Dark Onyx, 22dp corners)
-    item {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.hero))
-          .background(MaterialTheme.colorScheme.surfaceVariant)
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
-          .padding(Spacing.cardPaddingLarge)
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-              Avatar(name = student.name, size = 48.dp, background = MaterialTheme.colorScheme.primary)
-              Spacer(modifier = Modifier.width(Spacing.s3))
-              Column(Modifier.weight(1f)) {
-                Text(
-                  text = student.name,
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                  text = "Class ${student.fullClass} • Roll #${student.rollNumber} • Adm #${student.admissionNumber}",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  fontSize = 12.sp
-                )
-              }
-            }
-            ScholaPillBadge(status = student.status)
-          }
-
-          Spacer(modifier = Modifier.height(Spacing.s4))
-
-          // Attendance Ring & GPA Meter Row
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            VitalRing(
-              value = student.attendancePercent.toFloat(),
-              label = "Attendance",
-              size = VitalRingSize.MEDIUM,
-              gradientStart = MaterialTheme.colorScheme.primary,
-              trackColor = MaterialTheme.colorScheme.outlineVariant,
-              textColor = MaterialTheme.colorScheme.onSurface
-            )
-
-            Box(
-              modifier = Modifier
-                .width(1.dp)
-                .height(48.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text(
-                text = "CUMULATIVE GPA",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = TypeTokens.trackingMicroLabel,
-                fontSize = 12.sp
-              )
-              Text(
-                text = if (cloudDemo) "Not configured" else "${student.gpa} / 10",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-              )
-              Text(
-                text = if (cloudDemo) "Ranking not configured" else "Class Rank: #${student.rank}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-            }
-          }
+  val reports by repository.reportCards.collectAsState()
+  val grades by repository.gradebookEntries.collectAsState()
+  val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val invoice=invoices.firstOrNull {it.studentId==student.id}
+  val assessments=grades.filter {it.studentId==student.id}
+  val cards=reports.filter {it.studentId==student.id}
+  var contact by remember(student.id) {mutableStateOf(false)}
+  var personal by remember(student.id) {mutableStateOf(false)}
+  LazyColumn(modifier.fillMaxSize().testTag("student_360_detail_pane"),verticalArrangement=Arrangement.spacedBy(Spacing.xl24),contentPadding=PaddingValues(bottom=Spacing.xl24)) {
+    item {SchoolGroup {
+      Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+        Avatar(student.name,size=44.dp,background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
+        Column(Modifier.weight(1f)) {
+          Text(student.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+          Text("Class ${student.fullClass} · Roll ${student.rollNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          Text(student.admissionNumber,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
-    }
-
-    // 2. SEGMENTED TAB SELECTOR
-    item {
-      Surface(
-        shape = RoundedCornerShape(Radius.pill),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.pill))
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(4.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-          tabs.forEachIndexed { index, title ->
-            val isSelected = selectedTab == index
-            Box(
-              modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                .clickable { selectedTab = index }
-                .padding(vertical = 8.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-            }
-          }
+    }}
+    item {SchoolSection("Academic information") {SchoolGroup {
+      Column(Modifier.padding(Spacing.md12)) {
+        InfoRow("Class & section",student.fullClass)
+        InfoRow("Academic session",student.sessionId)
+        InfoRow("Student status",student.status)
+        if(!cloud) InfoRow("Local demo GPA / rank","${student.gpa} / 10 · Rank ${student.rank}")
+      }
+    }}}
+    item {SchoolSection("Contact & guardian",if(contact)"Hide" else "Details",{contact=!contact}) {SchoolGroup {
+      Column(Modifier.padding(Spacing.md12)) {
+        InfoRow("Guardian",student.parentName)
+        if(contact) {
+          InfoRow("Phone",student.parentPhone);InfoRow("Email",student.parentEmail);InfoRow("Address",student.address)
         }
       }
-    }
-
-    // 3. TAB CONTENT
-    when (selectedTab) {
-      0 -> {
-        // OVERVIEW: Parent credentials & Demographics
-        item {
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Contact & guardian", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(Spacing.s2))
-            InfoRow("Guardian Name", student.parentName)
-            InfoRow("Emergency Phone", student.parentPhone)
-            InfoRow("Verified Email", student.parentEmail)
-            InfoRow("Residential Address", student.address.ifBlank { "Not provided" })
-          }
-        }
-        item {
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Personal & admission details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(Spacing.s2))
-            InfoRow("Gender / DOB", "${student.gender} • ${student.dob}")
-            InfoRow("Blood Group", student.bloodGroup)
-            InfoRow("Admission Date", student.admissionDate.ifBlank { "Not provided" })
-          }
+    }}}
+    item {SchoolSection("Personal & admission details",if(personal)"Hide" else "Details",{personal=!personal}) {SchoolGroup {
+      Column(Modifier.padding(Spacing.md12)) {
+        InfoRow("Admission date",student.admissionDate)
+        if(personal){InfoRow("Gender / date of birth","${student.gender} · ${student.dob}");InfoRow("Blood group",student.bloodGroup)}
+      }
+    }}}
+    item {SchoolSection("Attendance") {SchoolGroup {
+      Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        Text("${student.attendancePercent}% recorded attendance",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+        Text("Attendance eligibility is determined by the school's policies. This summary does not certify examination eligibility.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+    }}}
+    item {SchoolSection("Fees & payments") {SchoolGroup {
+      Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        if(invoice==null) Text("No fee record available to this account.",style=MaterialTheme.typography.bodySmall)
+        else {
+          Text(invoice.title,style=MaterialTheme.typography.titleSmall)
+          InfoRow("Invoice",invoice.invoiceNumber)
+          InfoRow("Billed",profileCurrency(invoice.totalAmount));InfoRow("Paid",profileCurrency(invoice.paidAmount));InfoRow("Outstanding",profileCurrency(invoice.pendingAmount))
+          if(invoice.pendingAmount>0) AppButton(text="Pay · ${profileCurrency(invoice.pendingAmount)}",onClick={onPayFee(student.name,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth())
+          if(cloud) Text("Razorpay TEST checkout. Receipt confirmation is handled by the server.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
-
-      1 -> {
-        // ATTENDANCE: Roll Call verification details
-        item {
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Attendance Eligibility Threshold", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(Spacing.s2))
-            Text(
-              text = "Scholar presence is verified at ${student.attendancePercent}%. Examination eligibility requires minimum 75.0% verified presence.",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(Spacing.s3))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-              ScholaPillBadge(status = "Verified Present")
-              ScholaPillBadge(status = "Eligible")
-            }
-          }
+    }}}
+    item {SchoolSection("Assessment results") {SchoolGroup {
+      if(assessments.isEmpty()) Text("No assessment results available.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
+      assessments.forEach {grade ->
+        Row(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Column(Modifier.weight(1f)){Text(grade.assessmentTitle,style=MaterialTheme.typography.titleSmall);Text("${grade.subject} · ${grade.instructorName}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+          Text("${grade.score}/${grade.maxScore} · ${grade.letterGrade}",style=MaterialTheme.typography.labelLarge)
         }
       }
-
-      2 -> {
-        // LEDGER: Tuition invoice breakdown
-        item {
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column {
-                Text("Tuition & Activity Ledger", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(
-                  text = "Invoice: ${studentInvoice?.invoiceNumber ?: if (cloudDemo) "Not available" else "INV-2026-0842"}",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-              if (student.feeSummaryAvailable) ScholaPillBadge(status = student.feeStatus.label)
-            }
-            Spacer(modifier = Modifier.height(Spacing.s3))
-            val total = studentInvoice?.totalAmount ?: if (cloudDemo) 0L else 450000L
-            val paid = studentInvoice?.paidAmount ?: if (cloudDemo) 0L else 305000L
-            val due = (total - paid).coerceAtLeast(0L)
-
-            if (cloudDemo && studentInvoice == null) {
-              Text("No fee record is available to this account.", style = MaterialTheme.typography.bodyMedium)
-            } else {
-              InfoRow("Total Demanded", "₹${total / 100L}")
-              InfoRow("Paid Realized", "₹${paid / 100L}")
-              InfoRow("Outstanding Due", "₹${due / 100L}")
-
-            }
-            if (cloudDemo) Text("Use Fees for Razorpay test checkout.", style = MaterialTheme.typography.bodySmall)
-            if (due > 0) {
-              Spacer(modifier = Modifier.height(Spacing.s3))
-              AppButton(
-                text = "Collect Outstanding Dues ($${due / 100L})",
-                onClick = { onPayFee(student.name, due) },
-                modifier = Modifier.fillMaxWidth()
-              )
-            }
-          }
+    }}}
+    item {SchoolSection("Documents & marked papers") {SchoolGroup {
+      Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        val documents=cards.flatMap {card ->card.scores}.filter {it.checkedPaperUrl.isNotBlank()||it.answerKeyUrl.isNotBlank()}
+        if(documents.isEmpty()) Text("No marked-paper documents available.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        documents.forEach {score ->
+          Text(score.subjectName,style=MaterialTheme.typography.titleSmall)
+          if(score.checkedPaperUrl.isNotBlank()) SchoolDocumentButton(score.checkedPaperUrl,"Checked paper")
+          if(score.answerKeyUrl.isNotBlank()) SchoolDocumentButton(score.answerKeyUrl,"Answer key")
         }
       }
-
-      3 -> {
-        // TRANSCRIPT: Assessment grades & scores
-        if (studentGrades.isEmpty()) {
-          item {
-            EmptyStateView(
-              title = "No Grades Published Yet",
-              message = "Assessments for this cohort will appear once published by faculty."
-            )
-          }
-        } else {
-          items(studentGrades, key = { it.id }) { grd ->
-            AppCard(modifier = Modifier.fillMaxWidth()) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Column {
-                  Text(grd.assessmentTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text("${grd.subject} • ${grd.instructorName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                  Text("${grd.score} / ${grd.maxScore}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                  ScholaPillBadge(status = grd.letterGrade)
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    }}}
   }
 }
 
+private fun profileCurrency(paise: Long): String = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(java.math.BigDecimal(paise).movePointLeft(2))
+
 @Composable
 private fun InfoRow(label: String, value: String) {
-  Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm8), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Text(value.ifBlank { "Not provided" }, style = MaterialTheme.typography.bodyMedium,
-      fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+  Column(Modifier.fillMaxWidth().padding(vertical=Spacing.xs4)) {
+    Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(value.ifBlank {"Not provided"},style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
   }
 }

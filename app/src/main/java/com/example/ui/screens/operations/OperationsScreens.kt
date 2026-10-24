@@ -1,5 +1,6 @@
 package com.example.ui.screens.operations
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,118 +30,55 @@ import kotlinx.coroutines.launch
 import com.example.data.model.LeaveStatus
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
-import com.example.ui.components.SchoolFilterChip
+import com.example.ui.components.*
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.StatusBadge
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun OperationsHubScreen(
-  repository: ErpDataRepository,
-  onNavigateTo: (String) -> Unit,
-  onShowAddStudent: () -> Unit,
-  onShowAddTeacher: () -> Unit,
-  onShowCreateNotice: () -> Unit,
-  onShowApplyLeave: () -> Unit
-) {
-  val currentUser by repository.currentUser.collectAsState()
-  var query by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf("") }
-  var selectedArea by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf<String?>(null) }
-  var showBoundaries by remember(currentUser.id) { mutableStateOf(false) }
-  val modules = WorkspaceDirectory.visible(currentUser.role, query, WorkspaceArea.entries.find { it.name == selectedArea })
-  val availableAreas = WorkspaceDirectory.visible(currentUser.role).map { it.area }.distinct()
-  val administrator = currentUser.role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL)
-  val width = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
-  val columns = if (width >= 840) 3 else if (width >= 600) 2 else 1
-
-  LazyColumn(
-    Modifier.fillMaxSize().testTag("operations_hub_screen"),
-    contentPadding = PaddingValues(Spacing.screenPadding),
-    verticalArrangement = Arrangement.spacedBy(Spacing.md12)
-  ) {
+fun OperationsHubScreen(repository: ErpDataRepository,onNavigateTo: (String)->Unit,onShowAddStudent:()->Unit,onShowAddTeacher:()->Unit,onShowCreateNotice:()->Unit,onShowApplyLeave:()->Unit) {
+  val actor by repository.currentUser.collectAsState()
+  var query by androidx.compose.runtime.saveable.rememberSaveable(actor.id){mutableStateOf("")}
+  var area by androidx.compose.runtime.saveable.rememberSaveable(actor.id){mutableStateOf<String?>(null)}
+  var boundaries by remember {mutableStateOf(false)}
+  val administrator=actor.role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL)
+  val destinations=WorkspaceDirectory.visible(actor.role,query,WorkspaceArea.entries.find {it.name==area})
+  val available=WorkspaceDirectory.visible(actor.role).map {it.area}.distinct()
+  val columns=if(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp>=840)2 else 1
+  LazyColumn(Modifier.fillMaxSize().testTag("operations_hub_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+    item {Text("School workspaces",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      Text("${actor.role.displayName} · tools available to your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
     item {
-      Text("School workspaces", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-      Text("${currentUser.role.displayName} · ${WorkspaceDirectory.visible(currentUser.role).size} available tools",
-        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    item {
-      OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().testTag("module_search"),
-        label = { Text("Search workspaces") }, singleLine = true,
-        leadingIcon = { Icon(Icons.Default.Search, null) },
-        trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear search") } },
-        shape = RoundedCornerShape(Radius.input))
-    }
-    item {
-      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        item { SchoolFilterChip(selectedArea == null, { selectedArea = null }, { Text("All") }) }
-        items(availableAreas) { area -> SchoolFilterChip(selectedArea == area.name, { selectedArea = area.name }, { Text(area.label) }) }
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("module_search"),placeholder={Text("Search workspaces")},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotBlank())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear search")}},singleLine=true,shape=RoundedCornerShape(Radius.sm))
+      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        item {SchoolFilterChip(area==null,{area=null},{Text("All")})}
+        items(available){value->SchoolFilterChip(area==value.name,{area=value.name},{Text(value.label)})}
+      }
+      if(query.isBlank()&&area==null) FlowRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        if(administrator) {
+          OutlinedButton(onClick=onShowAddStudent){Text("Enrol student")};OutlinedButton(onClick=onShowAddTeacher){Text("Add faculty")};OutlinedButton(onClick=onShowCreateNotice){Text("Publish notice")}
+        } else if(actor.role!=UserRole.STUDENT) OutlinedButton(onClick=onShowApplyLeave){Text("Apply for leave")}
       }
     }
-    if (query.isBlank() && selectedArea == null) item {
-      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        if (administrator) {
-          item { FilledTonalButton(onClick = onShowAddStudent) { Icon(Icons.Default.PersonAdd, null); Spacer(Modifier.width(Spacing.sm8)); Text("Enrol student") } }
-          item { OutlinedButton(onClick = onShowAddTeacher) { Text("Add faculty") } }
-          item { OutlinedButton(onClick = onShowCreateNotice) { Text("Publish notice") } }
-        } else if (currentUser.role != UserRole.STUDENT) {
-          item { FilledTonalButton(onClick = onShowApplyLeave) { Text("Apply for leave") } }
-        }
-      }
-    }
-    if (modules.isEmpty()) item {
-      EmptyStateView(icon = Icons.Default.SearchOff, title = "No matching workspace", description = "Try a module name or choose another area.")
-    }
-    modules.groupBy { it.area }.forEach { (area, destinations) ->
-      item(key = area.name) {
-        Text(area.label, Modifier.padding(top = Spacing.md12), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-      }
-      items(destinations.chunked(columns)) { row ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-          row.forEach { destination ->
-            val (tint, container) = when (area) {
-              WorkspaceArea.PEOPLE, WorkspaceArea.FINANCE -> SemanticColors.onPeach to SemanticColors.peachContainer
-              WorkspaceArea.ACADEMICS -> SemanticColors.onLavender to SemanticColors.lavenderContainer
-              else -> MaterialTheme.colorScheme.onSecondaryContainer to MaterialTheme.colorScheme.secondaryContainer
-            }
-            val icon = when (area) {
-              WorkspaceArea.PEOPLE -> Icons.Default.Groups
-              WorkspaceArea.ACADEMICS -> Icons.Default.MenuBook
-              WorkspaceArea.ATTENDANCE -> Icons.Default.FactCheck
-              WorkspaceArea.FINANCE -> Icons.Default.AccountBalanceWallet
-              WorkspaceArea.OPERATIONS -> Icons.Default.Dashboard
-              WorkspaceArea.ACCOUNT -> Icons.Default.NotificationsNone
-            }
-            OutlinedCard(onClick = { onNavigateTo(destination.route) },
-              modifier = Modifier.weight(1f).testTag("workspace_${destination.route.substringBefore('?')}"),
-              shape = RoundedCornerShape(Radius.md),
-              colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-              Row(Modifier.fillMaxWidth().padding(Spacing.md12), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-                Box(Modifier.size(40.dp).background(container, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint) }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-                  Text(destination.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                  Text(destination.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-            }
+    if(destinations.isEmpty()) item {EmptyStateView(title="No matching workspace",message="Try another search or category.")}
+    items(destinations.groupBy {it.area}.toList().chunked(columns)) {groups->
+      Row(horizontalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
+        groups.forEach {(group,modules)->Column(Modifier.weight(1f)) {SchoolSection(group.label){SchoolGroup {
+          modules.forEach {destination->
+            val icon=when(group){WorkspaceArea.PEOPLE->Icons.Default.Groups;WorkspaceArea.ACADEMICS->Icons.Default.MenuBook;WorkspaceArea.ATTENDANCE->Icons.Default.FactCheck;WorkspaceArea.FINANCE->Icons.Default.ReceiptLong;WorkspaceArea.OPERATIONS->Icons.Default.Apps;WorkspaceArea.ACCOUNT->Icons.Default.Notifications}
+            SchoolRow(destination.title,destination.description,icon,{onNavigateTo(destination.route)},modifier=Modifier.testTag("workspace_${destination.route.substringBefore('?')}"))
+            if(destination!=modules.last()) HorizontalDivider()
           }
-          repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
-        }
+        }}}}
+        if(groups.size<columns) Spacer(Modifier.weight(1f))
       }
     }
-    if (administrator) item {
-      TextButton(onClick = { showBoundaries = !showBoundaries }, modifier = Modifier.fillMaxWidth()) {
-        Text(if (showBoundaries) "Hide integration boundaries" else "Specialist tools & integration boundaries")
-        Icon(if (showBoundaries) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
-      }
-      if (showBoundaries) Column(verticalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-        Text("These are not active modules", style = MaterialTheme.typography.titleSmall)
-        Text("Machine/RFID attendance needs a device provider and secure event ingestion. Tally, payroll, SMS/email and website tools need separate integrations. Hostel, counselling, scholarship and question-bank workflows are not implemented.", style = MaterialTheme.typography.bodyMedium)
-        Text("No device sync, payroll run or message dispatch happens from this directory. See the admin module matrix for scope and setup dependencies.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
+    if(administrator) item {
+      TextButton(onClick={boundaries=!boundaries}){Text(if(boundaries)"Hide integration boundaries" else "Specialist tools & integration boundaries")}
+      if(boundaries) Text("Machine/RFID attendance, Tally, payroll, SMS/email and website tools need separate integrations. Hostel, counselling, scholarship and question-bank workflows are not implemented. These are not active modules; no device sync, payroll run or message dispatch happens here.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }
 }
@@ -175,443 +113,93 @@ fun LeaveManagementScreen(
       dismissButton = { TextButton(onClick = { confirmDecision = null }) { Text("Cancel") } })
   }
 
-  val pendingLeaves = leaveRequests.filter { it.status == LeaveStatus.PENDING }
-  val historyLeaves = leaveRequests.filter { it.status != LeaveStatus.PENDING }
-
-  Scaffold(
-    floatingActionButton = {
-      ExtendedFloatingActionButton(
-        onClick = onShowApplyLeave,
-        icon = { Icon(Icons.Default.EventBusy, contentDescription = null) },
-        text = { Text("Apply Leave", fontWeight = FontWeight.Bold) },
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        modifier = Modifier.testTag("fab_apply_leave")
-      )
+  val pending=leaveRequests.filter {it.status==LeaveStatus.PENDING}
+  val history=leaveRequests.filter {it.status!=LeaveStatus.PENDING}
+  val visible=if(selectedTab==0)pending else history
+  var expanded by remember(currentUser.id){mutableStateOf<String?>(null)}
+  Column(Modifier.fillMaxSize().testTag("leave_management_screen")) {
+    Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.screenPadding),verticalAlignment=Alignment.CenterVertically) {
+      Text("Leave requests",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      Button(onClick=onShowApplyLeave,modifier=Modifier.testTag("fab_apply_leave"),shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Default.Add,null);Text("Apply")}
     }
-  ) { paddingValues ->
-    LazyColumn(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .testTag("leave_management_screen"),
-      contentPadding = PaddingValues(bottom = Spacing.xl24)
-    ) {
-      item {
-        TabRow(
-          selectedTabIndex = selectedTab,
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Tab(
-            selected = selectedTab == 0,
-            onClick = { selectedTab = 0 },
-            text = { Text("Pending (${pendingLeaves.size})", fontWeight = FontWeight.Bold) }
-          )
-          Tab(
-            selected = selectedTab == 1,
-            onClick = { selectedTab = 1 },
-            text = { Text("Processed History (${historyLeaves.size})", fontWeight = FontWeight.Bold) }
-          )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-      }
-
-      decisionError?.let { message -> item { Text(message, Modifier.padding(Spacing.screenPadding), color = MaterialTheme.colorScheme.error) } }
-      val displayList = if (selectedTab == 0) pendingLeaves else historyLeaves
-
-      if (displayList.isEmpty()) {
-        item {
-          EmptyStateView(
-            icon = Icons.Default.EventAvailable,
-            title = if (selectedTab == 0) "No Pending Requests" else "No Processed History",
-            description = if (selectedTab == 0) "All student and staff leaves have been processed." else "No historical leave applications recorded."
-          )
-        }
-      } else {
-        items(displayList, key = { it.id }) { leave ->
-          Card(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 6.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Column {
-                  Text(
-                    text = leave.applicantName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                  )
-                  Text(
-                    text = "${leave.classOrDept} • ${leave.applicantRole.displayName}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                  )
-                }
-                StatusBadge(status = leave.status.label, type = "leave")
-              }
-
-              Spacer(modifier = Modifier.height(8.dp))
-
-              Text(
-                text = "${leave.leaveType}: ${leave.startDate} to ${leave.endDate} (${leave.daysCount} Day(s))",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-              )
-
-              Spacer(modifier = Modifier.height(4.dp))
-
-              Text(
-                text = "\"${leave.reason}\"",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-
-              if (leave.approverRemark.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Surface(
-                  shape = RoundedCornerShape(8.dp),
-                  color = MaterialTheme.colorScheme.surfaceVariant,
-                  modifier = Modifier.fillMaxWidth()
-                ) {
-                  Text(
-                    text = "Remark: ${leave.approverRemark}",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(8.dp)
-                  )
-                }
-              }
-
-              if (leave.status == LeaveStatus.PENDING && (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN)) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.End
-                ) {
-                  OutlinedButton(
-                    enabled = deciding == null,
-                    onClick = { remark = ""; confirmDecision = leave.id to LeaveStatus.REJECTED },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
-                  ) {
-                    Text("Reject")
-                  }
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Button(
-                    enabled = deciding == null,
-                    onClick = { remark = ""; confirmDecision = leave.id to LeaveStatus.APPROVED },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess)
-                  ) {
-                    Text(if (deciding == leave.id) "Saving…" else "Approve")
-                  }
-                }
-              }
-            }
+    TabRow(selectedTabIndex=selectedTab,containerColor=MaterialTheme.colorScheme.background) {
+      Tab(selected=selectedTab==0,onClick={selectedTab=0},text={Text("Pending (${pending.size})")})
+      Tab(selected=selectedTab==1,onClick={selectedTab=1},text={Text("History (${history.size})")})
+    }
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      decisionError?.let {message->item {Text(message,color=MaterialTheme.colorScheme.error)}}
+      if(visible.isEmpty()) item {EmptyStateView(title="No requests in this view",message="Leave applications and confirmed decisions appear here.")}
+      items(visible,key={it.id}) {leave->SchoolGroup {
+        SchoolRow(leave.applicantName,"${leave.leaveType} · ${leave.startDate} – ${leave.endDate}",Icons.Default.EventBusy,{expanded=if(expanded==leave.id)null else leave.id},leave.status.label)
+        AnimatedVisibility(expanded==leave.id) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Text("${leave.applicantRole.displayName} · ${leave.classOrDept} · ${leave.daysCount} days",style=MaterialTheme.typography.bodySmall)
+          Text(leave.reason,style=MaterialTheme.typography.bodyMedium)
+          Text("Applied ${leave.appliedDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          if(leave.approverRemark.isNotBlank()) Text("School remark: ${leave.approverRemark}",style=MaterialTheme.typography.bodySmall)
+          if(leave.status==LeaveStatus.PENDING&&currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            OutlinedButton(enabled=deciding==null,onClick={remark="";confirmDecision=leave.id to LeaveStatus.REJECTED}){Text("Reject")}
+            Button(enabled=deciding==null,onClick={remark="";confirmDecision=leave.id to LeaveStatus.APPROVED}){Text(if(deciding==leave.id)"Saving…" else "Approve")}
           }
-        }
-      }
+        }}
+      }}
     }
   }
 }
 
 @Composable
-fun TransportScreen(
-  repository: ErpDataRepository
-) {
+fun TransportScreen(repository: ErpDataRepository) {
   val routes by repository.transportRoutes.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("transport_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(12.dp)
-  ) {
-    item {
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "School Transport",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-              Text(
-                text = "${routes.size} routes • Scheduled stops and driver contacts",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-              )
-            }
-            Surface(
-              shape = RoundedCornerShape(8.dp),
-              color = StatusSuccess
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Box(modifier = Modifier.size(8.dp).background(Color.White, CircleShape))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("ROUTES", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (routes.isEmpty()) item { EmptyStateView("No accessible transport routes", "Route records appear here when configured and available to your school account.") }
-    items(routes, key = { it.id }) { route ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Surface(
-              shape = RoundedCornerShape(6.dp),
-              color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-              Text(
-                text = route.routeNumber,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-              )
-            }
-            Text(
-              text = "Bus: ${route.vehicleNumber}",
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold
-            )
-          }
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          Text(
-            text = route.routeName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-          )
-
-          Spacer(modifier = Modifier.height(6.dp))
-
-          Text(
-            text = "Driver: ${route.driverName} (${route.driverPhone})",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-
-          Spacer(modifier = Modifier.height(10.dp))
-
-          Text(
-            text = "Route Stops & Timings:",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold
-          )
-
-          Spacer(modifier = Modifier.height(4.dp))
-
-          route.stops.forEach { stop ->
-            Row(
-              modifier = Modifier.padding(vertical = 2.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Box(modifier = Modifier.size(6.dp).background(RevenexBlue, CircleShape))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(text = stop, style = MaterialTheme.typography.bodySmall)
-            }
-          }
-        }
+  var query by remember {mutableStateOf("")}
+  val visible=routes.filter {query.isBlank()||it.routeName.contains(query,true)||it.routeNumber.contains(query,true)||it.stops.any {stop->stop.contains(query,true)}}
+  LazyColumn(Modifier.fillMaxSize().testTag("transport_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {Text("School transport",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search route or stop")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching routes",message="Routes appear when configured and available to your school account.")}
+    items(visible,key={it.id}) {route->var expanded by remember(route.id){mutableStateOf(false)}
+      SchoolGroup {
+        SchoolRow(route.routeName,"${route.routeNumber} · ${route.vehicleNumber}",Icons.Default.DirectionsBus,{expanded=!expanded},"${route.stops.size} stops")
+        AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Text("Driver: ${route.driverName} · ${route.driverPhone}",style=MaterialTheme.typography.bodyMedium)
+          Text("Stops & timings",style=MaterialTheme.typography.titleSmall)
+          route.stops.forEachIndexed {index,stop->Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12)){Text((index+1).toString(),style=MaterialTheme.typography.labelLarge);Text(stop,style=MaterialTheme.typography.bodySmall)}}
+        }}
       }
     }
   }
 }
 
 @Composable
-fun LibraryScreen(
-  repository: ErpDataRepository
-) {
+fun LibraryScreen(repository: ErpDataRepository) {
   val books by repository.libraryBooks.collectAsState()
-  val cloudMode = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("library_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(10.dp)
-  ) {
-    item {
-      Text("School library", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-      Text(if (cloudMode) "Catalogue and availability. Borrower tracking and circulation are not enabled for this cloud demo." else "Local sample catalogue and circulation preview.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    if (books.isEmpty()) item { EmptyStateView("No books available", "The school catalogue has no accessible records yet.") }
-    items(books, key = { it.id }) { book ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Row(
-          modifier = Modifier.padding(16.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Box(
-            modifier = Modifier
-              .size(48.dp)
-              .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.Book,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.onSurface,
-              modifier = Modifier.size(24.dp)
-            )
-          }
-
-          Spacer(modifier = Modifier.width(14.dp))
-
-          Column(modifier = Modifier.weight(1f)) {
-            Text(
-              text = book.title,
-              style = MaterialTheme.typography.titleSmall,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "By ${book.author}",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-              text = "${book.shelfLocation} • Available: ${book.availableCopies} / ${book.totalCopies}",
-              style = MaterialTheme.typography.labelSmall,
-              color = if (book.availableCopies > 0) SemanticColors.onSuccess else SemanticColors.onDanger,
-              fontWeight = FontWeight.Bold,
-              fontSize = 12.sp
-            )
-          }
-
-          if (cloudMode) {
-            Text("Catalogue", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          } else if (book.availableCopies > 0) {
-            OutlinedButton(
-              onClick = { repository.issueBook(book.id) },
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-            ) {
-              Text("Issue", fontSize = 12.sp)
-            }
-          } else {
-            Button(
-              onClick = { repository.returnBook(book.id) },
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-            ) {
-              Text("Return", fontSize = 12.sp)
-            }
-          }
-        }
-      }
-    }
+  val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  var query by remember {mutableStateOf("")}
+  val visible=books.filter {query.isBlank()||it.title.contains(query,true)||it.author.contains(query,true)||it.shelfLocation.contains(query,true)}
+  LazyColumn(Modifier.fillMaxSize().testTag("library_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {Text("School library",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      Text(if(cloud)"Catalogue only. Cloud borrower tracking and circulation are not configured." else "Local sample catalogue and circulation preview.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search title, author or shelf")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching books",message="No accessible catalogue records match this search.")}
+    items(visible,key={it.id}) {book->SchoolGroup {Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Icon(Icons.Default.MenuBook,null,tint=MaterialTheme.colorScheme.primary)
+      Column(Modifier.weight(1f)){Text(book.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);Text(book.author,style=MaterialTheme.typography.bodySmall);Text("${book.shelfLocation} · ${book.availableCopies}/${book.totalCopies} available",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+      if(!cloud) TextButton(onClick={if(book.availableCopies>0)repository.issueBook(book.id)else repository.returnBook(book.id)}){Text(if(book.availableCopies>0)"Issue" else "Return")}
+    }}}
   }
 }
 
 @Composable
-fun InventoryScreen(
-  repository: ErpDataRepository
-) {
+fun InventoryScreen(repository: ErpDataRepository) {
   val inventory by repository.inventory.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("inventory_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(10.dp)
-  ) {
-    item {
-      Text("School inventory", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-      Text("Recorded assets, quantities and locations", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    if (inventory.isEmpty()) item { EmptyStateView("No assets recorded", "No inventory records are available for this school session.") }
-    items(inventory, key = { it.id }) { item ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = item.itemName,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-              modifier = Modifier.weight(1f)
-            )
-            StatusBadge(status = item.condition)
-          }
-
-          Spacer(modifier = Modifier.height(6.dp))
-
-          Text(
-            text = "Category: ${item.category} • Location: ${item.location}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(
-              text = "Units: ${item.quantity}",
-              style = MaterialTheme.typography.labelMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Estimated Asset Value: ₹${item.estimatedValue.toInt()}",
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.primary,
-              fontWeight = FontWeight.Bold
-            )
-          }
-        }
-      }
-    }
+  var query by remember {mutableStateOf("")}
+  val visible=inventory.filter {query.isBlank()||it.itemName.contains(query,true)||it.category.contains(query,true)||it.location.contains(query,true)}
+  LazyColumn(Modifier.fillMaxSize().testTag("inventory_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {Text("School inventory",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search asset, category or location")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching assets",message="No accessible inventory records match this search.")}
+    items(visible,key={it.id}) {asset->SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      Row(Modifier.fillMaxWidth()){Text(asset.itemName,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);StatusBadge(status=asset.condition)}
+      Text("${asset.category} · ${asset.location}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text("${asset.quantity} units · Estimated value ${java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(asset.estimatedValue)}",style=MaterialTheme.typography.bodySmall)
+    }}}
   }
 }

@@ -20,165 +20,65 @@ import com.example.ui.components.SectionHeader
 import com.example.ui.components.SimpleBarChart
 import com.example.ui.components.SimpleProgressRing
 import com.example.ui.components.StatCard
+import com.example.ui.components.*
 import com.example.ui.theme.*
 
 @Composable
-fun ReportsAnalyticsScreen(
-  repository: ErpDataRepository
-) {
+fun ReportsAnalyticsScreen(repository: ErpDataRepository) {
   val students by repository.students.collectAsState()
   val teachers by repository.teachers.collectAsState()
-  val feeRecords by repository.feeRecords.collectAsState()
-
-  val totalStudents = students.size
-  val totalCollected = feeRecords.sumOf { it.paidAmount }
-  val totalPending = feeRecords.sumOf { it.pendingAmount }
-  val totalDemanded = feeRecords.sumOf { it.totalFee }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("reports_analytics_screen"),
-    contentPadding = PaddingValues(bottom = Spacing.xl24)
-  ) {
+  val fees by repository.feeRecords.collectAsState()
+  val registers by repository.classAttendance.collectAsState()
+  val actor by repository.currentUser.collectAsState()
+  val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val money:(Long)->String={java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(java.math.BigDecimal(it).movePointLeft(2))}
+  val cohorts=students.groupBy {it.fullClass}.toSortedMap()
+  LazyColumn(Modifier.fillMaxSize().testTag("reports_analytics_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
     item {
-      Card(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "School reports",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-              Text(
-                text = "Operational totals with illustrative demo charts",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-              )
-            }
-            IconButton(
-              enabled = false,
-              onClick = { /* Existing export is unavailable. */ },
-              modifier = Modifier.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(10.dp))
-            ) {
-              Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF export unavailable", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+      Text("School reports",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      Text(if(cloud) "School ${actor.schoolId} · loaded academic session" else "Local sample school · loaded session",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text("Totals reflect records available to your account. No growth or trend values are estimated.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    item {Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      SchoolMetric(students.size.toString(),"Students",Icons.Default.Groups,Modifier.weight(1f))
+      SchoolMetric(teachers.size.toString(),"Faculty",Icons.Default.School,Modifier.weight(1f))
+      SchoolMetric(cohorts.size.toString(),"Classes",Icons.Default.Class,Modifier.weight(1f))
+    }}
+    item {SchoolSection("Fee ledger · loaded session") {SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      listOf("Billed" to fees.sumOf {it.totalFee},"Collected" to fees.sumOf {it.paidAmount},"Outstanding" to fees.sumOf {it.pendingAmount}).forEach {(label,value)->
+        Row(Modifier.fillMaxWidth()) {Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);Text(money(value),style=MaterialTheme.typography.titleSmall)}
+      }
+    }}}}
+    item {SchoolSection("Enrolment by class") {
+      if(cohorts.isEmpty()) EmptyStateView(title="No class data",message="No student records are available for this scope.")
+      else SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        val largest=cohorts.values.maxOf {it.size}.coerceAtLeast(1)
+        cohorts.forEach {(name,pupils)->
+          Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+            Text(name,Modifier.widthIn(min=64.dp),style=MaterialTheme.typography.bodySmall)
+            LinearProgressIndicator(progress={pupils.size.toFloat()/largest},modifier=Modifier.weight(1f),color=MaterialTheme.colorScheme.primary,trackColor=MaterialTheme.colorScheme.secondaryContainer)
+            Text(pupils.size.toString(),style=MaterialTheme.typography.labelLarge)
           }
         }
-      }
-    }
-
-    item {
-      SectionHeader(title = "Core Operational Metrics")
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-      ) {
-        StatCard(
-          title = "Fee Realization",
-          value = if (totalDemanded > 0L) "${(totalCollected.toDouble() * 100 / totalDemanded).toInt()}%" else "—",
-          sublabel = "₹${totalCollected / 100000L}k Collected",
-          icon = Icons.Default.AccountBalanceWallet,
-          iconTint = ScholaSlateNavy,
-          iconBackground = MaterialTheme.colorScheme.secondaryContainer,
-          trendText = "Current fee records",
-          isPositiveTrend = true,
-          modifier = Modifier.weight(1f)
-        )
-        StatCard(
-          title = "Sample Attendance",
-          value = "95.6%",
-          sublabel = "Illustrative demo figure",
-          icon = Icons.Default.FactCheck,
-          iconTint = RevenexBlue,
-          iconBackground = MaterialTheme.colorScheme.primaryContainer,
-          trendText = "98% Target",
-          isPositiveTrend = true,
-          modifier = Modifier.weight(1f)
-        )
-      }
-      Spacer(modifier = Modifier.height(14.dp))
-    }
-
-    item {
-      SectionHeader(title = "Subject-Wise Academic Mastery")
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-      ) {
-        SimpleBarChart(
-          title = "Sample Subject Scores (Illustrative)",
-          data = listOf(
-            "Math" to 92.4f,
-            "Physics" to 88.6f,
-            "English" to 91.0f,
-            "Social" to 87.5f,
-            "CS/AI" to 96.2f,
-            "Hindi" to 86.8f
-          ),
-          barColor = MaterialTheme.colorScheme.primary
-        )
-
-        SimpleBarChart(
-          title = "Sample Grade Fee Ratios (Illustrative)",
-          data = listOf(
-            "G-10" to 84.0f,
-            "G-9" to 92.5f,
-            "G-8" to 78.0f,
-            "G-7" to 95.0f,
-            "G-6" to 90.2f
-          ),
-          barColor = MaterialTheme.colorScheme.tertiary
-        )
-      }
-      Spacer(modifier = Modifier.height(14.dp))
-    }
-
-    item {
-      SectionHeader(title = "Institutional Health Summary")
-      Card(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Text(
-            text = "Illustrative Demo Summary — Not Verified Findings",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-          )
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            text = "• 98.4% Teacher on-time attendance with 0 unscheduled classroom vacancies.\n• Fee collection is 14% higher than corresponding cycle in 2025.\n• 100% of homework assignments submitted and graded digitally on portal.\n• GPS bus tracking active on all 3 transport routes with 0 delay escalations.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 20.sp
-          )
+      }}
+    }}
+    item {SchoolSection("Recorded attendance") {
+      Text("Each row is one saved class/date/session register.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      SchoolGroup {
+        if(registers.isEmpty()) Text("No saved registers available.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
+        registers.values.sortedByDescending {it.date}.forEach {record ->
+          Row(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Column(Modifier.weight(1f)){Text("${record.classGrade}-${record.division} · ${record.date}",style=MaterialTheme.typography.titleSmall);Text(record.sessionSlot,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+            Text("${record.presentCount}/${record.totalStudents} present",style=MaterialTheme.typography.labelMedium)
+          }
+          HorizontalDivider()
         }
       }
-    }
+    }}
+    item {SchoolSection("Faculty by department") {SchoolGroup {
+      if(teachers.isEmpty()) Text("No faculty data available.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
+      teachers.groupBy {it.department}.forEach {(department,staff)->Row(Modifier.fillMaxWidth().padding(Spacing.md12)) {Text(department,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);Text(staff.size.toString(),style=MaterialTheme.typography.titleSmall)}}
+    }}}
+    item {Text("Report export is not configured in this demo.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   }
 }

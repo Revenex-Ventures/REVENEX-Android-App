@@ -27,130 +27,34 @@ import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TeacherDetailScreen(
-  teacherId: String,
-  repository: ErpDataRepository,
-  onBack: () -> Unit
-) {
+fun TeacherDetailScreen(teacherId: String, repository: ErpDataRepository, onBack: () -> Unit) {
   val teachers by repository.teachers.collectAsState()
   val timetable by repository.timetable.collectAsState()
-  val currentUser by repository.currentUser.collectAsState()
-
-  val teacher = teachers.firstOrNull { it.id == teacherId }
-  if (teacher == null) {
-    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(Spacing.s4)) {
-      TextButton(onClick = onBack) { Text("Back") }
-      EmptyStateView(title = "Teacher unavailable", message = "This record is not loaded or your account cannot access it.")
-    }
-    return
-  }
-  val teacherClasses = timetable.filter { it.teacherName.contains(teacher.name.split(" ").lastOrNull() ?: "") }
-
-  Scaffold(
-    containerColor = MaterialTheme.colorScheme.background,
-    topBar = {
-      TopAppBar(
-        title = { Text("Faculty Profile", fontWeight = FontWeight.Bold) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+  val teacher=teachers.firstOrNull {it.id==teacherId}
+  if(teacher==null){Column(Modifier.padding(Spacing.screenPadding)){TextButton(onClick=onBack){Text("Back")};EmptyStateView(title="Faculty unavailable",message="This record is not loaded or your account cannot access it.")};return}
+  val slots=timetable.filter {it.teacherName.contains(teacher.name.split(" ").lastOrNull()?:"")}
+  Scaffold(topBar={TopAppBar(title={Text("Faculty profile",style=MaterialTheme.typography.titleMedium)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}})}) {padding ->
+    LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+      item {SchoolGroup {Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+        Avatar(teacher.name,size=40.dp,background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
+        Column(Modifier.weight(1f)){Text(teacher.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text("${teacher.department} · ${teacher.designation}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(teacher.employeeId,style=MaterialTheme.typography.labelSmall)}
+      }}}
+      item {SchoolSection("Contact & qualifications") {SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        Text(teacher.email,style=MaterialTheme.typography.bodyMedium);Text(teacher.phone,style=MaterialTheme.typography.bodyMedium)
+        Text(teacher.qualification,style=MaterialTheme.typography.bodyMedium)
+        Text("${teacher.experienceYears} years experience · Joined ${teacher.joiningDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Classes: ${teacher.assignedClasses.joinToString(", ")}",style=MaterialTheme.typography.bodySmall)
+        Text("Subjects: ${teacher.subjects.joinToString(", ")}",style=MaterialTheme.typography.bodySmall)
+      }}}}
+      item {SchoolSection("Weekly schedule") {if(slots.isEmpty()) Text("No timetable slots assigned.",style=MaterialTheme.typography.bodySmall)}}
+      slots.groupBy {it.dayOfWeek}.forEach {(day,lessons) ->
+        item {SchoolSection(day){SchoolGroup {lessons.sortedBy {it.periodNumber}.forEach {slot ->
+          Row(Modifier.padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+            Column(Modifier.width(72.dp)){Text(slot.startTime,style=MaterialTheme.typography.labelLarge);Text(slot.endTime,style=MaterialTheme.typography.bodySmall)}
+            Column(Modifier.weight(1f)){Text(slot.subject,style=MaterialTheme.typography.titleSmall);Text("Class ${slot.classGrade}-${slot.division} · ${slot.roomNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
           }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-      )
-    }
-  ) { paddingValues ->
-    LazyColumn(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .padding(horizontal = Spacing.s4, vertical = Spacing.s2),
-      verticalArrangement = Arrangement.spacedBy(Spacing.s3),
-      contentPadding = PaddingValues(bottom = Spacing.xl24)
-    ) {
-      // 1. HERO IDENTITY SURFACE (Dark Onyx, 22dp corners)
-      item {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.hero))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
-            .padding(Spacing.cardPaddingLarge)
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Avatar(name = teacher.name, size = 52.dp, background = ScholaSlateNavy)
-            Spacer(modifier = Modifier.width(Spacing.s3))
-            Column {
-              Text(
-                text = teacher.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-              Text(
-                text = "${teacher.department} • ${teacher.designation}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-              Text(
-                text = "Emp ID: ${teacher.employeeId} • ${teacher.qualification}",
-                style = MaterialTheme.typography.labelSmall,
-                color = SemanticColors.onWarning,
-                fontSize = 12.sp
-              )
-            }
-          }
-        }
-      }
-
-      // 2. CONTACT & CREDENTIALS
-      item {
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Text("Faculty Contact & Qualifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          InfoCard(title = "Email Address", value = teacher.email, icon = Icons.Default.Email)
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          InfoCard(title = "Direct Phone", value = teacher.phone, icon = Icons.Default.Phone)
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          InfoCard(title = "Experience", value = "${teacher.experienceYears} Years", icon = Icons.Default.WorkspacePremium)
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          InfoCard(title = "Assigned Classes", value = teacher.assignedClasses.joinToString(", "), icon = Icons.Default.Class)
-        }
-      }
-
-      // 3. WEEKLY TIMETABLE SLOTS
-      item {
-        SectionHeader(horizontalPadding = 0.dp, title = "Weekly Lecture Schedule (${teacherClasses.size})")
-      }
-
-      if (teacherClasses.isEmpty()) {
-        item {
-          EmptyStateView(
-            title = "No Lecture Slots",
-            message = "No timetable slots currently assigned to this faculty member."
-          )
-        }
-      } else {
-        items(teacherClasses, key = { it.id }) { slot ->
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column {
-                Text(slot.subject, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text("${slot.dayOfWeek} • Period ${slot.periodNumber} (${slot.startTime} - ${slot.endTime})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text("Class ${slot.classGrade}-${slot.division} • Room ${slot.roomNumber}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-              ScholaPillBadge(status = "Class ${slot.classGrade}-${slot.division}")
-            }
-          }
-        }
+          HorizontalDivider()
+        }}}}
       }
     }
   }

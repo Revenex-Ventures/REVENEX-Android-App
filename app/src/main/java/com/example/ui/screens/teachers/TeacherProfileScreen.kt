@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.data.model.Teacher
 import com.example.data.repository.ErpDataRepository
-import com.example.ui.components.Avatar
+import com.example.ui.components.*
 import com.example.ui.components.StatusBadge
 import com.example.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +54,6 @@ fun TeacherProfileScreen(
   val teacher = remember(teachers, currentUser) {
     teachers.firstOrNull { it.email.equals(currentUser.email, ignoreCase = true) }
       ?: teachers.firstOrNull { it.name.equals(currentUser.name, ignoreCase = true) }
-      ?: teachers.firstOrNull()
   }
 
   if (teacher == null) {
@@ -102,9 +101,9 @@ fun TeacherProfileScreen(
   Column(
     modifier = Modifier
       .fillMaxSize()
-      .verticalScroll(rememberScrollState())
-      .padding(16.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp)
+      .imePadding().verticalScroll(rememberScrollState())
+      .padding(Spacing.screenPadding),
+    verticalArrangement = Arrangement.spacedBy(Spacing.xl24)
   ) {
     TeacherHeaderCard(
       teacher = teacher,
@@ -125,282 +124,59 @@ fun TeacherProfileScreen(
 }
 
 @Composable
-private fun TeacherHeaderCard(
-  teacher: Teacher,
-  onPickPhoto: () -> Unit
-) {
-  val accent = MaterialTheme.colorScheme.primary
-  Card(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.12f)),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
-  ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(20.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Box(modifier = Modifier.size(64.dp)) {
-        Box(
-          modifier = Modifier
-            .fillMaxSize()
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, accent.copy(alpha = 0.25f), CircleShape)
-            .clickable(onClick = onPickPhoto),
-          contentAlignment = Alignment.Center
-        ) {
-          Avatar(
-            name = teacher.name,
-            size = 56.dp,
-            imagePath = teacher.avatarUrl.ifBlank { null },
-            background = accent,
-            textColor = MaterialTheme.colorScheme.onPrimary
-          )
-        }
-        // Camera badge — drawn outside the clipped avatar so it is never cut off.
-        Box(
-          modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .border(2.dp, Color.White, CircleShape),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            Icons.Filled.CameraAlt,
-            contentDescription = "Change photo",
-            tint = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.size(16.dp)
-          )
-        }
+private fun TeacherHeaderCard(teacher: Teacher,onPickPhoto: () -> Unit) {
+  SchoolGroup {
+    Row(Modifier.fillMaxWidth().padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Box(Modifier.size(48.dp).clickable(onClick=onPickPhoto),contentAlignment=Alignment.Center) {
+        Avatar(teacher.name,size=40.dp,imagePath=teacher.avatarUrl.ifBlank {null},background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
       }
-
-      Spacer(modifier = Modifier.width(16.dp))
-
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-          text = teacher.name,
-          style = MaterialTheme.typography.headlineSmall,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-          text = teacher.designation,
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-          text = "Employee ID ${teacher.employeeId}",
-          style = MaterialTheme.typography.bodySmall,
-          color = accent,
-          fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        StatusBadge(status = teacher.status)
+      Column(Modifier.weight(1f)) {
+        Text(teacher.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+        Text(teacher.designation,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(teacher.employeeId,style=MaterialTheme.typography.labelSmall)
       }
+      IconButton(onClick=onPickPhoto){Icon(Icons.Filled.CameraAlt,"Change photo")}
     }
   }
 }
 
 @Composable
-private fun EditableFacultyCard(
-  teacher: Teacher,
-  onSave: (Teacher) -> Unit
-) {
-  var editing by remember(teacher.id) { mutableStateOf(false) }
-  var saved by remember(teacher.id) { mutableStateOf(true) }
-
-  var name by remember(teacher.id) { mutableStateOf(teacher.name) }
-  var dob by remember(teacher.id) { mutableStateOf(teacher.dob) }
-  var phone by remember(teacher.id) { mutableStateOf(teacher.phone) }
-  var email by remember(teacher.id) { mutableStateOf(teacher.email) }
-  var department by remember(teacher.id) { mutableStateOf(teacher.department) }
-  var designation by remember(teacher.id) { mutableStateOf(teacher.designation) }
-  var qualification by remember(teacher.id) { mutableStateOf(teacher.qualification) }
-
-  fun beginEdit() {
-    name = teacher.name
-    dob = teacher.dob
-    phone = teacher.phone
-    email = teacher.email
-    department = teacher.department
-    designation = teacher.designation
-    qualification = teacher.qualification
-    saved = true
-    editing = true
-  }
-
-  Card(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-  ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(
-          text = "Personal & Professional Details",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onSurface
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(
-            text = when {
-              editing && saved -> "Saved"
-              editing -> "Unsaved changes"
-              else -> "View only"
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = if (saved) SemanticColors.onSuccess else MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-          )
-          if (!editing) {
-            Spacer(modifier = Modifier.width(4.dp))
-            IconButton(
-              onClick = { beginEdit() },
-              modifier = Modifier.size(32.dp)
-            ) {
-              Icon(
-                Icons.Filled.Edit,
-                contentDescription = "Edit details",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(14.dp))
-
-      if (editing) {
-        OutlinedTextField(
-          value = name,
-          onValueChange = { name = it; saved = false },
-          label = { Text("Full Name") },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-          OutlinedTextField(
-            value = dob,
-            onValueChange = { dob = it; saved = false },
-            label = { Text("Date of Birth") },
-            singleLine = true,
-            modifier = Modifier.weight(1f)
-          )
-          OutlinedTextField(
-            value = department,
-            onValueChange = { department = it; saved = false },
-            label = { Text("Department") },
-            singleLine = true,
-            modifier = Modifier.weight(1f)
-          )
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = phone,
-          onValueChange = { phone = it; saved = false },
-          label = { Text("Phone") },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = email,
-          onValueChange = { email = it; saved = false },
-          label = { Text("Email") },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = designation,
-          onValueChange = { designation = it; saved = false },
-          label = { Text("Designation") },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-          value = qualification,
-          onValueChange = { qualification = it; saved = false },
-          label = { Text("Qualification") },
-          minLines = 2,
-          modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          OutlinedButton(
-            onClick = {
-              name = teacher.name
-              dob = teacher.dob
-              phone = teacher.phone
-              email = teacher.email
-              department = teacher.department
-              designation = teacher.designation
-              qualification = teacher.qualification
-              saved = true
-              editing = false
-            },
-            modifier = Modifier.weight(1f)
-          ) {
-            Text("Cancel")
-          }
-          Button(
-            onClick = {
-              onSave(
-                teacher.copy(
-                  name = name.trim(),
-                  dob = dob.trim(),
-                  phone = phone.trim(),
-                  email = email.trim(),
-                  department = department.trim(),
-                  designation = designation.trim(),
-                  qualification = qualification.trim()
-                )
-              )
-              saved = true
-              editing = false
-            },
-            enabled = !saved,
-            colors = ButtonDefaults.buttonColors(
-              containerColor = if (saved) SemanticColors.successContainer else MaterialTheme.colorScheme.primary,
-              contentColor = if (saved) SemanticColors.onSuccess else Color.White
-            ),
-            modifier = Modifier.weight(1f)
-          ) {
-            Text("Save Changes", fontWeight = FontWeight.Bold)
-          }
-        }
-      } else {
-        LabeledValue("Full Name", teacher.name)
-        LabeledValue("Date of Birth", teacher.dob)
-        LabeledValue("Phone", teacher.phone)
-        LabeledValue("Email", teacher.email)
-        LabeledValue("Designation", teacher.designation)
-        LabeledValue("Department", teacher.department)
-        LabeledValue("Qualification", teacher.qualification)
+private fun EditableFacultyCard(teacher: Teacher,onSave: (Teacher) -> Unit) {
+  var editing by remember(teacher.id){mutableStateOf(false)}
+  var saved by remember(teacher.id){mutableStateOf(true)}
+  var name by remember(teacher.id){mutableStateOf(teacher.name)}
+  var dob by remember(teacher.id){mutableStateOf(teacher.dob)}
+  var phone by remember(teacher.id){mutableStateOf(teacher.phone)}
+  var email by remember(teacher.id){mutableStateOf(teacher.email)}
+  var department by remember(teacher.id){mutableStateOf(teacher.department)}
+  var designation by remember(teacher.id){mutableStateOf(teacher.designation)}
+  var qualification by remember(teacher.id){mutableStateOf(teacher.qualification)}
+  fun reset(){name=teacher.name;dob=teacher.dob;phone=teacher.phone;email=teacher.email;department=teacher.department;designation=teacher.designation;qualification=teacher.qualification;saved=true}
+  Column(verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+    SchoolSection("Personal details",if(editing)"Editing" else "Edit",{if(!editing){reset();editing=true}}) {
+      if(editing) {
+        OutlinedTextField(name,{name=it;saved=false},Modifier.fillMaxWidth(),label={Text("Full name")},singleLine=true)
+        OutlinedTextField(dob,{dob=it;saved=false},Modifier.fillMaxWidth(),label={Text("Date of birth")},singleLine=true)
+      } else SchoolGroup {Column(Modifier.padding(Spacing.md12)){LabeledValue("Full name",teacher.name);LabeledValue("Date of birth",teacher.dob)}}
+    }
+    SchoolSection("Contact") {
+      if(editing) {
+        OutlinedTextField(phone,{phone=it;saved=false},Modifier.fillMaxWidth(),label={Text("Phone")},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Phone))
+        OutlinedTextField(email,{email=it;saved=false},Modifier.fillMaxWidth(),label={Text("Email")},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Email))
+      } else SchoolGroup {Column(Modifier.padding(Spacing.md12)){LabeledValue("Phone",teacher.phone);LabeledValue("Email",teacher.email)}}
+    }
+    SchoolSection("Professional information") {
+      if(editing) {
+        OutlinedTextField(department,{department=it;saved=false},Modifier.fillMaxWidth(),label={Text("Department")},singleLine=true)
+        OutlinedTextField(designation,{designation=it;saved=false},Modifier.fillMaxWidth(),label={Text("Designation")},singleLine=true)
+        OutlinedTextField(qualification,{qualification=it;saved=false},Modifier.fillMaxWidth(),label={Text("Qualification")},minLines=2)
+      } else SchoolGroup {Column(Modifier.padding(Spacing.md12)){LabeledValue("Department",teacher.department);LabeledValue("Designation",teacher.designation);LabeledValue("Qualification",teacher.qualification)}}
+    }
+    if(editing) {
+      Text(if(saved)"No unsaved changes" else "Unsaved changes",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        OutlinedButton(onClick={reset();editing=false},modifier=Modifier.weight(1f)){Text("Cancel")}
+        Button(onClick={onSave(teacher.copy(name=name.trim(),dob=dob.trim(),phone=phone.trim(),email=email.trim(),department=department.trim(),designation=designation.trim(),qualification=qualification.trim()));saved=true;editing=false},enabled=!saved,modifier=Modifier.weight(1f)){Text("Save changes")}
       }
     }
   }
@@ -408,50 +184,21 @@ private fun EditableFacultyCard(
 
 @Composable
 private fun FacultyRecordCard(teacher: Teacher) {
-  Card(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-  ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
-      Text(
-        text = "Faculty Record",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
-      )
-      Spacer(modifier = Modifier.height(12.dp))
-      LabeledValue("Employee ID", teacher.employeeId)
-      LabeledValue("Experience", "${teacher.experienceYears} years")
-      LabeledValue("Weekly Periods", "${teacher.weeklyPeriods}")
-      LabeledValue("Attendance", "${teacher.attendancePercent}%")
-      LabeledValue("Joining Date", teacher.joiningDate)
-      LabeledValue("Assigned Classes", teacher.assignedClasses.joinToString(", ").ifBlank { "—" })
-      LabeledValue("Subjects", teacher.subjects.joinToString(", ").ifBlank { "—" })
-    }
-  }
+  SchoolSection("Faculty record") {SchoolGroup {Column(Modifier.padding(Spacing.md12)) {
+    LabeledValue("Employee ID",teacher.employeeId)
+    LabeledValue("Experience / joined","${teacher.experienceYears} years · ${teacher.joiningDate}")
+    LabeledValue("Weekly periods",teacher.weeklyPeriods.toString())
+    LabeledValue("Recorded attendance","${teacher.attendancePercent}%")
+    LabeledValue("Assigned classes",teacher.assignedClasses.joinToString(", "))
+    LabeledValue("Subjects",teacher.subjects.joinToString(", "))
+    LabeledValue("Status",teacher.status)
+  }}}
 }
 
 @Composable
-private fun LabeledValue(label: String, value: String) {
-  Column(
-    modifier = Modifier
-      .fillMaxWidth()
-      .padding(vertical = 5.dp)
-  ) {
-    Text(
-      text = label,
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Text(
-      text = value.ifBlank { "—" },
-      style = MaterialTheme.typography.bodyMedium,
-      fontWeight = FontWeight.Medium,
-      color = MaterialTheme.colorScheme.onSurface,
-      modifier = Modifier.fillMaxWidth(),
-      textAlign = TextAlign.Start
-    )
+private fun LabeledValue(label: String,value: String) {
+  Column(Modifier.fillMaxWidth().padding(vertical=Spacing.xs4)) {
+    Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(value.ifBlank {"Not provided"},style=MaterialTheme.typography.bodyMedium)
   }
 }

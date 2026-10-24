@@ -75,14 +75,14 @@ fun SchoolRow(title: String, subtitle: String, icon: ImageVector, onClick: () ->
 
 @Composable
 fun SchoolMetric(value: String, label: String, icon: ImageVector, modifier: Modifier = Modifier,
-  tone: SchoolMetricTone = SchoolMetricTone.NEUTRAL, onClick: () -> Unit = {}) {
+  tone: SchoolMetricTone = SchoolMetricTone.NEUTRAL, onClick: (() -> Unit)? = null) {
   val (well, ink) = when (tone) {
     SchoolMetricTone.POSITIVE -> SemanticColors.successContainer to SemanticColors.onSuccess
     SchoolMetricTone.DANGER -> SemanticColors.dangerContainer to SemanticColors.onDanger
     SchoolMetricTone.FINANCE -> SemanticColors.butterContainer to SemanticColors.onButter
     SchoolMetricTone.NEUTRAL -> SemanticColors.blueContainer to SemanticColors.onBlue
   }
-  Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Radius.md),
+  Surface(if (onClick == null) modifier else modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Radius.md),
     color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
     Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
       Surface(color = well, shape = RoundedCornerShape(Radius.xs)) {

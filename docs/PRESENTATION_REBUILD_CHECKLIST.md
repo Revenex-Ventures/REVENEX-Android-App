@@ -75,3 +75,12 @@ Inspected Principal, Teacher, Attendance and dark Teacher. The hero hierarchy is
 - Tests now scroll the lazy container to a matching node and assert the actual attendance selection, instead of searching off-screen content. The final gate captures Attendance inside the production scaffold too.
 
 All remaining layouts are still pending. No previous gallery or compilation-only result is accepted as visual completion.
+
+## Verified second screen batch (4f1c353)
+CI 40071495556: 28 suites / 104 Android tests passed, zero failed/error/skipped; lint 0 errors / 69 warnings. 115 PNGs downloaded and the new eleven-experience Light/Dark galleries were inspected. The galleries are actual Compose/Robolectric renders of routed implementations; secondary-screen renders capture the routed screen body. They are not device captures.
+
+Galleries: `app/build/presentation-batch-4f1c353/screen-batch-light.png`, `screen-batch-dark.png`. The first gate is structurally replaced and its dark contrast correction is visible. The weekend teacher schedule and missing upcoming events remain honest empty states. Four attendance statuses are retained; no fake admission counts, photos, trend deltas or live AI are added.
+
+New source after that verified snapshot, awaiting the next build/render: grouped student and faculty profiles, faculty editing groups, adaptive directories, record-only principal attendance overview/history, loaded-data reports, compact timetable/scores, expandable resource/exam details, categorized workspace rows and transport/library/inventory/leave presentations.
+
+Correction to the initial interface note: the repository does expose an events state. The Principal/Parent now use it for parseable upcoming records and show empty states otherwise; cloud population is not assumed. All existing examination information remains reachable.
