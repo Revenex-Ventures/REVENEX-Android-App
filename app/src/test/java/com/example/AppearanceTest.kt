@@ -43,6 +43,16 @@ class AppearanceTest {
     assertEquals(android.app.UiModeManager.MODE_NIGHT_AUTO,org.robolectric.Shadows.shadowOf(manager).applicationNightMode)
     assertEquals(androidSetting,manager.nightMode)
   }
+  @Test @Config(sdk=[28],qualifiers="night")
+  fun explicitStartingPalettesDoNotInheritTheOppositeDevicePalette() {
+    val context=ApplicationProvider.getApplicationContext<android.content.Context>()
+    listOf(R.style.Theme_Revenex_Starting_Light to 0xFFF8F7F3.toInt(),
+      R.style.Theme_Revenex_Starting_Dark to 0xFF1D2228.toInt()).forEach { (theme,color) ->
+      val wrapped=android.view.ContextThemeWrapper(context,theme)
+      val attributes=wrapped.obtainStyledAttributes(intArrayOf(androidx.core.splashscreen.R.attr.windowSplashScreenBackground))
+      try {assertEquals(color,attributes.getColor(0,0))} finally {attributes.recycle()}
+    }
+  }
   @Test fun everyPortalHasAtMostFiveDistinctPrimaryDestinations() {
     UserRole.entries.forEach { role ->
       val items = NavConfig.getBottomNavItems(role)

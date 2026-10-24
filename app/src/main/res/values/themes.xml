@@ -23,4 +23,10 @@
         <item name="postSplashScreenTheme">@style/Theme.Revenex.Dark</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+    <style name="Theme.Revenex.Starting.Light" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#F8F7F3</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_book</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

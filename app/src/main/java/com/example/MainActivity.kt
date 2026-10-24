@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
   override fun onCreate(savedInstanceState: Bundle?) {
     val appearance = Appearance.parse(getSharedPreferences("revenex_appearance", MODE_PRIVATE).getString("mode", null))
     val systemDark = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
-    setTheme(if (appearance.usesDark(systemDark)) R.style.Theme_Revenex_Starting_Dark else R.style.Theme_Revenex_Starting)
+    setTheme(if (appearance.usesDark(systemDark)) R.style.Theme_Revenex_Starting_Dark else R.style.Theme_Revenex_Starting_Light)
     val splash = installSplashScreen()
     val showBrand = savedInstanceState == null && LaunchLifetime.claim()
     var splashExited by mutableStateOf(false)
