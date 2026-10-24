@@ -47,7 +47,7 @@ class ApprovedNavigationJourneyTest {
   compose.onNodeWithTag("workspace_principal_attendance").performClick()
   compose.onNodeWithTag("principal_attendance_overview").assertExists()
   compose.onAllNodesWithContentDescription("Back").onFirst().performClick()
-  compose.onAllNodesWithContentDescription("Back").onFirst().performClick()
+  compose.onNodeWithContentDescription("Home").performClick()
   compose.onNodeWithContentDescription("Account and settings").performClick()
   compose.onNodeWithText("Settings").performClick()
   compose.onNodeWithText("Sign out").performScrollTo().performClick()
