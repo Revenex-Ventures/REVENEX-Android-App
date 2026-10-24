@@ -92,7 +92,13 @@ class LaunchEntryTest {
       }
     }}
     compose.runOnIdle {assertTrue(initialized);ready=true}
-    compose.mainClock.advanceTimeBy(1800)
+    // Commit native-exit state and start its effect before measuring animation time.
+    compose.mainClock.advanceTimeByFrame()
+    compose.waitForIdle()
+    compose.mainClock.advanceTimeBy(800)
+    capture("brand_reveal_mid")
+    compose.mainClock.advanceTimeBy(900)
+    compose.waitForIdle()
     compose.onNodeWithTag("revenex_brand_intro").assertDoesNotExist()
     compose.runOnIdle {recomposition++}
     compose.mainClock.advanceTimeByFrame()

@@ -762,8 +762,6 @@ fun CreateNoticeDialog(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-
       }
     )
   }

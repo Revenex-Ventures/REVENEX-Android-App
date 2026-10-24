@@ -231,7 +231,8 @@ fun ScholaErpApp(
   val dataMode by repository.dataMode.collectAsState()
   val unreadNotificationsCount = notifications.count { !it.isRead }
   val initialRoute = remember {
-    if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isNotBlank() && !backendState.busy && !backendState.failed)
+    if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isNotBlank() &&
+      runCatching { repository.supabaseDataSource.sessionId().isNotBlank() }.getOrDefault(false))
       Screen.Dashboard.route else Screen.Auth.route
   }
 
