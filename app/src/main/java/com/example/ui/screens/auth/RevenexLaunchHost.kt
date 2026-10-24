@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.testTag
@@ -59,7 +60,8 @@ fun RevenexLaunchHost(
         // The native icon's 64dp book occupies the same centered position at p=0.
         Box(Modifier.fillMaxWidth().height(96.dp),contentAlignment=Alignment.Center) {
           Image(painterResource(R.drawable.revenex_launch_book),"Revenex",
-            Modifier.offset(x=(-96f*reveal).dp).requiredSize(288.dp),alignment=Alignment.Center)
+            Modifier.offset(x=(-96f*reveal).dp).requiredSize(288.dp)
+              .graphicsLayer { scaleX=1f-.44f*reveal;scaleY=scaleX },alignment=Alignment.Center)
           Box(Modifier.offset(x=22.dp).width((174f*reveal).dp).height(48.dp).clipToBounds(),contentAlignment=Alignment.CenterStart) {
             Text("REVENEX",Modifier.requiredWidth(174.dp),fontSize=28.sp,letterSpacing=1.sp,
               fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.onBackground,maxLines=1)
