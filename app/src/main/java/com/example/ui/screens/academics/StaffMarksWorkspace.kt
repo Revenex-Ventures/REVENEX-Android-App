@@ -71,7 +71,7 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
 
   LazyColumn(Modifier.fillMaxSize().imePadding().testTag("staff_marks_workspace"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
     item {WorkspacePageHeader("Marks & publication")}
-    item {TextButton(onClick=onViewReports,enabled=!busy){Text("View report cards & student details")}}
+    item {TextButton(onClick=onViewReports,enabled=!busy){Text("Report cards")}}
     if(students.isEmpty())item {EmptyStateView("No accessible students","Your school must allocate a class before marks can be entered.")}
     else {
       item {SchoolSection("1 · Student") {
@@ -100,15 +100,17 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
       item {SchoolSection("3 · Enter marks") {
         val editable=!busy&&report?.published!=true
         OutlinedTextField(subject,{subject=it},Modifier.fillMaxWidth().testTag("marks_subject"),label={Text("Subject")},isError=subject.length>120,enabled=editable,singleLine=true,shape=RoundedCornerShape(Radius.input))
-        OutlinedTextField(obtained,{obtained=it},Modifier.fillMaxWidth().testTag("marks_obtained"),label={Text("Marks obtained")},isError=obtained.isNotBlank()&&(score==null||score<0||(total!=null&&score>total)),enabled=editable,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input))
-        OutlinedTextField(maximum,{maximum=it},Modifier.fillMaxWidth().testTag("marks_maximum"),label={Text("Maximum marks")},isError=maximum.isNotBlank()&&(total==null||total !in 1..10000),enabled=editable,supportingText={Text("0 ≤ obtained ≤ maximum · Maximum 10,000")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input))
+        ResponsiveFormFields(
+          first = { field -> OutlinedTextField(obtained,{obtained=it},field.testTag("marks_obtained"),label={Text("Marks obtained")},isError=obtained.isNotBlank()&&(score==null||score<0||(total!=null&&score>total)),enabled=editable,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input)) },
+          second = { field -> OutlinedTextField(maximum,{maximum=it},field.testTag("marks_maximum"),label={Text("Maximum marks")},isError=maximum.isNotBlank()&&(total==null||total !in 1..10000),enabled=editable,supportingText={Text("0 ≤ obtained ≤ maximum · Maximum 10,000")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input)) }
+        )
         Button(modifier=Modifier.fillMaxWidth().testTag("save_draft_mark"),shape=RoundedCornerShape(Radius.input),enabled=editable&&term.trim().length in 1..80&&subject.trim().length in 1..120&&score!=null&&total!=null&&total in 1..10000&&score in 0..total,
-          onClick={perform("Draft save confirmed."){repository.saveMarksConfirmed(student!!.id,term,subject,score!!,total!!)}}){Text(if(busy)"Saving…" else "Save private draft")}
+          onClick={perform("Draft save confirmed."){repository.saveMarksConfirmed(student!!.id,term,subject,score!!,total!!)}}){Text(if(busy)"Saving…" else "Save draft")}
       }}
       if(report!=null)item {
         OutlinedButton(enabled=!busy&&report.scores.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input),onClick={
           if(report.published)perform("Unpublication confirmed."){repository.publishResultsConfirmed(student!!.id,report.term,false)} else confirmPublish=true
-        }){Text(if(report.published)"Unpublish term" else "Review & publish term")}
+        }){Text(if(report.published)"Unpublish term" else "Review & publish")}
       }
     }
     feedback?.let{message->item{Surface(color=if(failed)MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(Radius.md)) {

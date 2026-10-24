@@ -102,6 +102,11 @@ fun GlobalSearchScreen(
         )
       }
 
+      assignments.filter { it.title.contains(q, true) || it.subject.contains(q, true) }.forEach {
+        list.add(SearchResultItem(it.id, it.title, "${it.subject} · Due ${it.dueDate}",
+          "ASSIGNMENT", Icons.Default.Assignment, ScholaTerracotta, Screen.Homework.route))
+      }
+
       // Notices
       notices.filter { it.title.contains(q, ignoreCase = true) || it.content.contains(q, ignoreCase = true) }.forEach {
         list.add(
@@ -176,7 +181,7 @@ fun GlobalSearchScreen(
         contentPadding = PaddingValues(bottom = Spacing.xl24)
       ) {
         results.groupBy {it.category}.forEach {(category,entries)->
-          item {Text(when(category){"SCHOLAR"->"Students";"FACULTY"->"Faculty";"INVOICE"->"Invoices";else->"Notices"},Modifier.padding(top=Spacing.md12),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)}
+          item {Text(when(category){"SCHOLAR"->"Students";"FACULTY"->"Faculty";"INVOICE"->"Invoices";"ASSIGNMENT"->"Assignments";else->"Notices"},Modifier.padding(top=Spacing.md12),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)}
           item {SchoolGroup {entries.forEachIndexed {index,result->
             SchoolRow(result.title,result.subtitle,result.icon,{onNavigateTo(result.targetRoute)})
             if(index<entries.lastIndex) HorizontalDivider()

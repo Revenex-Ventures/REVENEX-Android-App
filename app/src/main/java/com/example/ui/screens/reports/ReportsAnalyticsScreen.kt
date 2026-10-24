@@ -32,6 +32,15 @@ fun ReportsAnalyticsScreen(repository: ErpDataRepository) {
   val actor by repository.currentUser.collectAsState()
   val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
   val money:(Long)->String={java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(java.math.BigDecimal(it).movePointLeft(2))}
+  var attendancePeriod by remember {mutableStateOf("All records")}
+  val today=java.time.LocalDate.now()
+  val attendanceRows=registers.values.filter { record ->
+    if(attendancePeriod=="All records") true else {
+      val date=com.example.ui.screens.attendance.parseSchoolRecordDate(record.date)
+      val start=if(attendancePeriod=="This week")today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)) else today.withDayOfMonth(1)
+      date!=null && !date.isBefore(start) && !date.isAfter(today)
+    }
+  }.sortedByDescending {com.example.ui.screens.attendance.parseSchoolRecordDate(it.date)}
   val cohorts=students.groupBy {it.fullClass}.toSortedMap()
   LazyColumn(Modifier.fillMaxSize().testTag("reports_analytics_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
     item {
@@ -63,10 +72,15 @@ fun ReportsAnalyticsScreen(repository: ErpDataRepository) {
       }}
     }}
     item {SchoolSection("Recorded attendance") {
-      Text("Each row is one saved class/date/session register.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        items(3) {index -> val period=listOf("All records","This week","This month")[index]
+          SchoolFilterChip(attendancePeriod==period,{attendancePeriod=period},{Text(period)})
+        }
+      }
+      Text("${attendanceRows.size} saved registers · $attendancePeriod",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       SchoolGroup {
-        if(registers.isEmpty()) Text("No saved registers available.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-        registers.values.sortedByDescending {it.date}.forEach {record ->
+        if(attendanceRows.isEmpty()) Text("No saved registers for this period.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
+        attendanceRows.forEach {record ->
           Row(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
             Column(Modifier.weight(1f)){Text("${record.classGrade}-${record.division} · ${record.date}",style=MaterialTheme.typography.titleSmall);Text(record.sessionSlot,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
             Text("${record.presentCount}/${record.totalStudents} present",style=MaterialTheme.typography.labelMedium)

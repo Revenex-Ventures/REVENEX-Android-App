@@ -59,16 +59,16 @@ class AdminWorkflowUiTest {
     compose.waitUntil { repository.reportCards.value.any { it.term == "UI verification term" } }
     assertFalse(repository.reportCards.value.first { it.term == "UI verification term" }.published)
     capture("marks_draft_light")
-    compose.onNodeWithTag("staff_marks_workspace").performScrollToNode(hasText("Review & publish term"))
-    compose.onNodeWithText("Review & publish term").performClick()
+    compose.onNodeWithTag("staff_marks_workspace").performScrollToNode(hasText("Review & publish"))
+    compose.onNodeWithText("Review & publish").performClick()
     compose.onNodeWithText("Publish results?").assertExists()
     capture("marks_review_light")
     compose.onNodeWithText("Publish").performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil { repository.reportCards.value.first { it.term == "UI verification term" }.published }
     compose.onNodeWithTag("save_draft_mark").performScrollTo().assertIsNotEnabled()
-    compose.onNodeWithTag("staff_marks_workspace").performScrollToNode(hasText("View report cards & student details"))
-    compose.onNodeWithText("View report cards & student details").performClick()
+    compose.onNodeWithTag("staff_marks_workspace").performScrollToNode(hasText("Report cards"))
+    compose.onNodeWithText("Report cards").performClick()
     assertTrue(reportOpened)
   }
 

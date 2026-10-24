@@ -186,7 +186,10 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
         SchoolRow(material.title,"${material.subject} · ${material.chapter}",Icons.Default.Description,{expanded=!expanded},material.fileType)
         androidx.compose.animation.AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
           Text(material.description,style=MaterialTheme.typography.bodyMedium)
-          Text("${material.teacherName} · Class ${material.classGrade} · ${material.uploadDate} · ${material.fileSize}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          SchoolDetailRow("Shared by",material.teacherName)
+          SchoolDetailRow("Class",material.classGrade)
+          SchoolDetailRow("Uploaded",material.uploadDate)
+          SchoolDetailRow("File", "${material.fileType} · ${material.fileSize}")
           if(material.attachmentUrl.isNotBlank()) SchoolDocumentButton(material.attachmentUrl,material.attachmentName.ifBlank {"Open document"})
           else Text("Document attachment is not available.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }}
@@ -207,7 +210,7 @@ fun ExamsScreen(repository: ErpDataRepository) {
       SchoolGroup {
         SchoolRow(exam.title,"Class ${exam.classGrade} · ${exam.startDate} – ${exam.endDate}",Icons.Default.CalendarMonth,{expanded=!expanded},if(exam.isPublished)"Published" else "Draft")
         androidx.compose.animation.AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-          Text(exam.term,style=MaterialTheme.typography.labelLarge)
+          SchoolDetailRow("Term",exam.term)
           exam.subjects.forEach {subject->
             Column {Text(subject.subjectName,style=MaterialTheme.typography.titleSmall);Text("${subject.date} · ${subject.time} · ${subject.room}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text("Maximum ${subject.maxMarks} · Passing ${subject.passingMarks}",style=MaterialTheme.typography.bodySmall)}
             HorizontalDivider()

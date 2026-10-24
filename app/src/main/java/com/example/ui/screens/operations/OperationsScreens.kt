@@ -158,7 +158,8 @@ fun TransportScreen(repository: ErpDataRepository) {
       SchoolGroup {
         SchoolRow(route.routeName,"${route.routeNumber} · ${route.vehicleNumber}",Icons.Default.DirectionsBus,{expanded=!expanded},"${route.stops.size} stops")
         AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-          Text("Driver: ${route.driverName} · ${route.driverPhone}",style=MaterialTheme.typography.bodyMedium)
+          SchoolDetailRow("Driver",route.driverName)
+          SchoolDetailRow("Contact",route.driverPhone)
           Text("Stops & timings",style=MaterialTheme.typography.titleSmall)
           route.stops.forEachIndexed {index,stop->Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12)){Text((index+1).toString(),style=MaterialTheme.typography.labelLarge);Text(stop,style=MaterialTheme.typography.bodySmall)}}
         }}
@@ -198,7 +199,8 @@ fun InventoryScreen(repository: ErpDataRepository) {
     items(visible,key={it.id}) {asset->SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
       Row(Modifier.fillMaxWidth()){Text(asset.itemName,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);StatusBadge(status=asset.condition)}
       Text("${asset.category} · ${asset.location}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-      Text("${asset.quantity} units · Estimated value ${java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(asset.estimatedValue)}",style=MaterialTheme.typography.bodySmall)
+      SchoolDetailRow("Quantity", "${asset.quantity} units")
+      SchoolDetailRow("Estimated value", java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(asset.estimatedValue))
     }}}
   }
 }

@@ -53,7 +53,7 @@ private fun FormHeading(title: String, subtitle: String, enabled: Boolean = true
 }
 
 @Composable
-private fun ResponsiveFormFields(
+internal fun ResponsiveFormFields(
   first: @Composable (Modifier) -> Unit,
   second: @Composable (Modifier) -> Unit,
   third: (@Composable (Modifier) -> Unit)? = null
