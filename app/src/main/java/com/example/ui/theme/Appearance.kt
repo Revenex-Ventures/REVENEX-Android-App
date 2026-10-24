@@ -24,8 +24,9 @@ class AppearancePreference(context: Context) {
   }
 }
 
-/** Persist only the platform's application night presentation, never global settings.
- * AUTO is time/location based and must not be used to mean "follow system".
+/** Persist only app presentation. Android's application setter maps AUTO to
+ * UI_MODE_NIGHT_UNDEFINED (clears the app override), unlike global setNightMode.
+ * Verified against AOSP Android 12L/14 UiModeManagerService and on-device below.
  */
 object AppearanceSystemBars {
   private var lastNight: Int? = null
@@ -33,9 +34,11 @@ object AppearanceSystemBars {
     if (android.os.Build.VERSION.SDK_INT < 31) return
     val prefs=context.getSharedPreferences("revenex_appearance",Context.MODE_PRIVATE)
     val choice=Appearance.parse(prefs.getString("mode",null))
-    val globalDark=android.content.res.Resources.getSystem().configuration.uiMode and
-      android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
-    val night=if(choice.usesDark(globalDark)) android.app.UiModeManager.MODE_NIGHT_YES else android.app.UiModeManager.MODE_NIGHT_NO
+    val night=when(choice) {
+      Appearance.LIGHT -> android.app.UiModeManager.MODE_NIGHT_NO
+      Appearance.DARK -> android.app.UiModeManager.MODE_NIGHT_YES
+      Appearance.SYSTEM -> android.app.UiModeManager.MODE_NIGHT_AUTO
+    }
     if(lastNight!=night) {
       lastNight=night
       context.getSystemService(android.app.UiModeManager::class.java)?.setApplicationNightMode(night)
@@ -43,11 +46,6 @@ object AppearanceSystemBars {
   }
   fun install(context: Context) {
     synchronize(context)
-    if(android.os.Build.VERSION.SDK_INT >= 31) {
-      androidx.core.content.ContextCompat.registerReceiver(context,object: android.content.BroadcastReceiver() {
-        override fun onReceive(context: Context,intent: android.content.Intent) { synchronize(context) }
-      },android.content.IntentFilter(android.content.Intent.ACTION_CONFIGURATION_CHANGED),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
-    }
   }
 }
 val LocalAppearance = staticCompositionLocalOf<AppearancePreference?> { null }

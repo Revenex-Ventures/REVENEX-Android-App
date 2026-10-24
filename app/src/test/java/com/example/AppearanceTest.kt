@@ -32,6 +32,17 @@ class AppearanceTest {
     assertTrue(Appearance.SYSTEM.usesDark(true))
     assertEquals(Appearance.LIGHT, Appearance.parse("invalid"))
   }
+  @Test fun systemClearsPreviouslyForcedApplicationModeWithoutChangingAndroidSetting() {
+    val context=ApplicationProvider.getApplicationContext<android.content.Context>()
+    val manager=context.getSystemService(android.app.UiModeManager::class.java)
+    val androidSetting=manager.nightMode
+    val preference=AppearancePreference(context)
+    preference.select(Appearance.DARK)
+    assertEquals(android.app.UiModeManager.MODE_NIGHT_YES,org.robolectric.Shadows.shadowOf(manager).applicationNightMode)
+    preference.select(Appearance.SYSTEM)
+    assertEquals(android.app.UiModeManager.MODE_NIGHT_AUTO,org.robolectric.Shadows.shadowOf(manager).applicationNightMode)
+    assertEquals(androidSetting,manager.nightMode)
+  }
   @Test fun everyPortalHasAtMostFiveDistinctPrimaryDestinations() {
     UserRole.entries.forEach { role ->
       val items = NavConfig.getBottomNavItems(role)

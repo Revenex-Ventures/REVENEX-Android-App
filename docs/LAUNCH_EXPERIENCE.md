@@ -15,7 +15,7 @@ The two supplied clips were inspected locally before implementation. The first i
 - Local demo has its own secondary screen with separate Principal, Admin, Teacher, Student and Parent personas. It works offline and is labeled synthetic.
 - Password visibility, IME submit, keyboard insets, scrolling, busy guards, error feedback and Back navigation remain native Compose controls. Passwords are not saved across activity/process recreation.
 - Existing Supabase authentication still resolves protected profile, school, session and linked children. Session restoration uses the existing authenticated `sessionId()` accessor, never a nonempty demo profile. Supabase sessions remain memory-only; a process restart requires sign-in under that existing policy.
-- Light remains the default; Light/Dark/System is persisted through the existing appearance preference. AndroidX core-splashscreen supplies the API 24+ handoff. On API 31+, application night presentation is synchronized with the preference; System uses global configuration rather than time-based AUTO mode. Night resources match the stored dark starting window.
+- Light remains the default; Light/Dark/System is persisted through the existing appearance preference. AndroidX core-splashscreen supplies the API 24+ handoff. On API 31+, the application-only night override uses NO/YES for Light/Dark and AUTO to clear the override for System. This application setter maps AUTO to `UI_MODE_NIGHT_UNDEFINED` in AOSP, unlike the global time-based `setNightMode` API, which this app never calls. Night resources match the stored dark starting window.
 - No Supabase schema, RLS, payment server, payment settlement or private configuration is changed by this launch work.
 
 ## Verification record
@@ -25,6 +25,8 @@ This file will be updated with the final tested source, APK hash and actual emul
 Already inspected: fresh Compose/Robolectric renders of photo entry and login in Light/Dark, separate demo selection, narrow 1.5× text, tablet entry and the actual routed Teacher dashboard. The first full launch test run compiled and ran 114 tests; three failed (two obsolete scroll-to-pinned-footer queries and one animation-clock synchronization). These were repaired without skipping tests or reducing assertions.
 
 Pending evidence: final build/test/lint result; actual APK cold launch/warm resume, appearance restart and screen recording. A separate Android 14 emulator was created because the preexisting AVD configuration pointed to an unsupported ARM image. Existing AVD/device data was not reset.
+
+Runtime testing found a System-mode regression in the initial launch implementation: a forced application night mode was read back as if it were the Android setting. Component tests had not caught it. The fix clears the application override instead of mirroring app resources or registering a configuration receiver. Official source verified: [Android 12L UiModeManagerService](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android12L-release/services/core/java/com/android/server/UiModeManagerService.java), [Android 14 UiModeManagerService](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/services/core/java/com/android/server/UiModeManagerService.java). Final runtime recheck remains required below.
 
 ## Device/hosted checks requiring a real account
 
