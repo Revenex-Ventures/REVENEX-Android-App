@@ -105,7 +105,10 @@ fun StudentDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
     }
     if(parent) item { SchoolSection("Latest updates","View all",{onNavigateTo(Screen.Notifications.route)}) {SchoolGroup {
       if(notifications.isEmpty()) Text("No school updates yet.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-      notifications.take(3).forEach {n -> SchoolRow(n.title,n.message,Icons.Default.Notifications,{onNavigateTo(Screen.Notifications.route)},shortSchoolTimestamp(n.timestamp));HorizontalDivider()}
+      notifications.take(3).forEach {n ->
+        val icon=when(n.category){com.example.data.model.NotificationCategory.ATTENDANCE->Icons.Default.HowToReg;com.example.data.model.NotificationCategory.FEES->Icons.Default.CurrencyRupee;com.example.data.model.NotificationCategory.HOMEWORK->Icons.Default.Description;else->Icons.Default.Campaign}
+        SchoolRow(n.title,"",icon,{onNavigateTo(Screen.Notifications.route)},shortSchoolTimestamp(n.timestamp));HorizontalDivider()
+      }
     }} }
     else {
       item {SchoolSection("Next class","View timetable",{onNavigateTo(Screen.Timetable.route)}) {SchoolGroup {
@@ -121,7 +124,7 @@ fun StudentDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
     if(parent) item {SchoolSection("School fees","View all",{onNavigateTo(Screen.Fees.route)}) {SchoolGroup {
       SchoolRow(amount,"Outstanding",Icons.Default.CurrencyRupee,{onNavigateTo(Screen.Fees.route)},"View invoice",Modifier.testTag("family_fee_accounts"))
     }}}
-    item {SchoolSection("Tasks due","View all",{onNavigateTo(Screen.Homework.route)}) {
+    if(!parent) item {SchoolSection("Tasks due","View all",{onNavigateTo(Screen.Homework.route)}) {
       if(pending.isEmpty()) Text("No pending assignments.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
       pending.take(3).forEach {hw -> SchoolTaskRow(hw.title,"${hw.subject} · Due ${hw.dueDate}",hw.subject,hw.submissionStatus){onNavigateTo(Screen.Homework.route)} }
     }}

@@ -108,6 +108,7 @@ fun TeacherProfileScreen(
     WorkspacePageHeader("Faculty profile")
     TeacherHeaderCard(
       teacher = teacher,
+      canEditPhoto = !cloudDemo,
       onPickPhoto = { if (cloudDemo) Toast.makeText(context, "Faculty updates are managed by the school office in this demo.", Toast.LENGTH_LONG).show() else imagePicker.launch("image/*") }
     )
 
@@ -125,10 +126,10 @@ fun TeacherProfileScreen(
 }
 
 @Composable
-private fun TeacherHeaderCard(teacher: Teacher,onPickPhoto: () -> Unit) {
+private fun TeacherHeaderCard(teacher: Teacher,onPickPhoto: () -> Unit,canEditPhoto:Boolean=true) {
   SchoolGroup {
     Row(Modifier.fillMaxWidth().padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-      Box(Modifier.size(48.dp).clickable(onClick=onPickPhoto),contentAlignment=Alignment.Center) {
+      Box(Modifier.size(48.dp).clickable(enabled=canEditPhoto,onClickLabel="Change photo",onClick=onPickPhoto),contentAlignment=Alignment.Center) {
         Avatar(teacher.name,size=40.dp,imagePath=teacher.avatarUrl.ifBlank {null},background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
       }
       Column(Modifier.weight(1f)) {
@@ -136,7 +137,7 @@ private fun TeacherHeaderCard(teacher: Teacher,onPickPhoto: () -> Unit) {
         Text(teacher.designation,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text(teacher.employeeId,style=MaterialTheme.typography.labelSmall)
       }
-      IconButton(onClick=onPickPhoto){Icon(Icons.Filled.CameraAlt,"Change photo")}
+      if(canEditPhoto) IconButton(onClick=onPickPhoto){Icon(Icons.Filled.CameraAlt,"Change photo")}
     }
   }
 }
@@ -166,7 +167,7 @@ private fun EditableFacultyCard(teacher: Teacher,onSave: (Teacher) -> Unit) {
         OutlinedTextField(email,{email=it;saved=false},Modifier.fillMaxWidth(),label={Text("Email")},singleLine=true,keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Email))
       } else SchoolGroup {Column(Modifier.padding(Spacing.md12)){LabeledValue("Phone",teacher.phone);LabeledValue("Email",teacher.email)}}
     }
-    SchoolSection("Professional information") {
+    SchoolSection("Professional") {
       if(editing) {
         OutlinedTextField(department,{department=it;saved=false},Modifier.fillMaxWidth(),label={Text("Department")},singleLine=true)
         OutlinedTextField(designation,{designation=it;saved=false},Modifier.fillMaxWidth(),label={Text("Designation")},singleLine=true)
@@ -185,7 +186,7 @@ private fun EditableFacultyCard(teacher: Teacher,onSave: (Teacher) -> Unit) {
 
 @Composable
 private fun FacultyRecordCard(teacher: Teacher) {
-  SchoolSection("Faculty record") {SchoolGroup {Column(Modifier.padding(Spacing.md12)) {
+  SchoolSection("Teaching record") {SchoolGroup {Column(Modifier.padding(Spacing.md12)) {
     LabeledValue("Employee ID",teacher.employeeId)
     LabeledValue("Experience / joined","${teacher.experienceYears} years · ${teacher.joiningDate}")
     LabeledValue("Weekly periods",teacher.weeklyPeriods.toString())
@@ -197,9 +198,4 @@ private fun FacultyRecordCard(teacher: Teacher) {
 }
 
 @Composable
-private fun LabeledValue(label: String,value: String) {
-  Column(Modifier.fillMaxWidth().padding(vertical=Spacing.xs4)) {
-    Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-    Text(value.ifBlank {"Not provided"},style=MaterialTheme.typography.bodyMedium)
-  }
-}
+private fun LabeledValue(label: String,value: String) {SchoolDetailRow(label,value)}

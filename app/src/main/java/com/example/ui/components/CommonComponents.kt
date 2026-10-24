@@ -600,3 +600,22 @@ fun shortSchoolTimestamp(value: String): String {
   val today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
   return local.format(java.time.format.DateTimeFormatter.ofPattern(if(local.toLocalDate()==today)"HH:mm" else "dd MMM"))
 }
+
+@Composable
+fun SchoolDetailRow(label: String,value: String) {
+  BoxWithConstraints(Modifier.fillMaxWidth().padding(vertical=Spacing.sm8)) {
+    val large=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f || maxWidth<280.dp
+    if(large) Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+      Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(value.ifBlank {"Not provided"},style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
+    } else Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12),verticalAlignment=Alignment.Top) {
+      Text(label,Modifier.weight(.42f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(value.ifBlank {"Not provided"},Modifier.weight(.58f),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
+    }
+  }
+}
+
+fun schoolRoleLabel(role:UserRole):String=when(role) {
+  UserRole.PRINCIPAL->"Principal";UserRole.ADMIN->"Administrator";UserRole.TEACHER->"Teacher"
+  UserRole.STUDENT->"Student";UserRole.PARENT->"Parent / Guardian"
+}

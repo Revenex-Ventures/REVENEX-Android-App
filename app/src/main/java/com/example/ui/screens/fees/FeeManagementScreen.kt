@@ -38,11 +38,17 @@ fun FeeManagementScreen(repository: ErpDataRepository,
   onShowPaymentModal: (studentName: String, amountDue: Long) -> Unit,
   onPayRazorpay: (String,String,Long) -> Unit = {_,name,amount -> onShowPaymentModal(name,amount)},
   onCheckRazorpay: (String) -> Unit = {}) {
-  val invoices by repository.invoices.collectAsState()
-  val fees by repository.feeRecords.collectAsState()
+  val allInvoices by repository.invoices.collectAsState()
+  val allFees by repository.feeRecords.collectAsState()
+  val selectedStudent by repository.selectedStudentId.collectAsState()
+  val students by repository.students.collectAsState()
   val user by repository.currentUser.collectAsState()
   val mode by repository.dataMode.collectAsState()
   val cloud=mode==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val family=user.role in setOf(UserRole.PARENT,UserRole.STUDENT)
+  val child=students.firstOrNull {it.id==selectedStudent}
+  val invoices=if(family)allInvoices.filter {it.studentId==child?.id} else allInvoices
+  val fees=if(family)allFees.filter {it.studentId==child?.id} else allFees
   var filter by remember(user.id) {mutableStateOf("Pending")}
   var expanded by remember(user.id) {mutableStateOf<String?>(null)}
   var filterMenu by remember {mutableStateOf(false)}
@@ -53,7 +59,9 @@ fun FeeManagementScreen(repository: ErpDataRepository,
   val list=androidx.compose.foundation.lazy.rememberLazyListState()
   val scope=rememberCoroutineScope()
   LazyColumn(Modifier.fillMaxSize().testTag("fee_management_screen"),state=list,contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {WorkspacePageHeader("Fees & payments")}
+    item {WorkspacePageHeader("Fees & payments")
+      if(child!=null&&family)Text("${child.name} · Class ${child.fullClass}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     item {Surface(shape=RoundedCornerShape(Radius.md),color=SemanticColors.peachContainer) {
       Column(Modifier.fillMaxWidth().padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         Row(Modifier.fillMaxWidth()) {
@@ -88,29 +96,36 @@ fun FeeManagementScreen(repository: ErpDataRepository,
     if(visible.isEmpty()) item {EmptyStateView(title="No matching invoices",message="There are no invoices in this view.")}
     items(visible,key={it.id}) {invoice ->
       SchoolGroup {
-        Row(Modifier.fillMaxWidth().clickable {expanded=if(expanded==invoice.id)null else invoice.id}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        Row(Modifier.fillMaxWidth().testTag("invoice_row_${invoice.id}").clickable {expanded=if(expanded==invoice.id)null else invoice.id}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
           Icon(Icons.Default.ReceiptLong,null,tint=MaterialTheme.colorScheme.primary)
           Column(Modifier.weight(1f)) {
-            Text(invoice.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+            Text(invoice.title.substringBefore(" & "),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
             Text("Due ${invoice.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
           }
           Column(horizontalAlignment=Alignment.End) {
             Text(feeCurrency(if(invoice.pendingAmount>0)invoice.pendingAmount else invoice.totalAmount),style=MaterialTheme.typography.titleSmall)
             StatusBadge(invoice.status.label)
-            if(invoice.pendingAmount>0) TextButton(onClick={onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount)}) {Text("Pay")}
-            else if(cloud) TextButton(onClick={onPayRazorpay(invoice.id,invoice.studentName,0L)}) {Text("Receipt")}
 
           }
+          Icon(if(expanded==invoice.id)Icons.Default.ExpandLess else Icons.Default.ChevronRight,"Invoice details",Modifier.size(Spacing.lg16))
         }
         androidx.compose.animation.AnimatedVisibility(visible=expanded==invoice.id) {
           Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
             HorizontalDivider()
+            Text(invoice.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
             Text(invoice.invoiceNumber,style=MaterialTheme.typography.labelMedium)
             Text("${invoice.studentName} · ${invoice.cohort}",style=MaterialTheme.typography.bodyMedium)
             Text(invoice.description,style=MaterialTheme.typography.bodyMedium)
+            fees.firstOrNull {it.id==invoice.id}?.let {record ->
+              SchoolDetailRow("Tuition",feeCurrency(record.tuitionFee));SchoolDetailRow("Exams",feeCurrency(record.examFee))
+              SchoolDetailRow("Transport",feeCurrency(record.transportFee));SchoolDetailRow("Lab / library",feeCurrency(record.labLibraryFee))
+              SchoolDetailRow("Scholarship",feeCurrency(record.discountScholarship))
+            }
             Text("${feeCurrency(invoice.paidAmount)} paid of ${feeCurrency(invoice.totalAmount)}",style=MaterialTheme.typography.bodySmall)
             Text("Issued ${invoice.issueDate} · ${invoice.paymentChannel}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             StatusBadge(status=invoice.status.label)
+            if(invoice.pendingAmount>0) Button(onClick={onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth().testTag("pay_invoice_${invoice.id}"),shape=RoundedCornerShape(Radius.sm)){Text("Pay")}
+            else if(cloud) Button(onClick={onPayRazorpay(invoice.id,invoice.studentName,0L)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm)){Text("Receipt")}
             if(cloud) TextButton(onClick={onCheckRazorpay(invoice.id)}) {Text(if(invoice.pendingAmount>0) "Check status" else "Receipt")}
           }
         }

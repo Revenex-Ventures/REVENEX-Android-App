@@ -22,6 +22,12 @@ class AdminExperienceTest {
     assertTrue(items.any { it.label == "More" })
   }
 
+  @Test fun familyScheduleKeepsItsTimetableDestination() {
+    listOf(UserRole.STUDENT,UserRole.PARENT).forEach {role ->
+      assertEquals(Screen.Timetable.route,NavConfig.getBottomNavItems(role).single {it.label=="Timetable"}.route)
+    }
+  }
+
   @Test
   fun demo_administrator_persona_resolves_before_dashboard_navigation() = runBlocking {
     val source = LocalDemoDataSource()

@@ -230,7 +230,7 @@ class SupabaseDataSource : ErpDataSource {
     } catch(e:Exception) {
       if(e is CancellationException) throw e
       if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.")
-      syncState.value=BackendSyncState(message="Save failed. No local success was assumed. Check access and network, then retry.",failed=true)
+      syncState.value=BackendSyncState(message="Save was not confirmed. Check connection and access before retrying.",failed=true)
       throw IllegalStateException(syncState.value.message)
     }
   }
@@ -273,7 +273,7 @@ class SupabaseDataSource : ErpDataSource {
     } catch(e:Exception) {
       if(e is CancellationException) throw e
       if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.")
-      syncState.value=BackendSyncState(message="Enrollment could not be confirmed. Check the student directory before retrying; verify class, duplicate admission number, access and migration 7.",failed=true)
+      syncState.value=BackendSyncState(message="Enrollment was not confirmed. Check the student directory before retrying. Contact your school administrator if the record is missing.",failed=true)
       throw IllegalStateException(syncState.value.message)
     }
   }

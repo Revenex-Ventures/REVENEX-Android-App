@@ -41,7 +41,7 @@ fun ProfileScreen(repository: ErpDataRepository, onBack: () -> Unit, onNavigateT
           Avatar(user.name,size=Spacing.xxl32)
           Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
             Text(user.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
-            Text(user.role.displayName,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(schoolRoleLabel(user.role),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text(if(cloud)"School account · Supabase" else "Local Demo",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
           }
           Icon(Icons.Default.ChevronRight,null)

@@ -193,30 +193,26 @@ data class ScholaDockItem(
 @Composable
 fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemSelected:(String)->Unit,modifier:Modifier=Modifier) {
   val largeText=LocalDensity.current.fontScale>1.3f
-  fun destinationLabel(label: String): String = when (label) {
-    "Attendance" -> "Attendance"
-    "Admissions" -> "People"
-    "Homework" -> "Tasks"
-    "Resources" -> "Notes"
-    "Timetable" -> "Schedule"
-    else -> label
+  fun label(value:String)=when(value){"Homework"->"Tasks";"Resources"->"Notes";"Timetable"->"Schedule";else->value}
+  @Composable fun Entry(item:ScholaDockItem,index:Int,entryModifier:Modifier) {
+    val selected=currentRoute==item.route
+    val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(entryModifier.semantics{this.selected=selected}.clickable(role=Role.Tab,onClickLabel=item.label){onItemSelected(item.route)}
+      .heightIn(min=64.dp).padding(vertical=Spacing.xs4),horizontalAlignment=Alignment.CenterHorizontally,
+      verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
+      val featured=!largeText && items.size==5 && index==2 && item.label in setOf("Homework","Attendance")
+      if(featured) Surface(shape=CircleShape,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer) {
+        Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.padding(Spacing.sm8).size(Spacing.xl24),tint=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
+      } else Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(Spacing.xl24),tint=ink)
+      Text(label(item.label),style=MaterialTheme.typography.labelSmall,color=ink)
+    }
   }
   Surface(modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.lg),color=MaterialTheme.colorScheme.surface,
     border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),shadowElevation=Elev.e1) {
     Column {
-      if(largeText) Text(destinationLabel(items.firstOrNull {it.route==currentRoute}?.label.orEmpty()),Modifier.padding(horizontal=Spacing.md12,vertical=Spacing.xs4),style=MaterialTheme.typography.labelLarge)
-      Row(Modifier.fillMaxWidth()) {
-        items.forEachIndexed { index,item->
-          val selected=currentRoute==item.route
-          val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-          Column(Modifier.weight(1f).semantics { this.selected = selected }.clickable(role=Role.Tab,onClickLabel=item.label){onItemSelected(item.route)}.heightIn(min=64.dp).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
-            val featured=items.size==5 && index==2 && item.label in setOf("Homework","Attendance")
-            if(featured) Surface(shape=CircleShape,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer) {
-              Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.padding(Spacing.sm8).size(24.dp),tint=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
-            } else Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(24.dp),tint=ink)
-            if(!largeText) Text(destinationLabel(item.label),style=MaterialTheme.typography.labelSmall,color=ink,maxLines=1,overflow=TextOverflow.Ellipsis)
-          }
-        }
+      // Larger type keeps every destination named; do not replace navigation labels with icons.
+      items.chunked(if(largeText)3 else items.size.coerceAtLeast(1)).forEachIndexed {row,chunk->
+        Row(Modifier.fillMaxWidth()) {chunk.forEachIndexed {column,item->Entry(item,row*3+column,Modifier.weight(1f))}}
       }
     }
   }

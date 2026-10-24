@@ -143,12 +143,14 @@ class ErpDataRepository private constructor() {
     onResult: ((Boolean) -> Unit)? = null
   ) {
     if (_dataMode.value == DataMode.SUPABASE_DEMO) {
+      val actorId=_currentUser.value.id
       repositoryScope.launch {
         try {
           supabaseDataSource.saveRollCall(classGrade,division,getCurrentFormattedDate(),studentList,sessionSlot)
-          onResult?.invoke(true)
+          if(_dataMode.value==DataMode.SUPABASE_DEMO && _currentUser.value.id==actorId) onResult?.invoke(true)
         } catch(e:Exception) {
           if(e is CancellationException) throw e
+          if(_dataMode.value!=DataMode.SUPABASE_DEMO || _currentUser.value.id!=actorId) return@launch
           _backendState.value=BackendSyncState(message="Attendance was not saved. Check access and connection.",failed=true)
           onResult?.invoke(false)
         }
@@ -319,26 +321,16 @@ class ErpDataRepository private constructor() {
       launch { source.getTeachersFlow().collect { _teachers.value = it } }
       launch {
         source.getFeeRecordsFlow().collect { records ->
-          _feeRecords.value = records
-          if (source is SupabaseDataSource) {
-            _invoices.value = records.map { fee ->
-              LedgerInvoice(
-                id = fee.id,
-                invoiceNumber = fee.id,
-                studentId = fee.studentId,
-                studentName = fee.studentName,
-                cohort = if (fee.classGrade.isNotBlank()) "${fee.classGrade}-${fee.division}" else "Standard",
-                title = "Tuition & Academic Dues",
-                totalAmount = fee.totalFee,
-                paidAmount = fee.paidAmount,
-                dueDate = fee.dueDate,
-                issueDate = "Not recorded",
-                status = fee.status,
-                paymentChannel = "Razorpay Test (server verified)",
-                description = "Tuition & Academic Dues"
-              )
-            }
-          }
+          _feeRecords.value=records
+          // Home, invoices, reports and receipts share one fee-record ledger in both modes.
+          _invoices.value=records.map {fee -> LedgerInvoice(
+            id=fee.id,invoiceNumber=fee.id,studentId=fee.studentId,studentName=fee.studentName,
+            cohort=if(fee.classGrade.isNotBlank()) "${fee.classGrade}-${fee.division}" else "Not provided",
+            title="School fees",totalAmount=fee.totalFee,paidAmount=fee.paidAmount,dueDate=fee.dueDate,
+            issueDate="Not recorded",status=fee.status,
+            paymentChannel=if(source is SupabaseDataSource)"Razorpay TEST" else "Local Demo",
+            description="School fee record"
+          )}
         }
       }
       launch { source.getAssignmentsFlow().collect { _assignments.value = it } }

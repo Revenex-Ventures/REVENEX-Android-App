@@ -24,6 +24,12 @@ class ApprovedNavigationJourneyTest {
   compose.onNodeWithTag("role_select_admin").performScrollTo().performClick()
   compose.onNodeWithTag("submit_login_button").performScrollTo().performClick()
   compose.waitUntil(10000){compose.onAllNodesWithTag("admin_dashboard_list").fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithContentDescription("People").performClick()
+  compose.onNodeWithTag("fab_admit_student").assertExists()
+  compose.onNodeWithText("Faculty").performClick()
+  compose.onNodeWithTag("fab_add_faculty").assertExists()
+  compose.onNodeWithText("Students").performClick()
+  compose.onNodeWithTag("fab_admit_student").assertExists()
   compose.onNodeWithContentDescription("Academics").performClick()
   compose.waitUntil(10000){compose.onAllNodesWithTag("operations_hub_screen").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithTag("workspace_homework").performScrollTo().performClick()

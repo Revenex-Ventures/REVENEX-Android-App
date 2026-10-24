@@ -57,3 +57,13 @@ Next presentation slice recomposes student shortcuts/tasks, guardian task rows, 
 Persistent successful sync/reconciliation banners no longer consume space on every cloud screen. Pending/errors remain visible; confirmed save feedback is brief. No background push is claimed. Inbox transport limitations are available through contextual information rather than repeated footer prose. Forms retain validation/details with shorter action labels.
 
 Secondary directory/detail/report/operations/chat refinements and final verification remain in progress; this paragraph does not declare every screen finished.
+
+## Directory and financial consistency slice
+
+Connected portal source 844f040 / CI 40103535176 is green. Its fresh portal renders were reviewed. Parent updates now preview title/category/time, with full messages retained in Inbox; duplicated parent task previews are removed while the task statistic keeps its working assignment destination. Student shortcuts retain their direct destinations; family Schedule is explicitly a timetable rather than the Admin academic hub.
+
+Directories use compact identity rows and a continuous student collection, retaining adaptive detail panes. Administrator People connects Students and Faculty through real routed tabs. Profile data is grouped into labeled academic/contact/teaching fields; full identifiers and details remain accessible. Large-font navigation keeps visible destination labels in two rows rather than hiding text.
+
+A separate demo-data inconsistency was found: Home/fee records and legacy invoice fixtures had different balances. Invoices now project from the existing fee records in both modes, so Home, Finance, reports and payment history share the same authoritative amounts. This is an in-memory projection correction, not a Supabase reseed. Family Finance is scoped to the selected child. Full invoice identity and fee heads are available in its expanded review, whose Pay action carries the exact record ID; the server still derives and validates payable amounts independently.
+
+Focused tests cover ledger identity/amount consistency, selected-child pending counts, invoice-to-checkout identifiers, People navigation and retained family timetable destinations. Final results remain pending until this slice completes CI and render review.

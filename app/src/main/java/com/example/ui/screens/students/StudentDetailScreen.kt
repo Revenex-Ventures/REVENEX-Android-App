@@ -101,7 +101,7 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
   LazyColumn(modifier.fillMaxSize().testTag("student_360_detail_pane"),verticalArrangement=Arrangement.spacedBy(Spacing.xl24),contentPadding=PaddingValues(bottom=Spacing.xl24)) {
     item {SchoolGroup {
       Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-        Avatar(student.name,size=44.dp,background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
+        Avatar(student.name,size=Spacing.xxl32,background=SemanticColors.lavenderContainer,textColor=SemanticColors.onLavender)
         Column(Modifier.weight(1f)) {
           Text(student.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
           Text("Class ${student.fullClass} · Roll ${student.rollNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -109,7 +109,7 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
         }
       }
     }}
-    item {SchoolSection("Academic information") {SchoolGroup {
+    item {SchoolSection("Academics") {SchoolGroup {
       Column(Modifier.padding(Spacing.md12)) {
         InfoRow("Class & section",student.fullClass)
         InfoRow("Academic session",student.sessionId)
@@ -117,7 +117,7 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
         if(!cloud) InfoRow("Local demo GPA / rank","${student.gpa} / 10 · Rank ${student.rank}")
       }
     }}}
-    item {SchoolSection("Contact & guardian",if(contact)"Hide" else "Details",{contact=!contact}) {SchoolGroup {
+    item {SchoolSection("Guardian",if(contact)"Hide" else "Details",{contact=!contact}) {SchoolGroup {
       Column(Modifier.padding(Spacing.md12)) {
         InfoRow("Guardian",student.parentName)
         if(contact) {
@@ -125,7 +125,7 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
         }
       }
     }}}
-    item {SchoolSection("Personal & admission details",if(personal)"Hide" else "Details",{personal=!personal}) {SchoolGroup {
+    item {SchoolSection("Admission",if(personal)"Hide" else "Details",{personal=!personal}) {SchoolGroup {
       Column(Modifier.padding(Spacing.md12)) {
         InfoRow("Admission date",student.admissionDate)
         if(personal){InfoRow("Gender / date of birth","${student.gender} · ${student.dob}");InfoRow("Blood group",student.bloodGroup)}
@@ -137,19 +137,19 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
         Text("Attendance eligibility is determined by the school's policies. This summary does not certify examination eligibility.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }}}
-    item {SchoolSection("Fees & payments") {SchoolGroup {
+    item {SchoolSection("Fees") {SchoolGroup {
       Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         if(invoice==null) Text("No fee record available to this account.",style=MaterialTheme.typography.bodySmall)
         else {
           Text(invoice.title,style=MaterialTheme.typography.titleSmall)
           InfoRow("Invoice",invoice.invoiceNumber)
           InfoRow("Billed",profileCurrency(invoice.totalAmount));InfoRow("Paid",profileCurrency(invoice.paidAmount));InfoRow("Outstanding",profileCurrency(invoice.pendingAmount))
-          if(invoice.pendingAmount>0) AppButton(text="Pay · ${profileCurrency(invoice.pendingAmount)}",onClick={onPayFee(student.name,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth())
+          if(invoice.pendingAmount>0) AppButton(text="Pay",onClick={onPayFee(student.name,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth())
           if(cloud) Text("Razorpay TEST checkout. Receipt confirmation is handled by the server.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
     }}}
-    item {SchoolSection("Assessment results") {SchoolGroup {
+    item {SchoolSection("Results") {SchoolGroup {
       if(assessments.isEmpty()) Text("No assessment results available.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
       assessments.forEach {grade ->
         Row(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
@@ -158,7 +158,7 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
         }
       }
     }}}
-    item {SchoolSection("Documents & marked papers") {SchoolGroup {
+    item {SchoolSection("Documents") {SchoolGroup {
       Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         val documents=cards.flatMap {card ->card.scores}.filter {it.checkedPaperUrl.isNotBlank()||it.answerKeyUrl.isNotBlank()}
         if(documents.isEmpty()) Text("No marked-paper documents available.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -175,9 +175,4 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
 private fun profileCurrency(paise: Long): String = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(java.math.BigDecimal(paise).movePointLeft(2))
 
 @Composable
-private fun InfoRow(label: String, value: String) {
-  Column(Modifier.fillMaxWidth().padding(vertical=Spacing.xs4)) {
-    Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-    Text(value.ifBlank {"Not provided"},style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
-  }
-}
+private fun InfoRow(label: String, value: String) {SchoolDetailRow(label,value)}

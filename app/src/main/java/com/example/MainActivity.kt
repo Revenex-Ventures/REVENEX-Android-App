@@ -420,7 +420,8 @@ fun ScholaErpApp(
           onNavigateToStudentDetail = { studentId ->
             navController.navigate(Screen.StudentDetail.createRoute(studentId))
           },
-          onShowAddStudent = { showAddStudentDialog = true }
+          onShowAddStudent = { showAddStudentDialog = true },
+          onOpenFaculty = {navController.navigate(Screen.Teachers.route)}
         )
       }
 
@@ -453,7 +454,8 @@ fun ScholaErpApp(
           onNavigateToTeacherDetail = { teacherId ->
             navController.navigate(Screen.TeacherDetail.createRoute(teacherId))
           },
-          onShowAddTeacher = { showAddTeacherDialog = true }
+          onShowAddTeacher = { showAddTeacherDialog = true },
+          onOpenStudents = {navController.navigate(Screen.Students.route)}
         )
       }
 
