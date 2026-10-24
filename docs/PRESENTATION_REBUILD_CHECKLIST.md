@@ -84,3 +84,12 @@ Galleries: `app/build/presentation-batch-4f1c353/screen-batch-light.png`, `scree
 New source after that verified snapshot, awaiting the next build/render: grouped student and faculty profiles, faculty editing groups, adaptive directories, record-only principal attendance overview/history, loaded-data reports, compact timetable/scores, expandable resource/exam details, categorized workspace rows and transport/library/inventory/leave presentations.
 
 Correction to the initial interface note: the repository does expose an events state. The Principal/Parent now use it for parseable upcoming records and show empty states otherwise; cloud population is not assumed. All existing examination information remains reachable.
+
+
+## Current launch delivery: bfc5dc1 (24 October 2026)
+
+The new native launch/account-entry slice is now implemented: Android splash handoff, one-time original Revenex reveal, bundled licensed classroom photograph, four generic portal-entry routes, separate five-persona offline demo, and existing backend-verified sign-in. Light/Dark/System was verified on Android 14, including correction of a real System-mode override bug. All five Local Demo role dashboards were captured from the actual final APK.
+
+Current evidence: **116 Android tests passed; 0 failures/errors/skips; lint 0 errors / 71 warnings; 129 fresh Robolectric PNGs**, plus actual emulator captures/recordings. APK source `bfc5dc16bff87216405849ff5820e1853768316d`; CI 40080849234. Earlier counts and pending logs above are historical snapshots, not current delivery claims. See [LAUNCH_EXPERIENCE.md](LAUNCH_EXPERIENCE.md) for exact artifact/hash, verification matrix and signing/hosted-device blockers.
+
+This completes the launch slice, not every earlier nested ERP presentation: the report/certificate/marks-editor and some payment-dialog layouts are still outside this completed slice. No database reset, reseed, deployed migration replay or payment logic change occurred.
