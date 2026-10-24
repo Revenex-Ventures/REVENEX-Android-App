@@ -33,6 +33,58 @@ import com.example.data.model.UserRole
 import com.example.ui.theme.*
 import java.util.Locale
 
+/** Compact presentation primitives shared by the routed school workspaces. */
+@Composable
+fun SchoolSection(title: String, action: String? = null, onAction: () -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
+  Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+      Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+      if (action != null) TextButton(onClick = onAction, contentPadding = PaddingValues(horizontal = Spacing.sm8)) {
+        Text(action, style = MaterialTheme.typography.labelMedium)
+      }
+    }
+    content()
+  }
+}
+
+@Composable
+fun SchoolGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+  Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.md),
+    color = MaterialTheme.colorScheme.surface,
+    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+    Column(content = content)
+  }
+}
+
+@Composable
+fun SchoolRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit,
+  trailing: String? = null, modifier: Modifier = Modifier) {
+  Row(modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 64.dp).padding(Spacing.md12),
+    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+    Surface(shape = RoundedCornerShape(Radius.sm), color = MaterialTheme.colorScheme.secondaryContainer) {
+      Icon(icon, null, Modifier.padding(Spacing.sm8).size(20.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+    }
+    Column(Modifier.weight(1f)) {
+      Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+      if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (trailing != null) Text(trailing, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Icon(Icons.Default.ChevronRight, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+}
+
+@Composable
+fun SchoolMetric(value: String, label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+  Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Radius.md),
+    color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+    Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+      Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+      Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+      Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}
+
 // ============================================================================
 // 1. SCHOLA TOP APP BAR (Institutional crest, ⌘K search trigger, unread badge)
 // ============================================================================
@@ -53,9 +105,10 @@ fun ScholaTopAppBar(
   Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
     Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
       navigationIcon?.invoke()
-      Column(Modifier.weight(1f).padding(start = Spacing.sm8)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(currentRole.displayName + if (currentUserName.isNotBlank()) " · " + currentUserName.substringBefore(" ") else "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Row(Modifier.weight(1f).padding(start = Spacing.sm8), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        Icon(Icons.Default.AutoStories, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
       }
       IconButton(onClick = onSearchClick, modifier = Modifier.testTag("command_palette_trigger_pill")) {
         Icon(Icons.Default.Search, "Search school records")

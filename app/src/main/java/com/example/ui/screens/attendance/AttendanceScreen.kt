@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -188,112 +189,38 @@ fun AttendanceScreen(
       verticalArrangement = Arrangement.spacedBy(Spacing.s3),
       contentPadding = PaddingValues(bottom = 20.dp)
     ) {
-      // 1. HERO MATRIX SURFACE (Dark Onyx, 22dp corners)
       item {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.hero))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.hero))
-            .padding(Spacing.cardPaddingLarge)
-        ) {
-          Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column {
-                Text(
-                  text = "ATTENDANCE REGISTER",
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  style = MaterialTheme.typography.labelSmall,
-                  letterSpacing = TypeTokens.trackingMicroLabel
-                )
-                Text(
-                  text = selectedCohort,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = SemanticColors.warningContainer
-              ) {
-                Text(
-                  text = if (savedRecord != null) "Saved register" else if (editingToday && canEdit) "Unsaved draft" else "No record",
-                  color = SemanticColors.onWarning,
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-              }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+          Text("Class attendance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+          Text(if (savedRecord != null) "Saved" else if (editingToday && canEdit) "Draft" else "No record",
+            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          OutlinedButton(onClick = { showDatePicker = true }, enabled = !saving, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(Spacing.xs4)); Text(selectedDate)
+          }
+          var cohortMenu by remember { mutableStateOf(false) }
+          Box(Modifier.weight(1f)) {
+            OutlinedButton(onClick = { cohortMenu = true }, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
+              Text(selectedCohort.ifBlank { "Select class" }, Modifier.weight(1f))
+              Icon(Icons.Default.ExpandMore,null,Modifier.size(18.dp))
             }
-
-            Spacer(modifier = Modifier.height(Spacing.s4))
-
-            OutlinedButton(onClick = { showDatePicker = true }, enabled = !saving) {
-              Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(Spacing.sm8)); Text(selectedDate)
-            }
-            if (!editingToday) Text("History is view-only. Return to today's date to record attendance.",
-              style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            // Cohort Selector Chips
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-              items(cohorts) { ch ->
-                val isSelected = selectedCohort == ch
-                Surface(
-                  shape = RoundedCornerShape(Radius.pill),
-                  color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.pill))
-                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-                    .clickable {
-                      selectedCohort = ch
-                      showSuccessNotification = false
-                    }
-                ) {
-                  Text(
-                    text = ch,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 12.dp, vertical = 6.dp)
-                  )
-                }
-              }
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.s3))
-
-            // Session Slot Switcher (Morning Roll Call, STEM Lab, Senior Practicum)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-              items(sessionSlots) { slot ->
-                val isSelected = selectedSessionSlot == slot
-                Surface(
-                  shape = RoundedCornerShape(Radius.sm),
-                  color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(Radius.sm))
-                    .border(1.dp, if (isSelected) ScholaGold else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.sm))
-                    .clickable {
-                      selectedSessionSlot = slot
-                      showSuccessNotification = false
-                    }
-                ) {
-                  Text(
-                    text = slot,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = Spacing.md12, vertical = Spacing.sm8)
-                  )
-                }
-              }
+            DropdownMenu(expanded = cohortMenu, onDismissRequest = { cohortMenu = false }) {
+              cohorts.forEach { cohort -> DropdownMenuItem(text = { Text(cohort) }, onClick = {
+                selectedCohort = cohort; cohortMenu = false; showSuccessNotification = false
+              }) }
             }
           }
         }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+          items(sessionSlots) { slot ->
+            SchoolFilterChip(selected = selectedSessionSlot == slot, onClick = {
+              if (!saving) { selectedSessionSlot = slot; showSuccessNotification = false }
+            }, label = { Text(slot) }, enabled = !saving)
+          }
+        }
+        if (!editingToday) Text("History is view-only.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
 
       // Counts scroll independently; the bulk action never squeezes their labels.
@@ -330,30 +257,48 @@ fun AttendanceScreen(
       }
       items(if ((editingToday && canEdit) || savedRecord != null) visibleStudents else emptyList(), key = { it.id }) { student ->
         val currentStatus = rollCallMap[student.id] ?: AttendanceStatus.PRESENT
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Avatar(student.name, size = 36.dp, background = MaterialTheme.colorScheme.primaryContainer,
-              textColor = MaterialTheme.colorScheme.onPrimaryContainer)
-            Spacer(Modifier.width(Spacing.md12))
-            Column(Modifier.weight(1f)) {
-              Text(student.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-              Text("Roll #${student.rollNumber} · ${student.admissionNumber}", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.md), color = MaterialTheme.colorScheme.surface,
+          border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+          BoxWithConstraints(Modifier.padding(Spacing.sm8)) {
+            val stacked = maxWidth < 320.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+            val identity: @Composable () -> Unit = {
+              Column {
+                Text(student.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Roll ${student.rollNumber}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
             }
-          }
-          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-            listOf(AttendanceStatus.PRESENT to "P", AttendanceStatus.LATE to "L", AttendanceStatus.ABSENT to "A", AttendanceStatus.EXCUSED to "E").forEach { (status,label) ->
-              FilterChip(colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer, selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer), selected = currentStatus == status,
-                enabled = editingToday && !saving && currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN,UserRole.TEACHER),
-                onClick = { rollCallMap[student.id] = status; showSuccessNotification = false },
-                label = { Text(label) },
-                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                  .semantics { contentDescription = "${status.name.lowercase()} for ${student.name}" }
-                  .testTag("btn_${status.name.lowercase()}_${student.rollNumber}"))
+            val controls: @Composable () -> Unit = {
+              Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+                listOf(AttendanceStatus.PRESENT to "P", AttendanceStatus.ABSENT to "A", AttendanceStatus.LATE to "L", AttendanceStatus.EXCUSED to "E").forEach { (status,label) ->
+                  val selected = currentStatus == status
+                  val container = when (status) {
+                    AttendanceStatus.PRESENT -> SemanticColors.successContainer
+                    AttendanceStatus.ABSENT -> SemanticColors.dangerContainer
+                    else -> SemanticColors.warningContainer
+                  }
+                  Surface(onClick = { rollCallMap[student.id] = status; showSuccessNotification = false },
+                    enabled = editingToday && !saving && canEdit,
+                    color = if (selected) container else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(Radius.xs),
+                    modifier = Modifier.size(48.dp).semantics {
+                      contentDescription = "${status.name.lowercase()} for ${student.name}"
+                      this.selected = selected
+                    }
+                      .testTag("btn_${status.name.lowercase()}_${student.rollNumber}")) {
+                    Box(contentAlignment = Alignment.Center) { Text(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                      color = if (selected) when (status) { AttendanceStatus.PRESENT -> SemanticColors.onSuccess; AttendanceStatus.ABSENT -> SemanticColors.onDanger; else -> SemanticColors.onWarning } else MaterialTheme.colorScheme.onSurfaceVariant) }
+                  }
+                }
+              }
+            }
+            if (stacked) Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) { identity(); controls() }
+            else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+              Box(Modifier.weight(1f)) { identity() }; controls()
             }
           }
         }
       }
+      item { Text("P Present · A Absent · L Late · E Excused", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
   }
 }

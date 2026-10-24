@@ -1,0 +1,90 @@
+package com.example
+
+import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import com.example.data.datasource.DataMode
+import com.example.data.model.UserRole
+import com.example.data.repository.ErpDataRepository
+import com.example.ui.components.ScholaResponsiveScaffold
+import com.example.ui.navigation.Screen
+import com.example.ui.screens.dashboard.*
+import com.example.ui.screens.attendance.AttendanceScreen
+import com.example.ui.theme.ScholaTheme
+import com.github.takahirom.roborazzi.captureRoboImage
+import org.junit.Rule
+import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+
+/** Same routed Composables and scaffold as MainActivity; synthetic data, 393dp / 1x font. */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk=[34], qualifiers="w393dp-h852dp-xhdpi")
+class PresentationRebuildGateTest {
+  @get:Rule val compose = createComposeRule()
+  private fun capture(name: String) {
+    compose.waitForIdle()
+    File("build/reports/presentation-rebuild").mkdirs()
+    compose.onRoot().captureRoboImage("build/reports/presentation-rebuild/$name.png")
+  }
+  private fun dashboard(role: UserRole, dark: Boolean) {
+    val repo = ErpDataRepository.getInstance()
+    repo.setDataMode(DataMode.DEMO); repo.switchRole(role)
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+    compose.waitUntil { repo.currentUser.value.role == role }
+    var destination = ""
+    compose.setContent {
+      val user by repo.currentUser.collectAsState()
+      ScholaTheme(dark) {
+        ScholaResponsiveScaffold(Screen.Dashboard.route,user,2,{ destination=it },{},{},{},{}) {
+          if (role == UserRole.PRINCIPAL) PrincipalDashboardScreen(repo,{destination=it},{},{},{})
+          else TeacherDashboardScreen(repo,{destination=it},{},{})
+        }
+      }
+    }
+    val name = "${role.name.lowercase()}_${if(dark) "dark" else "light"}"
+    capture(name)
+    if (role == UserRole.PRINCIPAL) {
+      compose.onNodeWithText("Today's actions").performScrollTo()
+      capture(name+"_actions")
+      compose.onNodeWithText("Attendance register").performClick()
+    } else {
+      compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
+    }
+    assertEquals(Screen.Attendance.route,destination)
+    if (role == UserRole.PRINCIPAL) {
+      compose.onNodeWithText("Manage school").performScrollTo(); capture(name+"_management")
+      compose.onNodeWithText("Recent activity").performScrollTo(); capture(name+"_activity")
+    } else {
+      compose.onNodeWithText("Teaching tools").performScrollTo(); capture(name+"_tools")
+    }
+  }
+  @Test fun principalLight() = dashboard(UserRole.PRINCIPAL,false)
+  @Test fun principalDark() = dashboard(UserRole.PRINCIPAL,true)
+  @Test fun teacherLight() = dashboard(UserRole.TEACHER,false)
+  @Test fun teacherDark() = dashboard(UserRole.TEACHER,true)
+  @Test fun attendanceRegisterRowsRetainSelection() {
+    val repo = ErpDataRepository.getInstance()
+    repo.setDataMode(DataMode.DEMO);repo.switchRole(UserRole.TEACHER)
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+    var dark by mutableStateOf(false)
+    compose.setContent { ScholaTheme(dark) { Surface(Modifier.fillMaxSize()) { AttendanceScreen(repo,onBack={}) } } }
+    capture("attendance_light")
+    compose.onNodeWithTag("attendance_matrix_view").performScrollToIndex(3)
+    val firstClass = repo.students.value.map { "Grade ${it.classGrade}-${it.division}" }.distinct().sorted().first()
+    val first = repo.students.value.filter { "Grade ${it.classGrade}-${it.division}" == firstClass }.minBy { it.rollNumber }
+    compose.onNodeWithTag("btn_absent_${first.rollNumber}").performScrollTo().performClick()
+    compose.onNodeWithText("1 Absent").assertExists()
+    compose.onNodeWithTag("submit_save_attendance").assertExists().assertIsEnabled()
+    compose.runOnIdle { dark = true }
+    capture("attendance_dark")
+  }
+}

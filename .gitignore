@@ -31,6 +31,7 @@ node_modules/
 
 # Local build caches, credentials and packaged artifacts
 /.audit-gradle/
+/.gradle-presentation-cache/
 **/build/
 *.apk
 *.aab

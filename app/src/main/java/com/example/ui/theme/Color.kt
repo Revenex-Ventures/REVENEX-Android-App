@@ -7,17 +7,17 @@ import androidx.compose.ui.graphics.Color
 // Warm canvas, ink typography, orange actions, sage/lavender/blue/butter module groupings.
 
 // 1. Foundation (neutral, monochrome)
-val ScholaLinen = Color(0xFFFFF9F0)
+val ScholaLinen = Color(0xFFFFFCF8)
 val ScholaSurface = Color(0xFFFFFFFF)
-val ScholaSurfaceWarm = Color(0xFFF4EFE7)
-val ScholaBorder = Color(0xFFE7DED3)
+val ScholaSurfaceWarm = Color(0xFFF7F6F3)
+val ScholaBorder = Color(0xFFE8E7E3)
 val ScholaBorderFocused = Color(0xFFAD3F00)
 val ScholaMuted = Color(0xFF665D55)
 val ScholaTextPrimary = Color(0xFF292621)
 val ScholaTextSecondary = Color(0xFF665D55)
 
 // 2. Burnt orange actions (white text meets contrast requirements)
-val ScholaTerracotta = Color(0xFFAD3F00)
+val ScholaTerracotta = Color(0xFFC74400)
 val ScholaTerracottaLight = Color(0xFFFFB681)
 val ScholaTerracottaDark = Color(0xFF7D2C00)
 val ScholaTerracottaContainer = Color(0xFFFFE2CB)
