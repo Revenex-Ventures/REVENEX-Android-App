@@ -245,6 +245,13 @@ fun ScholaErpApp(
     }
   }
 
+  var recentConfirmation by remember(currentUser.id) {mutableStateOf<String?>(null)}
+  LaunchedEffect(currentUser.id,backendState.message,backendState.busy,backendState.failed) {
+    if(backendState.busy || backendState.failed) recentConfirmation=null
+    else if(backendState.message.startsWith("Saved to school database") || backendState.message=="Attendance saved" || backendState.message.startsWith("Student enrolled")) recentConfirmation=backendState.message
+  }
+  LaunchedEffect(recentConfirmation) {if(recentConfirmation!=null){delay(3500);recentConfirmation=null}}
+
   // Global Command Palette (⌘K) Modal State
   var showCommandPalette by remember { mutableStateOf(false) }
 
@@ -300,11 +307,11 @@ fun ScholaErpApp(
     }
   ) { paddingValues ->
     Column(Modifier.fillMaxSize().padding(paddingValues)) {
-    if (currentRoute != Screen.Auth.route && dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank()) {
+    if (currentRoute != Screen.Auth.route && dataMode == com.example.data.datasource.DataMode.SUPABASE_DEMO && backendState.message.isNotBlank() && (backendState.busy || backendState.failed || recentConfirmation!=null)) {
       Surface(color=if(backendState.failed) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant) {
         Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
           if(backendState.busy) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
-          Text(backendState.message,style=MaterialTheme.typography.bodySmall)
+          Text(if(backendState.busy) "Saving…" else if(backendState.failed) backendState.message else "Saved",style=MaterialTheme.typography.bodySmall)
         }
       }
     }
@@ -594,6 +601,14 @@ fun ScholaErpApp(
           onShowCreateNotice = { showCreateNoticeDialog = true },
           onShowApplyLeave = { showApplyLeaveDialog = true }
         )
+      }
+
+      composable(Screen.Academics.route) {
+        OperationsHubScreen(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},
+          {showCreateNoticeDialog=true},{showApplyLeaveDialog=true},initialArea=WorkspaceArea.ACADEMICS)
+      }
+      composable(Screen.Audit.route) {
+        NoticesScreen(repository,{showCreateNoticeDialog=true},initialAudit=true)
       }
 
       // Reports & AI

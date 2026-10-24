@@ -53,7 +53,7 @@ fun SchoolSection(title: String, action: String? = null, onAction: () -> Unit = 
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
       Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
       if (action != null) Text(action,
-        modifier = Modifier.clickable(role = Role.Button, onClick = onAction)
+        modifier = Modifier.testTag("section_action_${title.lowercase().replace(' ','_')}").clickable(role = Role.Button, onClick = onAction)
           .heightIn(min = Presentation.sectionHeading).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.sm8),
         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     }
@@ -554,4 +554,49 @@ fun compactSchoolMoney(paise: Long): String {
     else -> return "₹"+rupees.stripTrailingZeros().toPlainString()
   }
   return "₹"+rupees.divide(unit.first,1,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+unit.second
+}
+
+@Composable
+fun SchoolShortcut(label: String, icon: ImageVector, modifier: Modifier = Modifier,
+  onClick: () -> Unit) {
+  Surface(modifier.clickable(role=Role.Button,onClick=onClick),shape=RoundedCornerShape(Radius.md),
+    color=MaterialTheme.colorScheme.surface,border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+    Column(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      Surface(shape=RoundedCornerShape(Radius.sm),color=MaterialTheme.colorScheme.primaryContainer) {
+        Icon(icon,null,Modifier.padding(Spacing.sm8).size(Spacing.xl24),tint=MaterialTheme.colorScheme.onPrimaryContainer)
+      }
+      Text(label,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurface)
+    }
+  }
+}
+
+@Composable
+fun SchoolTaskRow(title: String, detail: String, subject: String, status: String,
+  modifier: Modifier = Modifier, onClick: () -> Unit) {
+  val container=when {
+    subject.contains("math",true)->SemanticColors.lavenderContainer
+    subject.contains("physics",true)||subject.contains("science",true)->SemanticColors.successContainer
+    subject.contains("english",true)->SemanticColors.blueContainer
+    else->SemanticColors.peachContainer
+  }
+  val large=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
+  Surface(modifier.fillMaxWidth().clickable(role=Role.Button,onClick=onClick),color=container,shape=RoundedCornerShape(Radius.md)) {
+    Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Icon(Icons.Default.Description,null,Modifier.size(Spacing.xl24),tint=MaterialTheme.colorScheme.onSurface)
+      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+        Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurface)
+        Text(detail,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(large) StatusBadge(status)
+      }
+      if(!large) Box(Modifier.widthIn(max=120.dp)){StatusBadge(status)}
+      Icon(Icons.Default.ChevronRight,null,Modifier.size(Spacing.lg16),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}
+
+fun shortSchoolTimestamp(value: String): String {
+  val instant=runCatching {java.time.Instant.parse(value)}.getOrNull() ?: return value
+  val local=instant.atZone(java.time.ZoneId.of("Asia/Kolkata"))
+  val today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+  return local.format(java.time.format.DateTimeFormatter.ofPattern(if(local.toLocalDate()==today)"HH:mm" else "dd MMM"))
 }

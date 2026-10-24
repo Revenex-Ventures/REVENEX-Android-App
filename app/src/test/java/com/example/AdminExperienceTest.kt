@@ -3,6 +3,7 @@ package com.example
 import com.example.data.model.UserRole
 import com.example.data.datasource.LocalDemoDataSource
 import com.example.ui.navigation.NavConfig
+import com.example.ui.navigation.Screen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -16,7 +17,7 @@ class AdminExperienceTest {
 
     assertEquals("Home", items.first().label)
     assertTrue(items.any { it.label == "People" })
-    assertTrue(items.any { it.label == "Academics" })
+    assertEquals(Screen.Academics.route,items.single {it.label=="Academics"}.route)
     assertTrue(items.any { it.label == "Finance" })
     assertTrue(items.any { it.label == "More" })
   }

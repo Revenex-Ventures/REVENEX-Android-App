@@ -76,9 +76,9 @@ fun AdminDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String) -
         java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(java.math.BigDecimal(invoice.paidAmount).movePointLeft(2)),
         Icons.Default.ReceiptLong,{onNavigateTo(Screen.Fees.route)}) }
     } } }
-    item { SchoolSection("Recent activity","View all",{onNavigateTo(Screen.Notices.route)}) { SchoolGroup {
+    item { SchoolSection("Recent activity","View all",{onNavigateTo(Screen.Audit.route)}) { SchoolGroup {
       if(audit.isEmpty()) Text("No recorded activity.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-      audit.take(3).forEach { SchoolRow(it.actionSummary,"${it.actorName} · ${it.timestamp}",Icons.Default.History,{onNavigateTo(Screen.Notices.route)}) }
+      audit.take(3).forEach { SchoolRow(it.actionSummary,"${it.actorName} · ${it.timestamp}",Icons.Default.History,{onNavigateTo(Screen.Audit.route)}) }
     } } }
   }
 }

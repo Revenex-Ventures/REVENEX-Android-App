@@ -26,7 +26,7 @@ class ConfirmedNoticeFormTest {
         })
     } }
     compose.onNodeWithText("Notice Title *").performTextInput("School timetable update")
-    compose.onNodeWithText("Detailed Notice Content *").performTextInput("Please review the new timetable.")
+    compose.onNodeWithText("Notice message *").performTextInput("Please review the new timetable.")
     compose.onNodeWithTag("submit_publish_notice_button").assertIsDisplayed().performClick()
     compose.waitUntil { attemptedIds.size == 1 }
     compose.onNodeWithText("Publication could not be confirmed.", substring=true).assertIsDisplayed()

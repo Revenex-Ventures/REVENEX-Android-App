@@ -100,12 +100,12 @@ fun StudentDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
         Text("Welcome, ${child.name.substringBefore(" ")}",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
         Text("Class ${child.fullClass} · Roll ${child.rollNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(Spacing.md12))
-        SchoolGroup {SchoolRow("Ask the school assistant","Availability checked when opened",Icons.Default.AutoAwesome,{onNavigateTo(Screen.AiAssistant.route)})}
+        SchoolGroup {SchoolRow("School assistant","",Icons.Default.AutoAwesome,{onNavigateTo(Screen.AiAssistant.route)})}
       }
     }
     if(parent) item { SchoolSection("Latest updates","View all",{onNavigateTo(Screen.Notifications.route)}) {SchoolGroup {
       if(notifications.isEmpty()) Text("No school updates yet.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-      notifications.take(3).forEach {n -> SchoolRow(n.title,n.message,Icons.Default.Notifications,{onNavigateTo(Screen.Notifications.route)},n.timestamp);HorizontalDivider()}
+      notifications.take(3).forEach {n -> SchoolRow(n.title,n.message,Icons.Default.Notifications,{onNavigateTo(Screen.Notifications.route)},shortSchoolTimestamp(n.timestamp));HorizontalDivider()}
     }} }
     else {
       item {SchoolSection("Next class","View timetable",{onNavigateTo(Screen.Timetable.route)}) {SchoolGroup {
@@ -113,18 +113,18 @@ fun StudentDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
         else SchoolRow(next.subject,"${next.startTime} – ${next.endTime} · ${next.roomNumber}",Icons.Default.School,{onNavigateTo(Screen.Timetable.route)})
       }}}
       item {Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-        SchoolMetric("${child.attendancePercent.toInt()}%","Attendance",Icons.Default.FactCheck,Modifier.weight(1f),SchoolMetricTone.POSITIVE){onNavigateTo(Screen.Attendance.route)}
-        SchoolMetric("Today","Timetable",Icons.Default.CalendarMonth,Modifier.weight(1f)){onNavigateTo(Screen.Timetable.route)}
-        SchoolMetric(amount,"Fees",Icons.Default.AccountBalanceWallet,Modifier.weight(1f).testTag("family_fee_accounts"),SchoolMetricTone.FINANCE){onNavigateTo(Screen.Fees.route)}
+        SchoolShortcut("Attendance",Icons.Default.FactCheck,Modifier.weight(1f)){onNavigateTo(Screen.Attendance.route)}
+        SchoolShortcut("Timetable",Icons.Default.CalendarMonth,Modifier.weight(1f)){onNavigateTo(Screen.Timetable.route)}
+        SchoolShortcut("Fees",Icons.Default.AccountBalanceWallet,Modifier.weight(1f).testTag("family_fee_accounts")){onNavigateTo(Screen.Fees.route)}
       }}
     }
     if(parent) item {SchoolSection("School fees","View all",{onNavigateTo(Screen.Fees.route)}) {SchoolGroup {
-      SchoolRow(amount,"Outstanding for ${child.name}",Icons.Default.CurrencyRupee,{onNavigateTo(Screen.Fees.route)},"View invoices",Modifier.testTag("family_fee_accounts"))
+      SchoolRow(amount,"Outstanding",Icons.Default.CurrencyRupee,{onNavigateTo(Screen.Fees.route)},"View invoice",Modifier.testTag("family_fee_accounts"))
     }}}
-    item {SchoolSection(if(parent) "Tasks due" else "Due tasks","View all",{onNavigateTo(Screen.Homework.route)}) {SchoolGroup {
+    item {SchoolSection("Tasks due","View all",{onNavigateTo(Screen.Homework.route)}) {
       if(pending.isEmpty()) Text("No pending assignments.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-      pending.take(3).forEach {hw -> SchoolRow(hw.title,"${hw.subject} · Due ${hw.dueDate}",Icons.Default.Description,{onNavigateTo(Screen.Homework.route)},hw.submissionStatus);HorizontalDivider()}
-    }}}
+      pending.take(3).forEach {hw -> SchoolTaskRow(hw.title,"${hw.subject} · Due ${hw.dueDate}",hw.subject,hw.submissionStatus){onNavigateTo(Screen.Homework.route)} }
+    }}
     item {SchoolSection(if(parent) "Upcoming" else "Latest notice","View all",{onNavigateTo(Screen.Notices.route)}) {SchoolGroup {
       if(parent) {
         val upcoming=events.filter { dashboardEventIsUpcoming(it.date) }
@@ -132,12 +132,12 @@ fun StudentDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String)
         upcoming.take(2).forEach { SchoolRow(it.title,"${it.date} · ${it.time} · ${it.location}",Icons.Default.CalendarMonth,{onNavigateTo(Screen.Notices.route)}) }
       } else {
         if(notices.isEmpty()) Text("No school notice available.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
-        notices.take(1).forEach { SchoolRow(it.title,it.content,Icons.Default.Campaign,{onNavigateTo(Screen.Notices.route)}) }
+        notices.take(1).forEach { SchoolRow(it.title,it.publishedDate,Icons.Default.Campaign,{onNavigateTo(Screen.Notices.route)}) }
       }
     }}}
     item {SchoolSection("Student information") {SchoolGroup {
-      SchoolRow("Profile & reports","Academic, contact and document details",Icons.Default.AccountCircle,{onNavigateTo(Screen.StudentDetail.createRoute(child.id))})
-      SchoolRow("Learning resources","Notes and shared documents",Icons.Default.Folder,{onNavigateTo(Screen.StudyMaterial.route)})
+      SchoolRow("Profile","Academic, contact and document details",Icons.Default.AccountCircle,{onNavigateTo(Screen.StudentDetail.createRoute(child.id))})
+      SchoolRow("Resources","Notes and shared documents",Icons.Default.Folder,{onNavigateTo(Screen.StudyMaterial.route)})
     }}}
   }
 }

@@ -33,11 +33,12 @@ fun ProfileScreen(repository: ErpDataRepository, onBack: () -> Unit, onNavigateT
   val session = if(cloud && user.id.isNotBlank()) runCatching {repository.supabaseDataSource.sessionId()}.getOrDefault("Not loaded") else "Local sample session"
   var details by remember { mutableStateOf(false) }
   var help by remember { mutableStateOf(false) }
+  var security by remember(user.id) {mutableStateOf(false)}
   Scaffold(topBar={TopAppBar(title={Text("Settings",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}})}) { padding ->
     LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("profile_screen_list"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
       item { SchoolGroup {
         Row(Modifier.fillMaxWidth().clickable{details=true}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-          Avatar(user.name,size=Spacing.xxxl48)
+          Avatar(user.name,size=Spacing.xxl32)
           Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
             Text(user.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
             Text(user.role.displayName,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -49,9 +50,9 @@ fun ProfileScreen(repository: ErpDataRepository, onBack: () -> Unit, onNavigateT
       item { SchoolGroup {
         SchoolRow("Notifications","Your school inbox",Icons.Default.Notifications,{onNavigateTo(com.example.ui.navigation.Screen.Notifications.route)})
         HorizontalDivider()
-        SchoolRow("Learning documents","Notes and shared resources",Icons.Default.Folder,{onNavigateTo(com.example.ui.navigation.Screen.StudyMaterial.route)})
+        SchoolRow("Documents","Notes and shared resources",Icons.Default.Folder,{onNavigateTo(com.example.ui.navigation.Screen.StudyMaterial.route)})
         HorizontalDivider()
-        SchoolRow("Help & account information","School access and support",Icons.Default.HelpOutline,{help=true})
+        SchoolRow("Help","School access and support",Icons.Default.HelpOutline,{help=true})
       } }
       item { SchoolSection("Appearance") {
         val appearance=LocalAppearance.current
@@ -62,28 +63,20 @@ fun ProfileScreen(repository: ErpDataRepository, onBack: () -> Unit, onNavigateT
           }
         }
       } }
-      item { SchoolSection("Security") { SchoolGroup {
-        Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-          Icon(Icons.Default.Fingerprint,null,tint=MaterialTheme.colorScheme.primary)
-          Column(Modifier.weight(1f)) {
-            Text("Biometric & app lock",style=MaterialTheme.typography.titleSmall)
-            Text("Fingerprint or PIN when resuming",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-          Switch(checked=locked,onCheckedChange={repository.setAppLockEnabled(it)})
-        }
-      } } }
-      item { SchoolSection("School context") { SchoolGroup {
-        Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-          Text(if(cloud) "School: ${user.schoolId}" else "Revenex Public School · sample",style=MaterialTheme.typography.bodyMedium)
-          Text("Session: $session",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-          Text(if(cloud) "School membership is assigned by your school operator." else "Local demonstration data",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-      } } }
+      item {SchoolGroup {
+        SchoolRow("App lock",if(locked)"On" else "Off",Icons.Default.Fingerprint,{security=true})
+        HorizontalDivider()
+        SchoolRow("School",if(cloud)"ID …${user.schoolId.takeLast(6)} · Session …${session.takeLast(6)}" else "Revenex Public School · sample",Icons.Default.School,{details=true})
+      }}
       item { OutlinedButton(onClick={repository.logout();onNavigateTo(com.example.ui.navigation.Screen.Auth.route)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm),colors=ButtonDefaults.outlinedButtonColors(contentColor=MaterialTheme.colorScheme.error)) {
         Icon(Icons.Default.Logout,null);Spacer(Modifier.width(Spacing.sm8));Text("Sign out")
       } }
     }
   }
+  if(security) AlertDialog(onDismissRequest={security=false},title={Text("App lock")},text={Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    Text("Require fingerprint or PIN when resuming",Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
+    Switch(checked=locked,onCheckedChange={repository.setAppLockEnabled(it)})
+  }},confirmButton={TextButton(onClick={security=false}){Text("Done")}})
   if(details) AlertDialog(onDismissRequest={details=false},title={Text(user.name)},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
     Text(user.role.displayName);Text(user.email);Text("Phone: ${user.phone.ifBlank { "Not provided" }}");Text("School: ${user.schoolId}");Text("Session: $session")
   }},confirmButton={TextButton(onClick={details=false}) {Text("Done")}})

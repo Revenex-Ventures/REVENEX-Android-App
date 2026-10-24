@@ -301,7 +301,7 @@ fun ScholaPillBadge(
     modifier = modifier
   ) {
     Text(
-      text = status.uppercase(Locale.getDefault()),
+      text = status.lowercase(Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) },
       color = textColor,
       style = MaterialTheme.typography.labelSmall,
       fontWeight = FontWeight.Bold,

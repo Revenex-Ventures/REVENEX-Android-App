@@ -39,6 +39,8 @@ sealed class Screen(val route: String) {
   object AiAssistant : Screen("ai_assistant")
   object GlobalSearch : Screen("global_search")
   object OperationsHub : Screen("operations_hub")
+  object Academics : Screen("academic_hub")
+  object Audit : Screen("school_activity")
   object PrincipalAttendance : Screen("principal_attendance")
 }
 
@@ -62,7 +64,7 @@ object NavConfig {
       UserRole.ADMIN -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
         BottomNavItem(Screen.Students.route, "People", Icons.Filled.Groups, Icons.Outlined.Groups),
-        BottomNavItem(Screen.Timetable.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Academics.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Fees.route, "Finance", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
         BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Apps, Icons.Outlined.Apps)
       )
@@ -75,7 +77,7 @@ object NavConfig {
       )
       UserRole.STUDENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Timetable.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Academics.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
         BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
@@ -84,7 +86,7 @@ object NavConfig {
       // guardian link lands in the Student portal. There is no 4th portal.
       UserRole.PARENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Timetable.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Academics.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
         BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)

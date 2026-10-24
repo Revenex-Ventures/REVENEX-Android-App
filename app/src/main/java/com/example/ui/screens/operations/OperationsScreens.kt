@@ -39,36 +39,36 @@ import com.example.ui.theme.*
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun OperationsHubScreen(repository: ErpDataRepository,onNavigateTo: (String)->Unit,onShowAddStudent:()->Unit,onShowAddTeacher:()->Unit,onShowCreateNotice:()->Unit,onShowApplyLeave:()->Unit) {
+fun OperationsHubScreen(repository: ErpDataRepository,onNavigateTo: (String)->Unit,onShowAddStudent:()->Unit,onShowAddTeacher:()->Unit,onShowCreateNotice:()->Unit,onShowApplyLeave:()->Unit,initialArea:WorkspaceArea?=null) {
   val actor by repository.currentUser.collectAsState()
   var query by androidx.compose.runtime.saveable.rememberSaveable(actor.id){mutableStateOf("")}
-  var area by androidx.compose.runtime.saveable.rememberSaveable(actor.id){mutableStateOf<String?>(null)}
+  var area by androidx.compose.runtime.saveable.rememberSaveable(actor.id,initialArea){mutableStateOf(initialArea?.name)}
   var boundaries by remember {mutableStateOf(false)}
   val administrator=actor.role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL)
   val destinations=WorkspaceDirectory.visible(actor.role,query,WorkspaceArea.entries.find {it.name==area})
   val available=WorkspaceDirectory.visible(actor.role).map {it.area}.distinct()
   val columns=if(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp>=840)2 else 1
   LazyColumn(Modifier.fillMaxSize().testTag("operations_hub_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
-    item {WorkspacePageHeader("School workspaces")
-      Text("${actor.role.displayName} · tools available to your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+    item {WorkspacePageHeader(if(initialArea==WorkspaceArea.ACADEMICS)"Academics" else "Modules")
+      Text("Tools for your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
     item {
-      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("module_search"),placeholder={Text("Search workspaces")},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotBlank())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear search")}},singleLine=true,shape=RoundedCornerShape(Radius.sm))
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("module_search"),placeholder={Text("Search modules")},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotBlank())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear search")}},singleLine=true,shape=RoundedCornerShape(Radius.sm))
       androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         item {SchoolFilterChip(area==null,{area=null},{Text("All")})}
         items(available){value->SchoolFilterChip(area==value.name,{area=value.name},{Text(value.label)})}
       }
       if(query.isBlank()&&area==null) FlowRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         if(administrator) {
-          OutlinedButton(onClick=onShowAddStudent){Text("Enrol student")};OutlinedButton(onClick=onShowAddTeacher){Text("Add faculty")};OutlinedButton(onClick=onShowCreateNotice){Text("Publish notice")}
+          OutlinedButton(onClick=onShowAddStudent){Text("Add student")};OutlinedButton(onClick=onShowAddTeacher){Text("Add faculty")};OutlinedButton(onClick=onShowCreateNotice){Text("Publish notice")}
         } else if(actor.role!=UserRole.STUDENT) OutlinedButton(onClick=onShowApplyLeave){Text("Apply for leave")}
       }
     }
-    if(destinations.isEmpty()) item {EmptyStateView(title="No matching workspace",message="Try another search or category.")}
+    if(destinations.isEmpty()) item {EmptyStateView(title="No matching modules",message="Try another search or category.")}
     items(destinations.groupBy {it.area}.toList().chunked(columns)) {groups->
       Row(horizontalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
         groups.forEach {(group,modules)->Column(Modifier.weight(1f)) {SchoolSection(group.label){SchoolGroup {
           modules.forEach {destination->
-            val icon=when(group){WorkspaceArea.PEOPLE->Icons.Default.Groups;WorkspaceArea.ACADEMICS->Icons.Default.MenuBook;WorkspaceArea.ATTENDANCE->Icons.Default.FactCheck;WorkspaceArea.FINANCE->Icons.Default.ReceiptLong;WorkspaceArea.OPERATIONS->Icons.Default.Apps;WorkspaceArea.ACCOUNT->Icons.Default.Notifications}
+            val icon=when(group){WorkspaceArea.PEOPLE->Icons.Default.Groups;WorkspaceArea.ACADEMICS->Icons.Default.MenuBook;WorkspaceArea.ATTENDANCE->Icons.Default.FactCheck;WorkspaceArea.FINANCE->Icons.Default.ReceiptLong;WorkspaceArea.OPERATIONS->Icons.Default.Apps;WorkspaceArea.COMMUNICATION->Icons.Default.Notifications;WorkspaceArea.REPORTS->Icons.Default.BarChart;WorkspaceArea.SETTINGS->Icons.Default.Settings}
             SchoolRow(destination.title,destination.description,icon,{onNavigateTo(destination.route)},modifier=Modifier.testTag("workspace_${destination.route.substringBefore('?')}"))
             if(destination!=modules.last()) HorizontalDivider()
           }
@@ -77,7 +77,7 @@ fun OperationsHubScreen(repository: ErpDataRepository,onNavigateTo: (String)->Un
       }
     }
     if(administrator) item {
-      TextButton(onClick={boundaries=!boundaries}){Text(if(boundaries)"Hide integration boundaries" else "Specialist tools & integration boundaries")}
+      TextButton(onClick={boundaries=!boundaries}){Text(if(boundaries)"Hide details" else "Integration details")}
       if(boundaries) Text("Machine/RFID attendance, Tally, payroll, SMS/email and website tools need separate integrations. Hostel, counselling, scholarship and question-bank workflows are not implemented. These are not active modules; no device sync, payroll run or message dispatch happens here.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }

@@ -212,7 +212,7 @@ fun AddStudentDialog(
         ) {
           Icon(Icons.Default.PersonAdd, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Complete Admission & Save", fontWeight = FontWeight.Bold)
+          Text("Add student", fontWeight = FontWeight.Bold)
         }
       },
       content = {
@@ -222,7 +222,7 @@ fun AddStudentDialog(
         OutlinedTextField(
           value = name,
           onValueChange = { name = it; validationError = null },
-          label = { Text("Full Student Name *") },
+          label = { Text("Student name *") },
           placeholder = { Text("e.g., Aarav Patel") },
           leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
           modifier = Modifier
@@ -331,7 +331,7 @@ fun AddStudentDialog(
 
         // Section divider
         Text(
-          text = "Parent / Guardian Details",
+          text = "Guardian",
           style = MaterialTheme.typography.titleSmall,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.primary
@@ -342,7 +342,7 @@ fun AddStudentDialog(
         OutlinedTextField(
           value = parentName,
           onValueChange = { parentName = it; validationError = null },
-          label = { Text("Parent / Guardian Full Name *") },
+          label = { Text("Guardian name *") },
           leadingIcon = { Icon(Icons.Default.FamilyRestroom, contentDescription = null) },
           modifier = Modifier.fillMaxWidth(),
           singleLine = true
@@ -353,7 +353,7 @@ fun AddStudentDialog(
         OutlinedTextField(
           value = parentPhone,
           onValueChange = { parentPhone = it; validationError = null },
-          label = { Text("Parent Phone Number * (+91 XXXXX XXXXX)") },
+          label = { Text("Guardian phone *") },
           leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
           modifier = Modifier.fillMaxWidth(),
           singleLine = true
@@ -364,7 +364,7 @@ fun AddStudentDialog(
         OutlinedTextField(
           value = parentEmail,
           onValueChange = { parentEmail = it },
-          label = { Text("Parent Email (Optional)") },
+          label = { Text("Guardian email (optional)") },
           leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
           modifier = Modifier.fillMaxWidth(),
           singleLine = true
@@ -375,7 +375,7 @@ fun AddStudentDialog(
         OutlinedTextField(
           value = address,
           onValueChange = { address = it },
-          label = { Text("Residential Address") },
+          label = { Text("Address") },
           leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
           modifier = Modifier.fillMaxWidth(),
           maxLines = 2
@@ -484,7 +484,7 @@ fun AddTeacherDialog(
         ) {
           Icon(Icons.Default.School, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Save Faculty Profile", fontWeight = FontWeight.Bold)
+          Text("Save faculty", fontWeight = FontWeight.Bold)
         }
       },
       content = {
@@ -494,7 +494,7 @@ fun AddTeacherDialog(
         OutlinedTextField(
           value = name,
           onValueChange = { name = it; validationError = null },
-          label = { Text("Faculty Full Name *") },
+          label = { Text("Faculty name *") },
           placeholder = { Text("e.g. Prof. Sunita Rao") },
           leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
           modifier = Modifier
@@ -593,7 +593,7 @@ fun AddTeacherDialog(
         OutlinedTextField(
           value = email,
           onValueChange = { email = it; validationError = null },
-          label = { Text("Institutional Email *") },
+          label = { Text("School email *") },
           leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
           placeholder = { Text("teacher@revenexschool.edu.in") },
           modifier = Modifier.fillMaxWidth(),
@@ -605,7 +605,7 @@ fun AddTeacherDialog(
         OutlinedTextField(
           value = phone,
           onValueChange = { phone = it; validationError = null },
-          label = { Text("Contact Phone Number * (+91 XXXXX XXXXX)") },
+          label = { Text("Phone *") },
           leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
           modifier = Modifier.fillMaxWidth(),
           singleLine = true
@@ -714,7 +714,7 @@ fun CreateNoticeDialog(
         OutlinedTextField(
           value = content,
           onValueChange = { content = it },
-          label = { Text("Detailed Notice Content *") },
+          label = { Text("Notice message *") },
           modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 120.dp)
@@ -751,7 +751,7 @@ fun CreateNoticeDialog(
           horizontalArrangement = Arrangement.SpaceBetween
         ) {
           Text(
-            text = "Mark as High Priority Alert",
+            text = "Important",
             style = MaterialTheme.typography.bodyMedium
           )
           Switch(
@@ -912,7 +912,7 @@ fun CreateAssignmentDialog(
         OutlinedTextField(
           value = title,
           onValueChange = { title = it },
-          label = { Text("Assignment Title *") },
+          label = { Text("Title *") },
           modifier = Modifier.fillMaxWidth(),
           singleLine = true
         )
@@ -945,7 +945,7 @@ fun CreateAssignmentDialog(
         OutlinedTextField(
           value = instructions,
           onValueChange = { instructions = it },
-          label = { Text("Detailed Instructions & Guidelines *") },
+          label = { Text("Instructions *") },
           modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 100.dp),
@@ -1074,7 +1074,7 @@ fun ApplyLeaveDialog(
         ) {
           Icon(Icons.Default.Send, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Submit Leave Application")
+          Text("Submit request")
         }
       },
       content = {
@@ -1129,7 +1129,7 @@ fun ApplyLeaveDialog(
         OutlinedTextField(
           value = reason,
           onValueChange = { reason = it },
-          label = { Text("Reason for Absence *") },
+          label = { Text("Reason *") },
           modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 100.dp),
@@ -1154,12 +1154,12 @@ fun FeePaymentDialog(studentName: String,amountDue: Long,isProcessing: Boolean,p
       LinearProgressIndicator(Modifier.fillMaxWidth())
       Text(statusMessage.ifBlank{"Preparing secure test checkout…"},style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     } else if(paymentCompleted) {
-      Button(onClick=onDismiss,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input)){Text("Done & View Updated Ledger")}
+      Button(onClick=onDismiss,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input)){Text("Done")}
     } else {
       if(amountDue>0L)Button(onClick={onStartRazorpay("Razorpay Test")},modifier=Modifier.fillMaxWidth().testTag("submit_fee_payment_button"),shape=RoundedCornerShape(Radius.input)) {
-        Icon(Icons.Default.Lock,null);Spacer(Modifier.width(Spacing.sm8));Text("Pay $amount Securely")
+        Icon(Icons.Default.Lock,null);Spacer(Modifier.width(Spacing.sm8));Text("Pay")
       }
-      onCheckStatus?.let{check->TextButton(onClick=check,modifier=Modifier.fillMaxWidth()){Text("Check payment status")}}
+      onCheckStatus?.let{check->TextButton(onClick=check,modifier=Modifier.fillMaxWidth()){Text("Check status")}}
       if(amountDue<=0L)TextButton(onClick=onDismiss){Text("Close")}
     }
   }) {

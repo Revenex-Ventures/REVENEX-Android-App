@@ -47,3 +47,13 @@ Hosted read-only setup check (24 October): public tables without RLS = 0; profil
 - New focused tests cover successful confirmation, account switch during persistence, logout during refresh, server rejection, signed-out submission, and separate child completion. These are local lifecycle/projection tests, not a hosted two-device login simulation.
 
 No schema migration, database reset, reseed, permission relaxation or payment-settlement change is introduced by these fixes. Existing server-derived amounts, signature checks and duplicate-safe settlement remain in place.
+
+## Connected portal presentation batch
+
+The final first-batch amount correction (74dd493, CI 40100896129) passed and its actual Principal render was inspected: ₹12.9k stays on one line, while exact totals remain in Finance/accessibility. The separate account/child correction run (32e7771, CI 40101822743) passed Android and server checks.
+
+Next presentation slice recomposes student shortcuts/tasks, guardian task rows, assignment tab/status structure, timetable timeline, invoice review rows, compact notification chronology and Settings. The Admin Academics item now opens the academic module group instead of disguising a timetable-only link. Recent activity opens the Audit tab, not the unrelated Notices tab. Eight module groups are explicit. A new actual NavHost test follows Administrator → Academics → Assignments → Back → Activity, with an accessible section-action touch-target check.
+
+Persistent successful sync/reconciliation banners no longer consume space on every cloud screen. Pending/errors remain visible; confirmed save feedback is brief. No background push is claimed. Inbox transport limitations are available through contextual information rather than repeated footer prose. Forms retain validation/details with shorter action labels.
+
+Secondary directory/detail/report/operations/chat refinements and final verification remain in progress; this paragraph does not declare every screen finished.

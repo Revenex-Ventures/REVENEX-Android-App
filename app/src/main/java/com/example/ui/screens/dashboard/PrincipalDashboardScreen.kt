@@ -117,10 +117,10 @@ fun PrincipalDashboardScreen(repository: ErpDataRepository, onNavigateTo: (Strin
         SchoolRow("Publish notice", "School communication", Icons.Default.Campaign, onShowCreateNotice)
       }
     } }
-    item { SchoolSection("Recent activity", "View all", { onNavigateTo(Screen.Notices.route) }) {
+    item { SchoolSection("Recent activity", "View all", { onNavigateTo(Screen.Audit.route) }) {
       SchoolGroup {
         if (logs.isEmpty()) Text("No recorded activity.", Modifier.padding(Spacing.md12), style = MaterialTheme.typography.bodySmall)
-        logs.take(3).forEach { SchoolRow(it.actionSummary, "${it.actorName} · ${it.timestamp}", Icons.Default.History, { onNavigateTo(Screen.Notices.route) }) }
+        logs.take(3).forEach { SchoolRow(it.actionSummary, "${it.actorName} · ${it.timestamp}", Icons.Default.History, { onNavigateTo(Screen.Audit.route) }) }
       }
     } }
   }

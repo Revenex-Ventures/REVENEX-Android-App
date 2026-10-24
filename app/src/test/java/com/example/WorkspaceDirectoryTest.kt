@@ -24,6 +24,11 @@ class WorkspaceDirectoryTest {
     assertTrue(WorkspaceDirectory.visible(UserRole.ADMIN, "receipts", WorkspaceArea.ACADEMICS).isEmpty())
   }
 
+  @Test fun administratorHasEightClearModuleGroupsWithoutExposingStaffToolsToFamilies() {
+    assertEquals(WorkspaceArea.entries.toSet(),WorkspaceDirectory.visible(UserRole.ADMIN).map {it.area}.toSet())
+    assertFalse(WorkspaceDirectory.visible(UserRole.PARENT).any {it.route==Screen.Audit.route})
+  }
+
   @Test fun everyRoleHasUniqueRoutesAndInboxSettingsAndSearch() {
     for (role in UserRole.entries) {
       val routes = WorkspaceDirectory.visible(role).map { it.route }

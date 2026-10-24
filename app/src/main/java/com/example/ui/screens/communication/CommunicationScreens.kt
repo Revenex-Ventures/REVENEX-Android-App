@@ -21,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,12 +40,12 @@ import kotlinx.coroutines.launch
 // Segmented sub-tab: "System Audit Logs" ↔ "Parent Broadcasts"
 // ============================================================================
 @Composable
-fun NoticesScreen(repository: ErpDataRepository,onShowCreateNotice: () -> Unit) {
+fun NoticesScreen(repository: ErpDataRepository,onShowCreateNotice: () -> Unit,initialAudit:Boolean=false) {
   val notices by repository.notices.collectAsState()
   val logs by repository.auditLogs.collectAsState()
   val actor by repository.currentUser.collectAsState()
   val administrator=actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)
-  var audit by remember(actor.id){mutableStateOf(false)}
+  var audit by remember(actor.id,initialAudit){mutableStateOf(initialAudit && administrator)}
   var filter by remember(actor.id){mutableStateOf("All")}
   var expanded by remember(actor.id){mutableStateOf<String?>(null)}
   val filtered=logs.filter {filter=="All"||it.actionType.equals(filter,true)}
@@ -90,6 +93,8 @@ fun NotificationsScreen(
   val notifications by repository.notifications.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
   val scope = rememberCoroutineScope()
+  var about by remember(currentUser.id) {mutableStateOf(false)}
+  if(about) AlertDialog(onDismissRequest={about=false},title={Text("In-app inbox")},text={Text("Updates are stored for your account. Read state is individual. Device push is not configured. Each update opens its related workspace; record-specific links are not available yet.")},confirmButton={TextButton(onClick={about=false}){Text("Done")}})
   var category by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf<String?>(null) }
   var unreadOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf(false) }
   var markingAll by remember(currentUser.id) { mutableStateOf(false) }
@@ -131,7 +136,10 @@ fun NotificationsScreen(
       verticalArrangement = Arrangement.spacedBy(Spacing.s2)
     ) {
       item {
-        Text("${notifications.count { !it.isRead }} unread · School inbox", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+          Text("${notifications.count { !it.isRead }} unread",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          IconButton(onClick={about=true}){Icon(Icons.Default.Info,"Inbox information",Modifier.size(Spacing.xl20))}
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
           item { SchoolFilterChip(category == null, { category = null }, { Text("All") }) }
           items(notifications.map { it.category }.distinct()) { value ->
@@ -161,7 +169,7 @@ fun NotificationsScreen(
             } finally { opening = null }
           }
           },enabled=opening==null&&!markingAll,color=MaterialTheme.colorScheme.background) {
-            Row(Modifier.fillMaxWidth().padding(vertical=Spacing.md12),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+            Row(Modifier.fillMaxWidth().semantics {stateDescription=if(notif.isRead)"Read" else "Unread"}.padding(vertical=Spacing.sm8),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
               val (well,ink)=when(notif.category) {
                 NotificationCategory.FEES->SemanticColors.butterContainer to SemanticColors.onButter
                 NotificationCategory.ATTENDANCE->SemanticColors.successContainer to SemanticColors.onSuccess
@@ -172,21 +180,17 @@ fun NotificationsScreen(
               Column(Modifier.weight(1f)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
                   Text(notif.title,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=if(notif.isRead)FontWeight.Medium else FontWeight.Bold)
+                  Text(if(opening==notif.id)"Opening…" else shortSchoolTimestamp(notif.timestamp),Modifier.semantics{contentDescription=notif.timestamp},style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                   if(!notif.isRead) Box(Modifier.padding(top=Spacing.xs4).size(6.dp).background(MaterialTheme.colorScheme.primary,CircleShape))
                 }
                 Text(notif.message,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-                  Text(notif.category.label,Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,color=ink)
-                  Text(if(opening==notif.id)"Opening…" else notif.timestamp,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if(!notif.isRead) Text("Unread",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+
               }
             }
           }
           HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         }
       }
-      item { Text("In-app inbox. Device push is not configured. Updates open their related workspace; record-specific links are not available yet.",Modifier.padding(vertical=Spacing.md12),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
 
     }
   }

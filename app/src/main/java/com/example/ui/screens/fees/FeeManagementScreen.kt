@@ -58,16 +58,16 @@ fun FeeManagementScreen(repository: ErpDataRepository,
       Column(Modifier.fillMaxWidth().padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         Row(Modifier.fillMaxWidth()) {
           Column(Modifier.weight(1f)) {
-            Text("Outstanding amount",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
+            Text("Outstanding",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
             Text(feeCurrency(unpaid.sumOf {it.pendingAmount}),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SemanticColors.onPeach)
           }
           Text(if(cloud) "TEST mode" else "Local sample",style=MaterialTheme.typography.labelSmall,color=SemanticColors.onPeach)
         }
-        Text(if(user.role in setOf(UserRole.STUDENT,UserRole.PARENT)) "Invoices available to your account" else "School invoices · choose an invoice to review",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
+        Text(if(user.role in setOf(UserRole.STUDENT,UserRole.PARENT)) "Your school invoices" else "School invoices",style=MaterialTheme.typography.bodySmall,color=SemanticColors.onPeach)
         Button(onClick={
           if(unpaid.size==1) unpaid.first().let {onPayRazorpay(it.id,it.studentName,it.pendingAmount)}
           else {filter="Pending";scope.launch {list.animateScrollToItem(3)}}
-        },enabled=unpaid.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm)) {Text(if(unpaid.size==1) "Pay" else "View pending invoices")}
+        },enabled=unpaid.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm)) {Text(if(unpaid.size==1) "Pay" else "View invoices")}
       }
     }}
     item {
@@ -92,25 +92,26 @@ fun FeeManagementScreen(repository: ErpDataRepository,
           Icon(Icons.Default.ReceiptLong,null,tint=MaterialTheme.colorScheme.primary)
           Column(Modifier.weight(1f)) {
             Text(invoice.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-            Text("${invoice.studentName} · ${invoice.cohort}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Due ${invoice.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
           }
           Column(horizontalAlignment=Alignment.End) {
             Text(feeCurrency(if(invoice.pendingAmount>0)invoice.pendingAmount else invoice.totalAmount),style=MaterialTheme.typography.titleSmall)
+            StatusBadge(invoice.status.label)
             if(invoice.pendingAmount>0) TextButton(onClick={onPayRazorpay(invoice.id,invoice.studentName,invoice.pendingAmount)}) {Text("Pay")}
             else if(cloud) TextButton(onClick={onPayRazorpay(invoice.id,invoice.studentName,0L)}) {Text("Receipt")}
-            else StatusBadge(status="Paid")
+
           }
         }
         androidx.compose.animation.AnimatedVisibility(visible=expanded==invoice.id) {
           Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
             HorizontalDivider()
             Text(invoice.invoiceNumber,style=MaterialTheme.typography.labelMedium)
+            Text("${invoice.studentName} · ${invoice.cohort}",style=MaterialTheme.typography.bodyMedium)
             Text(invoice.description,style=MaterialTheme.typography.bodyMedium)
             Text("${feeCurrency(invoice.paidAmount)} paid of ${feeCurrency(invoice.totalAmount)}",style=MaterialTheme.typography.bodySmall)
             Text("Issued ${invoice.issueDate} · ${invoice.paymentChannel}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             StatusBadge(status=invoice.status.label)
-            if(cloud) TextButton(onClick={onCheckRazorpay(invoice.id)}) {Text(if(invoice.pendingAmount>0) "Check payment status" else "View receipt / status")}
+            if(cloud) TextButton(onClick={onCheckRazorpay(invoice.id)}) {Text(if(invoice.pendingAmount>0) "Check status" else "Receipt")}
           }
         }
       }
