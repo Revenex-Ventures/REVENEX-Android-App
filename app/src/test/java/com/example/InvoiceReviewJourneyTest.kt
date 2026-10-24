@@ -2,6 +2,7 @@ package com.example
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.example.data.datasource.DataMode
+import com.example.data.datasource.AppEnvironment
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.screens.fees.FeeManagementScreen
@@ -15,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -24,10 +27,21 @@ import org.robolectric.annotation.Config
 class InvoiceReviewJourneyTest {
  @get:Rule val compose=createComposeRule()
  private val dispatcher=StandardTestDispatcher()
+ private var fixture: ErpDataRepository?=null
  @Before fun setup(){Dispatchers.setMain(dispatcher)}
- @After fun cleanup(){dispatcher.scheduler.runCurrent();Dispatchers.resetMain()}
+ @After fun cleanup(){
+  fixture?.let { repository ->
+    (ErpDataRepository::class.java.getDeclaredField("repositoryScope").apply {isAccessible=true}.get(repository) as CoroutineScope).cancel()
+  }
+  dispatcher.scheduler.runCurrent();Dispatchers.resetMain()
+ }
  @Test fun invoiceReviewPreservesItsIdentifierAndOutstandingAmountForCheckout() {
-  val repository=ErpDataRepository.getInstance();repository.setDataMode(DataMode.DEMO)
+  // A separate in-memory fixture avoids inheriting a fee already settled by another test.
+  // This never resets the application singleton or touches hosted records.
+  AppEnvironment.setMode(DataMode.DEMO)
+  val repository=ErpDataRepository::class.java.getDeclaredConstructor().apply {isAccessible=true}.newInstance()
+  fixture=repository
+  repository.setDataMode(DataMode.DEMO)
   dispatcher.scheduler.runCurrent()
   repository.switchRole(UserRole.PARENT)
   dispatcher.scheduler.runCurrent()
