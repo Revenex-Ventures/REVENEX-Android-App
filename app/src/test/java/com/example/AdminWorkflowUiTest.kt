@@ -103,11 +103,11 @@ class AdminWorkflowUiTest {
     val repository = repository(UserRole.PARENT)
     var destination = ""
     compose.setContent { ScholaTheme(false) { GlobalCommandPaletteModal(repository, {}, { destination = it }, {}) } }
-    compose.onNodeWithTag("command_palette_search_field").performTextInput("Enrol")
-    compose.onNodeWithText("Enrol student").assertDoesNotExist()
+    compose.onNodeWithTag("command_palette_search_field").performTextInput("Add student")
+    compose.onNodeWithText("Add student").assertDoesNotExist()
     compose.onNodeWithTag("command_palette_search_field").performTextClearance()
     compose.onNodeWithTag("command_palette_search_field").performTextInput("Fee")
-    compose.onNodeWithText("Fee accounts").performClick()
+    compose.onNodeWithText("Fees").performClick()
     assertEquals(Screen.Fees.route, destination)
   }
 

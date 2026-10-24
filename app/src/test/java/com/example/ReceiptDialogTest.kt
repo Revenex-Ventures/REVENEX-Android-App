@@ -22,7 +22,7 @@ class ReceiptDialogTest {
       FeePaymentDialog("Demo student",0L,false,false,"",{}, { starts++ },onCheckStatus={checks++})
     } }
     compose.onNodeWithTag("submit_fee_payment_button").assertDoesNotExist()
-    compose.onNodeWithText("Check payment status").performClick()
+    compose.onNodeWithText("Check status").performClick()
     compose.runOnIdle { assertEquals(1,checks);assertEquals(0,starts) }
   }
   @Test fun confirmedStatusReplacesLookupWithReceiptWithoutStartingCharge() {
@@ -33,7 +33,7 @@ class ReceiptDialogTest {
         if(confirmed) "pay_fixture" else "",{}, { starts++ },
         receiptNo=if(confirmed) "RZP-TEST-fixture" else "",onCheckStatus={confirmed=true})
     } }
-    compose.onNodeWithText("Check payment status").performClick()
+    compose.onNodeWithText("Check status").performClick()
     compose.onNodeWithText("RZP-TEST-fixture").assertExists()
     compose.onNodeWithText("Captured · verified (test)").assertExists()
     compose.onNodeWithTag("submit_fee_payment_button").assertDoesNotExist()
