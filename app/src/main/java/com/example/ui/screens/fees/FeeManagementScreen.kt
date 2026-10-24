@@ -53,7 +53,7 @@ fun FeeManagementScreen(repository: ErpDataRepository,
   val list=androidx.compose.foundation.lazy.rememberLazyListState()
   val scope=rememberCoroutineScope()
   LazyColumn(Modifier.fillMaxSize().testTag("fee_management_screen"),state=list,contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {Text("Fees & payments",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}
+    item {WorkspacePageHeader("Fees & payments")}
     item {Surface(shape=RoundedCornerShape(Radius.md),color=SemanticColors.peachContainer) {
       Column(Modifier.fillMaxWidth().padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         Row(Modifier.fillMaxWidth()) {

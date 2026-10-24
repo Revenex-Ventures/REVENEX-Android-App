@@ -46,7 +46,7 @@ fun TimetableScreen(repository: ErpDataRepository) {
   val classes=timetable.map {"${it.classGrade}-${it.division}"}.distinct().sorted()
   val slots=timetable.filter {it.dayOfWeek.equals(day,true)&&(cohort.isBlank()||"${it.classGrade}-${it.division}"==cohort)}.sortedBy {it.periodNumber}
   Column(Modifier.fillMaxSize().testTag("timetable_screen")) {
-    Text("Timetable & scores",Modifier.padding(Spacing.screenPadding),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    Box(Modifier.padding(horizontal=Spacing.screenPadding)) {WorkspacePageHeader("Timetable & scores")}
     TabRow(selectedTabIndex=tab,containerColor=MaterialTheme.colorScheme.background) {listOf("Timetable","Scores").forEachIndexed {index,title->Tab(selected=tab==index,onClick={tab=index},text={Text(title)})}}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
       if(tab==0) {
@@ -97,8 +97,7 @@ fun HomeworkScreen(repository: ErpDataRepository, onShowCreateAssignment: () -> 
   val subjects=assignments.map {it.subject}.distinct().sorted()
   val filtered=assignments.filter {(subjectFilter.isBlank()||it.subject==subjectFilter)&&(!pendingOnly||!it.isCompletedByStudent)}
   Column(Modifier.fillMaxSize()) {
-    Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.screenPadding),verticalAlignment=Alignment.CenterVertically) {
-      Text("Assignments",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    WorkspacePageHeader("Assignments",Modifier.padding(horizontal=Spacing.screenPadding)) {
       if(!resources && currentUser.role in setOf(UserRole.TEACHER,UserRole.PRINCIPAL,UserRole.ADMIN)) Button(onClick=onShowCreateAssignment,shape=RoundedCornerShape(Radius.sm)) {Icon(Icons.Default.Add,null);Text("Add")}
     }
     TabRow(selectedTabIndex=if(resources)1 else 0,containerColor=MaterialTheme.colorScheme.background) {
@@ -170,7 +169,7 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
   var query by remember {mutableStateOf("")}
   val visible=materials.filter {query.isBlank()||it.title.contains(query,true)||it.subject.contains(query,true)||it.chapter.contains(query,true)}
   LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {Text("Learning resources",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    item {WorkspacePageHeader("Learning resources")
       OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search documents or subjects")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
     if(visible.isEmpty()) item {EmptyStateView(title="No matching resources",message="Shared notes and documents appear here when available.")}
     items(visible,key={it.id}) {material->
@@ -192,7 +191,7 @@ fun StudyMaterialScreen(repository: ErpDataRepository) {
 fun ExamsScreen(repository: ErpDataRepository) {
   val schedules by repository.examSchedules.collectAsState()
   LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {Text("Examinations",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    item {WorkspacePageHeader("Examinations")
       Text("Schedules available to your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
     if(schedules.isEmpty()) item {EmptyStateView(title="No examinations scheduled",message="Examination schedules appear when available to your account.")}
     items(schedules,key={it.id}) {exam->

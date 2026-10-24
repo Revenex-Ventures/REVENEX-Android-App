@@ -9,6 +9,9 @@ import com.example.data.datasource.DataMode
 import com.example.data.datasource.RazorpayCheckoutOrder
 import com.example.data.datasource.RazorpayPaymentResult
 import com.example.data.datasource.RazorpayPayments
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.ui.screens.auth.RevenexLaunchHost
+import com.example.ui.screens.auth.LaunchLifetime
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -85,7 +88,14 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
   override fun onCreate(savedInstanceState: Bundle?) {
     val appearance = Appearance.parse(getSharedPreferences("revenex_appearance", MODE_PRIVATE).getString("mode", null))
     val systemDark = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
-    setTheme(if (appearance.usesDark(systemDark)) R.style.Theme_Revenex_Dark else R.style.Theme_MyApplication)
+    setTheme(if (appearance.usesDark(systemDark)) R.style.Theme_Revenex_Starting_Dark else R.style.Theme_Revenex_Starting)
+    val splash = installSplashScreen()
+    val showBrand = savedInstanceState == null && LaunchLifetime.claim()
+    var splashExited by mutableStateOf(false)
+    splash.setOnExitAnimationListener { provider ->
+      provider.remove()
+      splashExited = true
+    }
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
@@ -99,6 +109,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         }
       }
       ScholaTheme {
+        RevenexLaunchHost(showBrand, splashExited) {
         ScholaErpApp(
           isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
           onStartPayment={ feeId, _ -> startRazorpayPayment(feeId) },
@@ -109,6 +120,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
           verifiedPaymentAmount=activeAmount,verifiedReceipt=paymentReceipt,paymentStatus=paymentStatusMessage,
           onCheckPayment={ feeId -> checkPaymentStatus(feeId) }
         )
+        }
       }
     }
   }
@@ -271,6 +283,9 @@ fun ScholaErpApp(
       navController.navigate(Screen.Auth.route) {
         popUpTo(navController.graph.id) { inclusive = true }
       }
+    },
+    onBack = {
+      if (!navController.popBackStack()) navController.navigate(Screen.Dashboard.route) { launchSingleTop = true }
     }
   ) { paddingValues ->
     Column(Modifier.fillMaxSize().padding(paddingValues)) {
@@ -326,7 +341,7 @@ fun ScholaErpApp(
         AuthScreen(
           repository = repository,
           onLoginSuccess = {
-            navController.navigate(Screen.Loading.route) {
+            navController.navigate(Screen.Dashboard.route) {
               popUpTo(Screen.Auth.route) { inclusive = true }
             }
           }

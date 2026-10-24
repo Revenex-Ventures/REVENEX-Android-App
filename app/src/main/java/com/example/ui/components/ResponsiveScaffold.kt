@@ -64,8 +64,12 @@ fun ScholaResponsiveScaffold(
   onOpenNotifications: () -> Unit,
   onOpenProfile: () -> Unit,
   onLogout: () -> Unit,
+  onBack: (() -> Unit)? = null,
   content: @Composable (PaddingValues) -> Unit
 ) {
+  val pageContent: @Composable () -> Unit = {
+    CompositionLocalProvider(LocalWorkspaceBack provides onBack) { content(PaddingValues(0.dp)) }
+  }
   val windowSizeClass = rememberWindowSizeClass()
   val navItems = remember(currentUser.role) {
     NavConfig.getBottomNavItems(currentUser.role).filterNot {
@@ -97,7 +101,7 @@ fun ScholaResponsiveScaffold(
       Scaffold(
         containerColor = GlassBgTransparent,
         topBar = {
-          if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route && currentRoute != Screen.Attendance.route) {
+          if (currentRoute == Screen.Dashboard.route) {
             ScholaTopAppBar(
               title = "REVENEX",
               subtitle = "School ERP demonstration",
@@ -129,7 +133,7 @@ fun ScholaResponsiveScaffold(
       ) { paddingValues ->
         GlassBackground {
           Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
         }
       }
@@ -157,7 +161,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route && currentRoute != Screen.Attendance.route) {
+              if (currentRoute == Screen.Dashboard.route) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
@@ -174,7 +178,7 @@ fun ScholaResponsiveScaffold(
           ) { paddingValues ->
             GlassBackground {
               Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
             }
           }
@@ -208,7 +212,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route && currentRoute != Screen.Attendance.route) {
+              if (currentRoute == Screen.Dashboard.route) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
@@ -225,7 +229,7 @@ fun ScholaResponsiveScaffold(
           ) { paddingValues ->
             GlassBackground {
               Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
             }
           }

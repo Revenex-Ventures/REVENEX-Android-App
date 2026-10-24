@@ -181,13 +181,8 @@ fun CompactStatTile(
 // ============================================================================
 
 @Composable
-fun ScholaFloatingDock(
-  items: List<ScholaDockItem>,
-  currentRoute: String?,
-  onItemSelected: (String) -> Unit,
-  modifier: Modifier = Modifier
-) {
-  val largeText = LocalDensity.current.fontScale > 1.3f
+fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemSelected:(String)->Unit,modifier:Modifier=Modifier) {
+  val largeText=LocalDensity.current.fontScale>1.3f
   fun destinationLabel(label: String): String = when (label) {
     "Attendance" -> "Roll call"
     "Admissions" -> "Students"
@@ -196,82 +191,20 @@ fun ScholaFloatingDock(
     "Timetable" -> "Schedule"
     else -> label
   }
-  Column(modifier.clip(RoundedCornerShape(Radius.lg)).background(MaterialTheme.colorScheme.surface)
-    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))) {
-    if (largeText) Text(destinationLabel(items.firstOrNull { it.route == currentRoute }?.label.orEmpty()),
-      style = MaterialTheme.typography.labelLarge,
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md12, vertical = Spacing.xs4))
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e0,
-      windowInsets = WindowInsets(0, 0, 0, 0)) {
-      items.forEach { item ->
-        val selected = currentRoute == item.route
-        NavigationBarItem(colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-          selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
-          selected = selected, onClick = { onItemSelected(item.route) },
-          icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
-          label = if (largeText) null else { { Text(destinationLabel(item.label), style = MaterialTheme.typography.labelSmall,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) } })
+  Surface(modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.lg),color=MaterialTheme.colorScheme.surface,
+    border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),shadowElevation=Elev.e1) {
+    Column {
+      if(largeText) Text(destinationLabel(items.firstOrNull {it.route==currentRoute}?.label.orEmpty()),Modifier.padding(horizontal=Spacing.md12,vertical=Spacing.xs4),style=MaterialTheme.typography.labelLarge)
+      Row(Modifier.fillMaxWidth()) {
+        items.forEach {item->
+          val selected=currentRoute==item.route
+          val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+          Column(Modifier.weight(1f).clickable(onClickLabel=item.label){onItemSelected(item.route)}.heightIn(min=64.dp).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
+            Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(24.dp),tint=ink)
+            if(!largeText) Text(destinationLabel(item.label),style=MaterialTheme.typography.labelSmall,color=ink,maxLines=1,overflow=TextOverflow.Ellipsis)
+          }
+        }
       }
-    }
-  }
-}
-
-data class ScholaDockItem(
-  val route: String,
-  val label: String,
-  val selectedIcon: ImageVector,
-  val unselectedIcon: ImageVector
-)
-
-private class DockClick {
-  private val sampleRate = 44100
-  private val track: AudioTrack
-
-  init {
-    val duration = 0.008f
-    val total = (sampleRate * duration).toInt()
-    val pcm = ShortArray(total)
-    for (i in 0 until total) {
-      val t = i.toFloat() / sampleRate
-      val decay = exp(-t * 500f)
-      val body = sin(2.0 * Math.PI.toFloat() * 1200.0f * t)
-      pcm[i] = ((body * decay) * 0.20f * Short.MAX_VALUE).toInt().toShort()
-    }
-    track = AudioTrack.Builder()
-      .setAudioAttributes(
-        AudioAttributes.Builder()
-          .setUsage(AudioAttributes.USAGE_MEDIA)
-          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-          .build()
-      )
-      .setAudioFormat(
-        AudioFormat.Builder()
-          .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-          .setSampleRate(sampleRate)
-          .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-          .build()
-      )
-      .setBufferSizeInBytes(pcm.size * 2)
-      .setTransferMode(AudioTrack.MODE_STATIC)
-      .build()
-    track.write(pcm, 0, pcm.size)
-    track.reloadStaticData()
-  }
-
-  fun play() {
-    try {
-      track.stop()
-      track.reloadStaticData()
-      track.play()
-    } catch (_: Exception) {
-    }
-  }
-
-  fun release() {
-    try {
-      track.stop()
-      track.release()
-    } catch (_: Exception) {
     }
   }
 }

@@ -1,5 +1,7 @@
 package com.example.ui.screens.communication
 
+import androidx.compose.animation.AnimatedVisibility
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,223 +37,49 @@ import kotlinx.coroutines.launch
 // Segmented sub-tab: "System Audit Logs" ↔ "Parent Broadcasts"
 // ============================================================================
 @Composable
-fun NoticesScreen(
-  repository: ErpDataRepository,
-  onShowCreateNotice: () -> Unit
-) {
-  val auditLogs by repository.auditLogs.collectAsState()
+fun NoticesScreen(repository: ErpDataRepository,onShowCreateNotice: () -> Unit) {
   val notices by repository.notices.collectAsState()
-  val currentUser by repository.currentUser.collectAsState()
-
-  var selectedSubTab by remember(currentUser.id) { mutableStateOf(1) } // 0 = System Audit Logs, 1 = Parent Broadcasts
-  var auditFilter by remember { mutableStateOf("All") }
-  val auditFilters = listOf("All", "ROLL_CALL", "FEE_PAYMENT", "GRADEBOOK", "ADMISSION", "BROADCAST")
-
-  val filteredAuditLogs = remember(auditLogs, auditFilter) {
-    if (auditFilter == "All") auditLogs
-    else auditLogs.filter { it.actionType.equals(auditFilter, ignoreCase = true) }
-  }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background)
-      .testTag("notices_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      WorkspaceHeading(
-        if (selectedSubTab == 0) "School activity" else "Notices & circulars",
-        if (selectedSubTab == 0) "Recorded actions from your school workspace." else "Announcements, events and important school updates."
-      ) {
-        if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
-          FilledTonalButton(onClick = onShowCreateNotice) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(Modifier.width(Spacing.sm8))
-            Text("Compose notice")
-          }
-        }
-      }
+  val logs by repository.auditLogs.collectAsState()
+  val actor by repository.currentUser.collectAsState()
+  val administrator=actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)
+  var audit by remember(actor.id){mutableStateOf(false)}
+  var filter by remember(actor.id){mutableStateOf("All")}
+  var expanded by remember(actor.id){mutableStateOf<String?>(null)}
+  val filtered=logs.filter {filter=="All"||it.actionType.equals(filter,true)}
+  Column(Modifier.fillMaxSize().testTag("notices_screen")) {
+    WorkspacePageHeader(if(audit)"School activity" else "Notices & circulars",Modifier.padding(horizontal=Spacing.screenPadding)) {
+      if(administrator) Button(onClick=onShowCreateNotice,shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Default.Add,null);Text("Add")}
     }
-
-    // 2. SEGMENTED SUB-TAB TOGGLE ("System Audit Logs" ↔ "Parent Broadcasts")
-    item {
-      Surface(
-        shape = RoundedCornerShape(Radius.pill),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.pill))
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(4.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-          listOf("Audit log", "Notices").forEachIndexed { index, title ->
-            if (index == 0 && currentUser.role !in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) return@forEachIndexed
-            val isSelected = selectedSubTab == index
-            Box(
-              modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                .clickable { selectedSubTab = index }
-                .heightIn(min = 48.dp).padding(vertical = Spacing.sm8),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-            }
-          }
-        }
-      }
+    if(administrator) TabRow(selectedTabIndex=if(audit)1 else 0,containerColor=MaterialTheme.colorScheme.background) {
+      Tab(selected=!audit,onClick={audit=false},text={Text("Notices")});Tab(selected=audit,onClick={audit=true},text={Text("Audit log")})
     }
-
-    // 3. SUB-TAB CONTENT
-    if (selectedSubTab == 0) {
-      // TAB 1: SYSTEM AUDIT LOGS
-      item {
-        LazyRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-        ) {
-          items(auditFilters) { flt ->
-            val isSelected = auditFilter == flt
-            Surface(
-              shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-              modifier = Modifier
-                .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-                .clickable { auditFilter = flt }
-            ) {
-              Text(
-                text = flt.replace("_", " "),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = Spacing.sm8)
-              )
-            }
-          }
-        }
-      }
-
-      if (filteredAuditLogs.isEmpty()) {
-        item {
-          EmptyStateView(title = "No Audit Logs", message = "No system audit logs found matching '$auditFilter'.")
-        }
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      if(audit) {
+        item {LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){items(listOf("All")+logs.map {it.actionType}.distinct()){value->SchoolFilterChip(filter==value,{filter=value},{Text(value.replace('_',' '))})}}}
+        if(filtered.isEmpty()) item {EmptyStateView(title="No activity in this view",message="Confirmed school activity appears here when available.")}
+        items(filtered,key={it.id}) {log->SchoolGroup {
+          SchoolRow(log.actionSummary,"${log.actorName} · ${log.timestamp}",Icons.Default.History,{expanded=if(expanded==log.id)null else log.id})
+          AnimatedVisibility(expanded==log.id){Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Text(log.details,style=MaterialTheme.typography.bodyMedium);Text("${log.actorRole} · ${log.actionType}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(log.targetScholar.isNotBlank()) Text(log.targetScholar,style=MaterialTheme.typography.bodySmall)
+          }}
+        }}
       } else {
-        items(filteredAuditLogs, key = { it.id }) { log ->
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.Top
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(38.dp)
-                  .clip(CircleShape)
-                  .background(
-                    when (log.actionType) {
-                      "ROLL_CALL" -> SemanticColors.successContainer
-                      "FEE_PAYMENT" -> MaterialTheme.colorScheme.primaryContainer
-                      "GRADEBOOK" -> Color(0xFFEDE9FE)
-                      else -> MaterialTheme.colorScheme.secondaryContainer
-                    }
-                  ),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = when (log.actionType) {
-                    "ROLL_CALL" -> Icons.Default.CheckCircle
-                    "FEE_PAYMENT" -> Icons.Default.Payment
-                    "GRADEBOOK" -> Icons.Default.Grade
-                    "ADMISSION" -> Icons.Default.PersonAdd
-                    else -> Icons.Default.Campaign
-                  },
-                  contentDescription = null,
-                  tint = when (log.actionType) {
-                    "ROLL_CALL" -> SemanticColors.onSuccess
-                    "FEE_PAYMENT" -> MaterialTheme.colorScheme.primary
-                    "GRADEBOOK" -> MaterialTheme.colorScheme.primary
-                    else -> ScholaSlateNavy
-                  },
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-
-              Spacer(modifier = Modifier.width(Spacing.s3))
-
-              Column(modifier = Modifier.weight(1f)) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(log.actionSummary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  Text(log.timestamp, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                  text = "${log.actorName} (${log.actorRole}) • Target: ${log.targetScholar}",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer,
-                  fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(log.details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-            }
-          }
-        }
-      }
-    } else {
-      // TAB 2: PARENT BROADCASTS
-      item {
-        SectionHeader(horizontalPadding = 0.dp, title = "Published Official Circulars (${notices.size})")
-      }
-
-      if (notices.isEmpty()) item {
-        EmptyStateView(title = "No school notices", message = "Published announcements will appear here.")
-      }
-      items(notices, key = { it.id }) { notice ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            ScholaPillBadge(status = notice.category.label)
-            Text(notice.publishedDate, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          Text(notice.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(4.dp))
-          Text(notice.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          Spacer(modifier = Modifier.height(Spacing.s2))
-          Text(
-            text = "Issued by ${notice.authorName} (${notice.authorRole}) • Target: ${notice.targetAudience}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
-          )
-        }
+        if(notices.isEmpty()) item {EmptyStateView(title="No school notices",message="Published announcements appear here when available to your account.")}
+        items(notices,key={it.id}) {notice->SchoolGroup {
+          SchoolRow(notice.title,"${notice.category.label} · ${notice.publishedDate}",Icons.Default.Campaign,{expanded=if(expanded==notice.id)null else notice.id},if(notice.isImportant)"Important" else null)
+          AnimatedVisibility(expanded==notice.id){Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Text(notice.content,style=MaterialTheme.typography.bodyMedium)
+            Text("${notice.authorName} · ${notice.authorRole}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Audience: ${notice.targetAudience}",style=MaterialTheme.typography.bodySmall)
+            if(notice.attachmentName.isNotBlank()) Text("Attachment: ${notice.attachmentName}",style=MaterialTheme.typography.bodySmall)
+          }}
+        }}
       }
     }
   }
 }
 
-// Notifications Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(

@@ -35,7 +35,7 @@ fun ReportsAnalyticsScreen(repository: ErpDataRepository) {
   val cohorts=students.groupBy {it.fullClass}.toSortedMap()
   LazyColumn(Modifier.fillMaxSize().testTag("reports_analytics_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
     item {
-      Text("School reports",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+      WorkspacePageHeader("School reports")
       Text(if(cloud) "School ${actor.schoolId} · loaded academic session" else "Local sample school · loaded session",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       Text("Totals reflect records available to your account. No growth or trend values are estimated.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }

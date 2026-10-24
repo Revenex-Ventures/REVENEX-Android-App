@@ -45,7 +45,7 @@ import java.util.UUID
 private fun FormHeading(title: String, subtitle: String, enabled: Boolean = true, onDismiss: () -> Unit) {
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
-      Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+      Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
       Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     IconButton(enabled = enabled, onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
@@ -68,6 +68,22 @@ private fun ResponsiveFormFields(
       Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
         first(Modifier.weight(1f)); second(Modifier.weight(1f)); third?.invoke(Modifier.weight(1f))
       }
+    }
+  }
+}
+
+@Composable
+private fun CompactFormLayout(header: @Composable () -> Unit, footer: @Composable ColumnScope.() -> Unit,
+  content: @Composable ColumnScope.() -> Unit) {
+  Surface(modifier=Modifier.widthIn(max=600.dp).fillMaxWidth(0.94f)
+    .heightIn(max=LocalConfiguration.current.screenHeightDp.dp-Spacing.xxl32)
+    .windowInsetsPadding(WindowInsets.safeDrawing).imePadding(),shape=RoundedCornerShape(Radius.lg),color=MaterialTheme.colorScheme.surface) {
+    Column {
+      Box(Modifier.fillMaxWidth().padding(Spacing.screenPadding)){header()}
+      HorizontalDivider()
+      Column(Modifier.weight(1f,fill=false).fillMaxWidth().verticalScroll(rememberScrollState()).padding(Spacing.screenPadding),content=content)
+      HorizontalDivider()
+      Column(Modifier.fillMaxWidth().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.sm8),content=footer)
     }
   }
 }
@@ -102,24 +118,104 @@ fun AddStudentDialog(
     onDismissRequest = { if(!saving) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .imePadding()
-        .padding(vertical = Spacing.sm8),
-      shape = RoundedCornerShape(Radius.hero),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        FormHeading("New student", "Identity, class and guardian details. Required fields are marked *.", enabled = !saving, onDismiss = onDismiss)
+    CompactFormLayout(
+      header = {FormHeading("New student", "Identity, class and guardian details. Required fields are marked *.", enabled = !saving, onDismiss = onDismiss)},
+      footer = {
+        validationError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        Button(
+          onClick = {
+            // Validation
+            val classNum = classGrade.trim().toIntOrNull()
+            when {
+              name.trim().length < 3 -> {
+                validationError = "Student name must be at least 3 characters."
+                return@Button
+              }
+              studentId.trim().isBlank() -> {
+                validationError = "Student ID is required."
+                return@Button
+              }
+              existingStudentIds.any { it.equals(studentId.trim(), ignoreCase = true) } -> {
+                validationError = "Student ID already exists in the system."
+                return@Button
+              }
+              admissionNo.trim().isBlank() -> {
+                validationError = "Admission number is required."
+                return@Button
+              }
+              existingAdmissionNumbers.any { it.equals(admissionNo.trim(), ignoreCase = true) } -> {
+                validationError = "Admission number already exists."
+                return@Button
+              }
+              classGrade.isBlank() || classNum == null || classNum !in 1..12 -> {
+                validationError = "Valid Class/Grade (1-12) is required."
+                return@Button
+              }
+              dob.isBlank() || !Regex("""^\d{2}/\d{2}/\d{4}$""").matches(dob.trim()) -> {
+                validationError = "Date of Birth must be in DD/MM/YYYY format."
+                return@Button
+              }
+              parentName.trim().length < 3 -> {
+                validationError = "Parent/Guardian name must be at least 3 characters."
+                return@Button
+              }
+              parentPhone.replace("+91", "").trim().replace(" ", "").length < 10 -> {
+                validationError = "Please enter a valid 10-digit Indian phone number."
+                return@Button
+              }
+              else -> {
+                val indiaDateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale("en", "IN"))
+                indiaDateFormat.timeZone = java.util.TimeZone.getTimeZone("Asia/Kolkata")
+
+                val newStudent = Student(
+                  id = studentId.trim(),
+                  admissionNumber = admissionNo.trim(),
+                  rollNumber = rollNo.toIntOrNull() ?: 1,
+                  name = name.trim(),
+                  classGrade = classGrade.trim(),
+                  division = division.trim().uppercase().ifBlank { "A" },
+                  dob = dob.trim(),
+                  gender = gender.ifBlank { "Not Specified" },
+                  bloodGroup = bloodGroup.ifBlank { "Unknown" },
+                  parentName = parentName.trim(),
+                  parentPhone = parentPhone.trim(),
+                  parentEmail = parentEmail.trim(),
+                  address = address.ifBlank { "Address pending" },
+                  admissionDate = indiaDateFormat.format(java.util.Date()),
+                  attendancePercent = 100.0,
+                  feeStatus = FeeStatus.PENDING,
+                  feePendingAmount = 4500000L,
+                  rank = 1,
+                  gpa = 0.0,
+                  status = "ACTIVE"
+                )
+                val feePaise=if(annualFee.isBlank()) 0L else runCatching { java.math.BigDecimal(annualFee.trim()).movePointRight(2).longValueExact() }.getOrNull()
+                if(feePaise==null || feePaise !in 0L..1000000000L) { validationError="Enter a valid non-negative INR amount with at most two decimals.";return@Button }
+                if(onSubmitStudent==null) { onAddStudent(newStudent);onDismiss() } else {
+                  saving=true;validationError=null
+                  submitScope.launch {
+                    try { onSubmitStudent(newStudent,feePaise);onDismiss() }
+                    catch(e:Exception) { if(e is kotlinx.coroutines.CancellationException)throw e;validationError=e.message ?: "Enrollment was not confirmed. Check the directory before retrying." }
+                    finally { saving=false }
+                  }
+                }
+              }
+            }
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .testTag("submit_add_student_button"),
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+          enabled = !saving && name.isNotBlank() && parentName.isNotBlank() && classGrade.isNotBlank()
+        ) {
+          Icon(Icons.Default.PersonAdd, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Complete Admission & Save", fontWeight = FontWeight.Bold)
+        }
+      },
+      content = {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -290,127 +386,15 @@ fun AddStudentDialog(
           OutlinedTextField(value=annualFee,onValueChange={ annualFee=it },label={ Text("Initial fee in INR (optional)") },supportingText={ Text("Creates an unpaid invoice. Blank means no invoice; it does not create login accounts.") },modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=!saving)
         }
         // Validation error display
-        if (validationError != null) {
-          Spacer(modifier = Modifier.height(8.dp))
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.errorContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(10.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = validationError ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-              )
-            }
-          }
-        }
+
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-          onClick = {
-            // Validation
-            val classNum = classGrade.trim().toIntOrNull()
-            when {
-              name.trim().length < 3 -> {
-                validationError = "Student name must be at least 3 characters."
-                return@Button
-              }
-              studentId.trim().isBlank() -> {
-                validationError = "Student ID is required."
-                return@Button
-              }
-              existingStudentIds.any { it.equals(studentId.trim(), ignoreCase = true) } -> {
-                validationError = "Student ID already exists in the system."
-                return@Button
-              }
-              admissionNo.trim().isBlank() -> {
-                validationError = "Admission number is required."
-                return@Button
-              }
-              existingAdmissionNumbers.any { it.equals(admissionNo.trim(), ignoreCase = true) } -> {
-                validationError = "Admission number already exists."
-                return@Button
-              }
-              classGrade.isBlank() || classNum == null || classNum !in 1..12 -> {
-                validationError = "Valid Class/Grade (1-12) is required."
-                return@Button
-              }
-              dob.isBlank() || !Regex("""^\d{2}/\d{2}/\d{4}$""").matches(dob.trim()) -> {
-                validationError = "Date of Birth must be in DD/MM/YYYY format."
-                return@Button
-              }
-              parentName.trim().length < 3 -> {
-                validationError = "Parent/Guardian name must be at least 3 characters."
-                return@Button
-              }
-              parentPhone.replace("+91", "").trim().replace(" ", "").length < 10 -> {
-                validationError = "Please enter a valid 10-digit Indian phone number."
-                return@Button
-              }
-              else -> {
-                val indiaDateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale("en", "IN"))
-                indiaDateFormat.timeZone = java.util.TimeZone.getTimeZone("Asia/Kolkata")
 
-                val newStudent = Student(
-                  id = studentId.trim(),
-                  admissionNumber = admissionNo.trim(),
-                  rollNumber = rollNo.toIntOrNull() ?: 1,
-                  name = name.trim(),
-                  classGrade = classGrade.trim(),
-                  division = division.trim().uppercase().ifBlank { "A" },
-                  dob = dob.trim(),
-                  gender = gender.ifBlank { "Not Specified" },
-                  bloodGroup = bloodGroup.ifBlank { "Unknown" },
-                  parentName = parentName.trim(),
-                  parentPhone = parentPhone.trim(),
-                  parentEmail = parentEmail.trim(),
-                  address = address.ifBlank { "Address pending" },
-                  admissionDate = indiaDateFormat.format(java.util.Date()),
-                  attendancePercent = 100.0,
-                  feeStatus = FeeStatus.PENDING,
-                  feePendingAmount = 4500000L,
-                  rank = 1,
-                  gpa = 0.0,
-                  status = "ACTIVE"
-                )
-                val feePaise=if(annualFee.isBlank()) 0L else runCatching { java.math.BigDecimal(annualFee.trim()).movePointRight(2).longValueExact() }.getOrNull()
-                if(feePaise==null || feePaise !in 0L..1000000000L) { validationError="Enter a valid non-negative INR amount with at most two decimals.";return@Button }
-                if(onSubmitStudent==null) { onAddStudent(newStudent);onDismiss() } else {
-                  saving=true;validationError=null
-                  submitScope.launch {
-                    try { onSubmitStudent(newStudent,feePaise);onDismiss() }
-                    catch(e:Exception) { if(e is kotlinx.coroutines.CancellationException)throw e;validationError=e.message ?: "Enrollment was not confirmed. Check the directory before retrying." }
-                    finally { saving=false }
-                  }
-                }
-              }
-            }
-          },
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .testTag("submit_add_student_button"),
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-          enabled = !saving && name.isNotBlank() && parentName.isNotBlank() && classGrade.isNotBlank()
-        ) {
-          Icon(Icons.Default.PersonAdd, contentDescription = null)
-          Spacer(modifier = Modifier.width(8.dp))
-          Text("Complete Admission & Save", fontWeight = FontWeight.Bold)
-        }
       }
-    }
+    )
   }
 }
-
 
 @Composable
 fun AddTeacherDialog(
@@ -435,24 +419,75 @@ fun AddTeacherDialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .imePadding()
-        .padding(vertical = Spacing.sm8),
-      shape = RoundedCornerShape(Radius.hero),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        FormHeading("Add faculty member", "Contact information and teaching assignment.", enabled = true, onDismiss = onDismiss)
+    CompactFormLayout(
+      header = {FormHeading("Add faculty member", "Contact information and teaching assignment.", enabled = true, onDismiss = onDismiss)},
+      footer = {
+        validationError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        Button(
+          onClick = {
+            when {
+              name.trim().length < 3 -> {
+                validationError = "Faculty name must be at least 3 characters."
+                return@Button
+              }
+              employeeId.trim().isBlank() -> {
+                validationError = "Employee ID is required."
+                return@Button
+              }
+              existingEmployeeIds.any { it.equals(employeeId.trim(), ignoreCase = true) } -> {
+                validationError = "Employee ID already exists."
+                return@Button
+              }
+              dob.isBlank() || !Regex("""^\d{2}/\d{2}/\d{4}$""").matches(dob.trim()) -> {
+                validationError = "Date of Birth must be in DD/MM/YYYY format."
+                return@Button
+              }
+              phone.replace("+91", "").trim().replace(" ", "").length < 10 -> {
+                validationError = "Please enter a valid 10-digit Indian phone number."
+                return@Button
+              }
+              else -> {
+                val indiaDateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale("en", "IN"))
+                indiaDateFormat.timeZone = java.util.TimeZone.getTimeZone("Asia/Kolkata")
+
+                val newTeacher = Teacher(
+                  id = "tch_${UUID.randomUUID().toString().take(8)}",
+                  employeeId = employeeId.trim().uppercase(),
+                  name = name.trim(),
+                  dob = dob.trim(),
+                  gender = gender.trim(),
+                  department = department.trim().ifBlank { "General" },
+                  designation = designation.trim().ifBlank { "Faculty Member" },
+                  qualification = qualification.trim().ifBlank { "B.Ed" },
+                  email = email.ifBlank { "${name.lowercase().replace(" ", ".")}@revenexschool.edu.in" },
+                  phone = phone.trim(),
+                  assignedClasses = assignedClass.split(",").map { it.trim() }.filter { it.isNotBlank() },
+                  subjects = listOf(subject.trim().ifBlank { "General Studies" }),
+                  weeklyPeriods = 22,
+                  attendancePercent = 100.0,
+                  experienceYears = 5,
+                  joiningDate = indiaDateFormat.format(java.util.Date()),
+                  status = "ACTIVE"
+                )
+                onAddTeacher(newTeacher)
+                onDismiss()
+              }
+            }
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .testTag("submit_add_teacher_button"),
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+          enabled = name.isNotBlank() && employeeId.isNotBlank()
+        ) {
+          Icon(Icons.Default.School, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Save Faculty Profile", fontWeight = FontWeight.Bold)
+        }
+      },
+      content = {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -589,95 +624,13 @@ fun AddTeacherDialog(
         )
 
         // Validation error display
-        if (validationError != null) {
-          Spacer(modifier = Modifier.height(8.dp))
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.errorContainer,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(10.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = validationError ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-              )
-            }
-          }
-        }
+
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-          onClick = {
-            when {
-              name.trim().length < 3 -> {
-                validationError = "Faculty name must be at least 3 characters."
-                return@Button
-              }
-              employeeId.trim().isBlank() -> {
-                validationError = "Employee ID is required."
-                return@Button
-              }
-              existingEmployeeIds.any { it.equals(employeeId.trim(), ignoreCase = true) } -> {
-                validationError = "Employee ID already exists."
-                return@Button
-              }
-              dob.isBlank() || !Regex("""^\d{2}/\d{2}/\d{4}$""").matches(dob.trim()) -> {
-                validationError = "Date of Birth must be in DD/MM/YYYY format."
-                return@Button
-              }
-              phone.replace("+91", "").trim().replace(" ", "").length < 10 -> {
-                validationError = "Please enter a valid 10-digit Indian phone number."
-                return@Button
-              }
-              else -> {
-                val indiaDateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale("en", "IN"))
-                indiaDateFormat.timeZone = java.util.TimeZone.getTimeZone("Asia/Kolkata")
 
-                val newTeacher = Teacher(
-                  id = "tch_${UUID.randomUUID().toString().take(8)}",
-                  employeeId = employeeId.trim().uppercase(),
-                  name = name.trim(),
-                  dob = dob.trim(),
-                  gender = gender.trim(),
-                  department = department.trim().ifBlank { "General" },
-                  designation = designation.trim().ifBlank { "Faculty Member" },
-                  qualification = qualification.trim().ifBlank { "B.Ed" },
-                  email = email.ifBlank { "${name.lowercase().replace(" ", ".")}@revenexschool.edu.in" },
-                  phone = phone.trim(),
-                  assignedClasses = assignedClass.split(",").map { it.trim() }.filter { it.isNotBlank() },
-                  subjects = listOf(subject.trim().ifBlank { "General Studies" }),
-                  weeklyPeriods = 22,
-                  attendancePercent = 100.0,
-                  experienceYears = 5,
-                  joiningDate = indiaDateFormat.format(java.util.Date()),
-                  status = "ACTIVE"
-                )
-                onAddTeacher(newTeacher)
-                onDismiss()
-              }
-            }
-          },
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .testTag("submit_add_teacher_button"),
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-          enabled = name.isNotBlank() && employeeId.isNotBlank()
-        ) {
-          Icon(Icons.Default.School, contentDescription = null)
-          Spacer(modifier = Modifier.width(8.dp))
-          Text("Save Faculty Profile", fontWeight = FontWeight.Bold)
-        }
       }
-    }
+    )
   }
 }
 
@@ -701,24 +654,48 @@ fun CreateNoticeDialog(
     onDismissRequest = { if (!saving) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .imePadding()
-        .padding(vertical = Spacing.sm8),
-      shape = RoundedCornerShape(Radius.hero),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        FormHeading("Publish a notice", "Write a clear school announcement and choose its category.", enabled = !saving, onDismiss = onDismiss)
+    CompactFormLayout(
+      header = {FormHeading("Publish a notice", "Write a clear school announcement and choose its category.", enabled = !saving, onDismiss = onDismiss)},
+      footer = {
+        saveError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        Button(
+          onClick = {
+            if (title.isNotBlank() && content.isNotBlank()) {
+              val notice = SchoolNotice(
+                id = noticeId,
+                title = title.trim(),
+                content = content.trim(),
+                category = category,
+                publishedDate = "Today",
+                authorName = "Principal / Admin Office",
+                authorRole = "Administration",
+                targetAudience = targetAudience,
+                isImportant = isImportant
+              )
+              saving = true
+              saveError = null
+              publishScope.launch {
+                try {
+                  if (onSubmitNotice != null) onSubmitNotice(notice) else onPublish(notice)
+                  onDismiss()
+                } catch (e: Exception) {
+                  if (e is kotlinx.coroutines.CancellationException) throw e
+                  saveError = "Publication could not be confirmed. Your notice is kept here; check the inbox before retrying."
+                } finally { saving = false }
+              }
+            }
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("submit_publish_notice_button"),
+          enabled = title.isNotBlank() && content.isNotBlank() && !saving
+        ) {
+          Icon(Icons.Default.Campaign, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(if (saving) "Publishing…" else "Publish school announcement")
+        }
+      },
+      content = {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -786,44 +763,9 @@ fun CreateNoticeDialog(
         Spacer(modifier = Modifier.height(20.dp))
 
         saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-        Button(
-          onClick = {
-            if (title.isNotBlank() && content.isNotBlank()) {
-              val notice = SchoolNotice(
-                id = noticeId,
-                title = title.trim(),
-                content = content.trim(),
-                category = category,
-                publishedDate = "Today",
-                authorName = "Principal / Admin Office",
-                authorRole = "Administration",
-                targetAudience = targetAudience,
-                isImportant = isImportant
-              )
-              saving = true
-              saveError = null
-              publishScope.launch {
-                try {
-                  if (onSubmitNotice != null) onSubmitNotice(notice) else onPublish(notice)
-                  onDismiss()
-                } catch (e: Exception) {
-                  if (e is kotlinx.coroutines.CancellationException) throw e
-                  saveError = "Publication could not be confirmed. Your notice is kept here; check the inbox before retrying."
-                } finally { saving = false }
-              }
-            }
-          },
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("submit_publish_notice_button"),
-          enabled = title.isNotBlank() && content.isNotBlank() && !saving
-        ) {
-          Icon(Icons.Default.Campaign, contentDescription = null)
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(if (saving) "Publishing…" else "Publish school announcement")
-        }
+
       }
-    }
+    )
   }
 }
 
@@ -890,24 +832,82 @@ fun CreateAssignmentDialog(
     onDismissRequest = { if (!isUploading) onDismiss() },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .imePadding()
-        .padding(vertical = Spacing.sm8),
-      shape = RoundedCornerShape(Radius.hero),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        FormHeading("New assignment", "Set the subject, class, deadline and optional reference document.", enabled = !isUploading, onDismiss = onDismiss)
+    CompactFormLayout(
+      header = {FormHeading("New assignment", "Set the subject, class, deadline and optional reference document.", enabled = !isUploading, onDismiss = onDismiss)},
+      footer = {
+        attachmentError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        Button(
+          onClick = {
+            attachmentError = null
+            val validClass = classGrade.trim().isNotEmpty()
+            val validDivision = division.trim().isNotEmpty()
+            
+            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
+            val parsedDueDate = runCatching { sdf.parse(dueDate.trim()) }.getOrNull()
+            val todayMidnight = runCatching { sdf.parse(todayDate) }.getOrNull()
+            if (parsedDueDate != null && todayMidnight != null && parsedDueDate.before(todayMidnight)) {
+              attachmentError = "Due date cannot be in the past."
+              return@Button
+            }
+
+            if (title.isNotBlank() && instructions.isNotBlank() && validClass && validDivision) {
+              isUploading = true
+              createScope.launch {
+                var attachedName = selectedFileName
+                var attachedMime = selectedFileMime
+                var attachedUrl = ""
+                try {
+                  val pickUri = selectedFileUri
+                  if (pickUri != null && selectedFileName.isNotEmpty()) {
+                    val result = repository.uploadAttachment(
+                      context = context,
+                      folder = "assignments",
+                      sourceUri = pickUri,
+                      displayName = selectedFileName,
+                      mimeType = selectedFileMime
+                    )
+                    attachedName = result.name
+                    attachedMime = result.mimeType
+                    attachedUrl = result.url
+                  }
+                  val assignment = HomeworkAssignment(
+                    id = assignmentId,
+                    title = title.trim(),
+                    subject = subject.trim(),
+                    classGrade = classGrade.trim(),
+                    division = division.trim(),
+                    teacherName = teacherName,
+                    assignedDate = todayDate,
+                    dueDate = dueDate.trim(),
+                    instructions = instructions.trim(),
+                    attachmentName = attachedName,
+                    attachmentType = attachedMime,
+                    attachmentUrl = attachedUrl,
+                    maxPoints = maxPoints.toIntOrNull() ?: 20,
+                    isCompletedByStudent = false,
+                    submissionStatus = "Pending"
+                  )
+                  if (onSubmitAssignment != null) onSubmitAssignment(assignment) else onCreate(assignment)
+                  onDismiss()
+                } catch (e: Exception) {
+                  if (e is kotlinx.coroutines.CancellationException) throw e
+                  attachmentError = "Assignment could not be confirmed. Your work is retained; check Homework before retrying."
+                } finally {
+                  isUploading = false
+                }
+              }
+            }
+          },
+          modifier = Modifier.fillMaxWidth(),
+          enabled = title.isNotBlank() && instructions.isNotBlank() &&
+            classGrade.isNotBlank() && division.isNotBlank() && !isUploading
+        ) {
+          Icon(Icons.Default.Assignment, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(if (isUploading) "Publishing…" else "Assign to class $classGrade-$division")
+        }
+      },
+      content = {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -994,9 +994,7 @@ fun CreateAssignmentDialog(
           readOnly = true,
           isError = attachmentError != null,
           supportingText = {
-            if (attachmentError != null) {
-              Text(attachmentError.orEmpty(), color = MaterialTheme.colorScheme.error)
-            }
+    
           },
           label = { Text("Attach Reference File (PDF / DOC / DOCX)") },
           trailingIcon = {
@@ -1024,78 +1022,9 @@ fun CreateAssignmentDialog(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-          onClick = {
-            attachmentError = null
-            val validClass = classGrade.trim().isNotEmpty()
-            val validDivision = division.trim().isNotEmpty()
-            
-            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
-            val parsedDueDate = runCatching { sdf.parse(dueDate.trim()) }.getOrNull()
-            val todayMidnight = runCatching { sdf.parse(todayDate) }.getOrNull()
-            if (parsedDueDate != null && todayMidnight != null && parsedDueDate.before(todayMidnight)) {
-              attachmentError = "Due date cannot be in the past."
-              return@Button
-            }
 
-            if (title.isNotBlank() && instructions.isNotBlank() && validClass && validDivision) {
-              isUploading = true
-              createScope.launch {
-                var attachedName = selectedFileName
-                var attachedMime = selectedFileMime
-                var attachedUrl = ""
-                try {
-                  val pickUri = selectedFileUri
-                  if (pickUri != null && selectedFileName.isNotEmpty()) {
-                    val result = repository.uploadAttachment(
-                      context = context,
-                      folder = "assignments",
-                      sourceUri = pickUri,
-                      displayName = selectedFileName,
-                      mimeType = selectedFileMime
-                    )
-                    attachedName = result.name
-                    attachedMime = result.mimeType
-                    attachedUrl = result.url
-                  }
-                  val assignment = HomeworkAssignment(
-                    id = assignmentId,
-                    title = title.trim(),
-                    subject = subject.trim(),
-                    classGrade = classGrade.trim(),
-                    division = division.trim(),
-                    teacherName = teacherName,
-                    assignedDate = todayDate,
-                    dueDate = dueDate.trim(),
-                    instructions = instructions.trim(),
-                    attachmentName = attachedName,
-                    attachmentType = attachedMime,
-                    attachmentUrl = attachedUrl,
-                    maxPoints = maxPoints.toIntOrNull() ?: 20,
-                    isCompletedByStudent = false,
-                    submissionStatus = "Pending"
-                  )
-                  if (onSubmitAssignment != null) onSubmitAssignment(assignment) else onCreate(assignment)
-                  onDismiss()
-                } catch (e: Exception) {
-                  if (e is kotlinx.coroutines.CancellationException) throw e
-                  attachmentError = "Assignment could not be confirmed. Your work is retained; check Homework before retrying."
-                } finally {
-                  isUploading = false
-                }
-              }
-            }
-          },
-          modifier = Modifier.fillMaxWidth(),
-          enabled = title.isNotBlank() && instructions.isNotBlank() &&
-            classGrade.isNotBlank() && division.isNotBlank() && !isUploading
-        ) {
-          Icon(Icons.Default.Assignment, contentDescription = null)
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(if (isUploading) "Publishing…" else "Assign to class $classGrade-$division")
-        }
       }
-    }
+    )
   }
 }
 
@@ -1117,24 +1046,40 @@ fun ApplyLeaveDialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Card(
-      modifier = Modifier
-        .widthIn(max = 600.dp)
-        .fillMaxWidth(0.94f)
-        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - Spacing.xxl32)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .imePadding()
-        .padding(vertical = Spacing.sm8),
-      shape = RoundedCornerShape(Radius.hero),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(20.dp)
-          .verticalScroll(rememberScrollState())
-      ) {
-        FormHeading("Request leave", "Choose the dates and explain your request.", enabled = true, onDismiss = onDismiss)
+    CompactFormLayout(
+      header = {FormHeading("Request leave", "Choose the dates and explain your request.", enabled = true, onDismiss = onDismiss)},
+      footer = {
+        dateError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        Button(
+          onClick = {
+            dateError = null
+            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
+            val start = runCatching { sdf.parse(startDate.trim()) }.getOrNull()
+            val end = runCatching { sdf.parse(endDate.trim()) }.getOrNull()
+            if (start != null && end != null && end.before(start)) {
+              dateError = "End date must be on or after start date."
+              return@Button
+            }
+            if (reason.isNotBlank()) {
+              onApply(
+                leaveType,
+                startDate,
+                endDate,
+                daysCount.toIntOrNull() ?: 1,
+                reason.trim()
+              )
+              onDismiss()
+            }
+          },
+          modifier = Modifier.fillMaxWidth(),
+          enabled = reason.isNotBlank()
+        ) {
+          Icon(Icons.Default.Send, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Submit Leave Application")
+        }
+      },
+      content = {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1179,14 +1124,7 @@ fun ApplyLeaveDialog(
           }
         )
 
-        if (dateError != null) {
-          Spacer(modifier = Modifier.height(10.dp))
-          Text(
-            text = dateError!!,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall
-          )
-        }
+
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -1202,36 +1140,9 @@ fun ApplyLeaveDialog(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-          onClick = {
-            dateError = null
-            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
-            val start = runCatching { sdf.parse(startDate.trim()) }.getOrNull()
-            val end = runCatching { sdf.parse(endDate.trim()) }.getOrNull()
-            if (start != null && end != null && end.before(start)) {
-              dateError = "End date must be on or after start date."
-              return@Button
-            }
-            if (reason.isNotBlank()) {
-              onApply(
-                leaveType,
-                startDate,
-                endDate,
-                daysCount.toIntOrNull() ?: 1,
-                reason.trim()
-              )
-              onDismiss()
-            }
-          },
-          modifier = Modifier.fillMaxWidth(),
-          enabled = reason.isNotBlank()
-        ) {
-          Icon(Icons.Default.Send, contentDescription = null)
-          Spacer(modifier = Modifier.width(8.dp))
-          Text("Submit Leave Application")
-        }
+
       }
-    }
+    )
   }
 }
 

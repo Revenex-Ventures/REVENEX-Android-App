@@ -40,8 +40,7 @@ fun StudentListScreen(repository: ErpDataRepository, onNavigateToStudentDetail: 
   val wide=rememberWindowSizeClass()!=WindowSizeClass.COMPACT_MOBILE
   val detail=students.firstOrNull {it.id==selected} ?: visible.firstOrNull()
   Column(Modifier.fillMaxSize().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-      Text("Students",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    WorkspacePageHeader("Students") {
       if(actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) Button(onClick=onShowAddStudent,shape=RoundedCornerShape(Radius.sm),modifier=Modifier.testTag("fab_admit_student")){Icon(Icons.Default.Add,null);Text("Add student")}
     }
     OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search name, admission ID or guardian")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=RoundedCornerShape(Radius.sm),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outlineVariant))

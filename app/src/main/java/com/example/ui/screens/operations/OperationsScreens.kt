@@ -49,7 +49,7 @@ fun OperationsHubScreen(repository: ErpDataRepository,onNavigateTo: (String)->Un
   val available=WorkspaceDirectory.visible(actor.role).map {it.area}.distinct()
   val columns=if(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp>=840)2 else 1
   LazyColumn(Modifier.fillMaxSize().testTag("operations_hub_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
-    item {Text("School workspaces",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    item {WorkspacePageHeader("School workspaces")
       Text("${actor.role.displayName} · tools available to your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
     item {
       OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("module_search"),placeholder={Text("Search workspaces")},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotBlank())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear search")}},singleLine=true,shape=RoundedCornerShape(Radius.sm))
@@ -118,8 +118,7 @@ fun LeaveManagementScreen(
   val visible=if(selectedTab==0)pending else history
   var expanded by remember(currentUser.id){mutableStateOf<String?>(null)}
   Column(Modifier.fillMaxSize().testTag("leave_management_screen")) {
-    Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.screenPadding),verticalAlignment=Alignment.CenterVertically) {
-      Text("Leave requests",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    WorkspacePageHeader("Leave requests",Modifier.padding(horizontal=Spacing.screenPadding)) {
       Button(onClick=onShowApplyLeave,modifier=Modifier.testTag("fab_apply_leave"),shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Default.Add,null);Text("Apply")}
     }
     TabRow(selectedTabIndex=selectedTab,containerColor=MaterialTheme.colorScheme.background) {
@@ -152,7 +151,7 @@ fun TransportScreen(repository: ErpDataRepository) {
   var query by remember {mutableStateOf("")}
   val visible=routes.filter {query.isBlank()||it.routeName.contains(query,true)||it.routeNumber.contains(query,true)||it.stops.any {stop->stop.contains(query,true)}}
   LazyColumn(Modifier.fillMaxSize().testTag("transport_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {Text("School transport",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    item {WorkspacePageHeader("School transport")
       OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search route or stop")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
     if(visible.isEmpty()) item {EmptyStateView(title="No matching routes",message="Routes appear when configured and available to your school account.")}
     items(visible,key={it.id}) {route->var expanded by remember(route.id){mutableStateOf(false)}
@@ -175,7 +174,7 @@ fun LibraryScreen(repository: ErpDataRepository) {
   var query by remember {mutableStateOf("")}
   val visible=books.filter {query.isBlank()||it.title.contains(query,true)||it.author.contains(query,true)||it.shelfLocation.contains(query,true)}
   LazyColumn(Modifier.fillMaxSize().testTag("library_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {Text("School library",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    item {WorkspacePageHeader("School library")
       Text(if(cloud)"Catalogue only. Cloud borrower tracking and circulation are not configured." else "Local sample catalogue and circulation preview.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search title, author or shelf")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
     if(visible.isEmpty()) item {EmptyStateView(title="No matching books",message="No accessible catalogue records match this search.")}
@@ -193,7 +192,7 @@ fun InventoryScreen(repository: ErpDataRepository) {
   var query by remember {mutableStateOf("")}
   val visible=inventory.filter {query.isBlank()||it.itemName.contains(query,true)||it.category.contains(query,true)||it.location.contains(query,true)}
   LazyColumn(Modifier.fillMaxSize().testTag("inventory_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    item {Text("School inventory",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    item {WorkspacePageHeader("School inventory")
       OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search asset, category or location")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
     if(visible.isEmpty()) item {EmptyStateView(title="No matching assets",message="No accessible inventory records match this search.")}
     items(visible,key={it.id}) {asset->SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {

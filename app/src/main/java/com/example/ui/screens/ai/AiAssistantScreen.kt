@@ -91,111 +91,50 @@ fun AiAssistantScreen(repository: ErpDataRepository, onBack: () -> Unit) {
     isTyping = false
   }
 
+  val conversation=androidx.compose.foundation.lazy.rememberLazyListState()
+  LaunchedEffect(messages.size,isTyping) {if(messages.size>1) conversation.animateScrollToItem(messages.size)}
   Scaffold(
-    topBar = {
-      Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e1) {
-        Row(
-          modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(Spacing.s2),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-          Box(Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-          }
-          Spacer(Modifier.width(Spacing.s3))
-          Column(Modifier.weight(1f)) {
-            Text("Revenex Assistant", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(
-              if (isDemo) "Guided assistant • demo records" else "Guided assistant • live AI unavailable",
-              style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-        }
+    containerColor=MaterialTheme.colorScheme.background,
+    topBar={Surface(color=MaterialTheme.colorScheme.surface) {Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8),verticalAlignment=Alignment.CenterVertically) {
+      IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}
+      Column(Modifier.weight(1f)){Text("Revenex assistant",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(if(isDemo)"Local demo guidance" else "Secure server responses",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+      Icon(Icons.Default.AutoAwesome,null,Modifier.padding(Spacing.md12),tint=MaterialTheme.colorScheme.primary)
+    }}},
+    bottomBar={Surface(color=MaterialTheme.colorScheme.surface) {Column(Modifier.navigationBarsPadding().imePadding().padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      if(messages.size==1) LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){items(suggestions){suggestion->AssistChip(onClick={send(suggestion)},label={Text(suggestion)})}}
+      Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        OutlinedTextField(inputText,{inputText=it},Modifier.weight(1f).testTag("ai_assistant_input"),enabled=!isTyping,placeholder={Text("Ask a school or study question")},minLines=1,maxLines=4,shape=RoundedCornerShape(Radius.sm))
+        FilledIconButton(onClick={send(inputText)},enabled=inputText.isNotBlank()&&!isTyping,modifier=Modifier.size(48.dp).testTag("ai_assistant_send_btn")){Icon(Icons.Default.Send,"Send")}
       }
-    },
-    bottomBar = {
-      Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e3) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = Spacing.md12, vertical = Spacing.s2)) {
-          LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2), contentPadding = PaddingValues(bottom = Spacing.s2)) {
-            items(suggestions) { suggestion ->
-              AssistChip(onClick = { send(suggestion) }, label = { Text(suggestion, maxLines = 1, overflow = TextOverflow.Ellipsis) })
-            }
-          }
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-              value = inputText, onValueChange = { inputText = it }, enabled = !isTyping,
-              placeholder = { Text("Ask for study help or ERP guidance") },
-              modifier = Modifier.weight(1f).testTag("ai_assistant_input"), shape = RoundedCornerShape(Radius.input), singleLine = true
-            )
-            Spacer(Modifier.width(Spacing.s2))
-            IconButton(
-              onClick = { send(inputText) }, enabled = inputText.isNotBlank() && !isTyping,
-              modifier = Modifier.size(48.dp).clip(CircleShape).background(RoleAccent.of(currentUser.role)).testTag("ai_assistant_send_btn")
-            ) { Icon(Icons.Default.Send, "Send", tint = Color.White) }
-          }
-        }
-      }
-    }
-  ) { padding ->
-    LazyColumn(
-      modifier = Modifier.fillMaxSize().padding(padding).testTag("ai_messages_list"),
-      contentPadding = PaddingValues(Spacing.lg16), verticalArrangement = Arrangement.spacedBy(Spacing.md12)
-    ) {
-      item { AssistantModeBanner(isDemo) }
-      items(messages, key = { it.id }) { message ->
-        AnimatedVisibility(visible = true, enter = fadeIn(), exit = fadeOut()) { MessageBubble(message) }
-      }
-      item {
-        AnimatedVisibility(visible = isTyping, enter = fadeIn(), exit = fadeOut()) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(Spacing.s2))
-            Text("Preparing a safe response…", style = MaterialTheme.typography.bodySmall)
-          }
-        }
-      }
+    }}}
+  ) {padding->
+    LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("ai_messages_list"),state=conversation,contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      item {AssistantModeBanner(isDemo)}
+      items(messages,key={it.id}){message->MessageBubble(message)}
+      if(isTyping) item {Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp);Text("Preparing a response…",style=MaterialTheme.typography.bodySmall)}}
     }
   }
 }
 
 @Composable
 private fun AssistantModeBanner(isDemo: Boolean) {
-  val title = if (isDemo) "Demo data mode" else "Live AI unavailable"
-  val detail = if (isDemo) "Any personal summary uses sample data and is not a real school record."
-    else "A secure model provider has not been configured. School facts will not be guessed."
-  Card(colors = CardDefaults.cardColors(containerColor = if (isDemo) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
-    Column(Modifier.padding(Spacing.md12)) {
-      Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = if (isDemo) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
-      Spacer(Modifier.height(Spacing.xs4))
-      Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+  Surface(shape=RoundedCornerShape(Radius.sm),color=MaterialTheme.colorScheme.secondaryContainer) {
+    Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+      Text(if(isDemo)"Demo data mode" else "Live AI unavailable",style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.SemiBold)
+      Text(if(isDemo)"School summaries use local sample data." else "A secure provider has not been configured. School facts will not be guessed.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
     }
   }
 }
 
 @Composable
 private fun MessageBubble(message: ChatMessage) {
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = if (message.isAssistant) Arrangement.Start else Arrangement.End,
-    verticalAlignment = Alignment.Top
-  ) {
-    if (message.isAssistant) {
-      Box(Modifier.size(30.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
-        Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
-      }
-      Spacer(Modifier.width(Spacing.s2))
-    }
-    Surface(
-      color = if (message.isAssistant) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer,
-      shape = RoundedCornerShape(Radius.lg), modifier = Modifier.widthIn(max = 340.dp)
-    ) {
-      Column(Modifier.padding(Spacing.md12)) {
-        Text(message.text, style = MaterialTheme.typography.bodyMedium, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer)
-        Spacer(Modifier.height(Spacing.xs4))
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s2), verticalAlignment = Alignment.CenterVertically) {
-          message.source?.let { Text(it.label(), style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .72f)) }
-          Text(message.timestamp, style = MaterialTheme.typography.labelSmall, color = if (message.isAssistant) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .72f))
-        }
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=if(message.isAssistant)Arrangement.Start else Arrangement.End) {
+    Surface(color=if(message.isAssistant)MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primaryContainer,
+      shape=RoundedCornerShape(topStart=Radius.md,topEnd=Radius.md,bottomStart=if(message.isAssistant)Radius.xs else Radius.md,bottomEnd=if(message.isAssistant)Radius.md else Radius.xs),
+      border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),modifier=Modifier.widthIn(max=340.dp)) {
+      Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        Text(message.text,style=MaterialTheme.typography.bodyMedium,color=if(message.isAssistant)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimaryContainer)
+        Text(listOfNotNull(message.source?.label(),message.timestamp).joinToString(" · "),style=MaterialTheme.typography.labelSmall,color=if(message.isAssistant)MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer)
       }
     }
   }

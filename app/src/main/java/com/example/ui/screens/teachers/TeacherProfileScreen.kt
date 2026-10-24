@@ -105,6 +105,7 @@ fun TeacherProfileScreen(
       .padding(Spacing.screenPadding),
     verticalArrangement = Arrangement.spacedBy(Spacing.xl24)
   ) {
+    WorkspacePageHeader("Faculty profile")
     TeacherHeaderCard(
       teacher = teacher,
       onPickPhoto = { if (cloudDemo) Toast.makeText(context, "Faculty updates are managed by the school office in this demo.", Toast.LENGTH_LONG).show() else imagePicker.launch("image/*") }

@@ -35,8 +35,7 @@ fun TeacherListScreen(repository: ErpDataRepository, onNavigateToTeacherDetail: 
   val departments=teachers.filter {it.status=="ACTIVE"}.map {it.department}.distinct().sorted()
   val visible=teachers.filter {it.status=="ACTIVE"&&(department.isBlank()||it.department==department)&&(query.isBlank()||it.name.contains(query,true)||it.department.contains(query,true)||it.subjects.any {subject->subject.contains(query,true)})}
   Column(Modifier.fillMaxSize().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-      Text("Faculty",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+    WorkspacePageHeader("Faculty") {
       if(actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) Button(onClick=onShowAddTeacher,shape=RoundedCornerShape(Radius.sm),modifier=Modifier.testTag("fab_add_faculty")){Icon(Icons.Default.Add,null);Text("Add faculty")}
     }
     OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search faculty, department or subject")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=RoundedCornerShape(Radius.sm),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outlineVariant))

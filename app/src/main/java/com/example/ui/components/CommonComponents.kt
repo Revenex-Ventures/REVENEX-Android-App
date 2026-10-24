@@ -33,6 +33,18 @@ import com.example.data.model.UserRole
 import com.example.ui.theme.*
 import java.util.Locale
 
+val LocalWorkspaceBack = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+@Composable
+fun WorkspacePageHeader(title: String, modifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit = {}) {
+  val back = LocalWorkspaceBack.current
+  Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+    if (back != null) IconButton(onClick = back) { Icon(Icons.Default.ArrowBack, "Back") }
+    Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    actions()
+  }
+}
+
 /** Compact presentation primitives shared by the routed school workspaces. */
 @Composable
 fun SchoolSection(title: String, action: String? = null, onAction: () -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
@@ -409,55 +421,18 @@ fun FeeCollectionDonutChart(
 // 7. EMPTY STATE & SUCCESS CHECKMARK
 // ============================================================================
 @Composable
-fun EmptyStateView(
-  title: String,
-  message: String = "",
-  description: String = message,
-  icon: ImageVector = Icons.Outlined.Inbox,
-  actionLabel: String? = null,
-  onActionClick: (() -> Unit)? = null,
-  modifier: Modifier = Modifier
-) {
-  Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(Spacing.xxl32),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
-  ) {
-    Box(
-      modifier = Modifier
-        .size(56.dp)
-        .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
-      contentAlignment = Alignment.Center
-    ) {
-      Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(28.dp)
-      )
-    }
-    Spacer(modifier = Modifier.height(Spacing.s3))
-    Text(
-      text = title,
-      style = MaterialTheme.typography.titleMedium,
-      fontWeight = FontWeight.Bold,
-      color = MaterialTheme.colorScheme.onSurface,
-      textAlign = TextAlign.Center
-    )
-    if (description.isNotBlank()) {
-      Spacer(modifier = Modifier.height(Spacing.s1))
-      Text(
-        text = description,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
-      )
-    }
-    if (actionLabel != null && onActionClick != null) {
-      Spacer(modifier = Modifier.height(Spacing.s4))
-      AppButton(text = actionLabel, onClick = onActionClick)
+fun EmptyStateView(title: String,message: String="",description: String=message,icon: ImageVector=Icons.Outlined.Inbox,
+  actionLabel: String?=null,onActionClick:(()->Unit)?=null,modifier:Modifier=Modifier) {
+  Surface(modifier.fillMaxWidth(),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(Radius.md)) {
+    Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Row(verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+        Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+          Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurface)
+          if(description.isNotBlank()) Text(description,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      }
+      if(actionLabel!=null&&onActionClick!=null) TextButton(onClick=onActionClick){Text(actionLabel)}
     }
   }
 }
