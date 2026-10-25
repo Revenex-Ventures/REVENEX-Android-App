@@ -41,6 +41,8 @@ sealed class Screen(val route: String) {
   object OperationsHub : Screen("operations_hub")
   object Academics : Screen("academic_hub")
   object Audit : Screen("school_activity")
+  object PrincipalSubjects : Screen("principal_subjects")
+  object PrincipalCalendar : Screen("principal_calendar")
   object PrincipalAllocations : Screen("principal_allocations")
   object PrincipalClass : Screen("principal_class/{cohort}?date={date}") {
     fun createRoute(cohort:String,date:String)="principal_class/${android.net.Uri.encode(cohort)}?date=$date"
@@ -66,7 +68,7 @@ object NavConfig {
         role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL) -> Screen.Students.route
       route in setOf(Screen.PrincipalAttendance.route,Screen.PrincipalClass.route) && role == UserRole.PRINCIPAL -> Screen.OperationsHub.route
       role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL) && route in setOf(Screen.Homework.route, Screen.Timetable.route,
-        Screen.Exams.route, Screen.ReportCard.route, Screen.StudyMaterial.route) -> Screen.Academics.route
+        Screen.Exams.route, Screen.ReportCard.route, Screen.StudyMaterial.route,Screen.PrincipalSubjects.route,Screen.PrincipalCalendar.route) -> Screen.Academics.route
       else -> Screen.OperationsHub.route
     }
   }

@@ -97,7 +97,7 @@ fun ScholaTheme(
   val preference = LocalAppearance.current ?: rememberAppearancePreference()
   val dark = darkTheme ?: preference.selection.usesDark(isSystemInDarkTheme())
   val colorScheme = (if (dark) ScholaDarkColorScheme else ScholaLightColorScheme).let { base ->
-    if(principal)base.copy(primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight) else base
+    if(principal)base.copy(background=if(dark)base.background else PrincipalColors.canvasLight,onSurface=if(dark)base.onSurface else PrincipalColors.inkLight,onBackground=if(dark)base.onBackground else PrincipalColors.inkLight,onSurfaceVariant=if(dark)base.onSurfaceVariant else PrincipalColors.mutedLight,primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight) else base
   }
   val view = LocalView.current
   SideEffect {

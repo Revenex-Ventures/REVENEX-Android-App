@@ -168,6 +168,9 @@ object Presentation {
 
 /** Geometry and functional colors taken from the approved Principal panels. */
 object PrincipalLayout {
+  val compactModuleHeight = 88.dp
+  val contextWidth = 160.dp
+  val reportColumn = 144.dp
   val summaryHeight = 80.dp
   val historyHeight = 320.dp
   val attentionRowHeight = 52.dp
@@ -182,6 +185,9 @@ object PrincipalLayout {
   val metricSize = 26.sp
 }
 object PrincipalColors {
+  val canvasLight = Color(0xFFFCFCFB)
+  val inkLight = Color(0xFF111827)
+  val mutedLight = Color(0xFF515665)
   val actionLight = Color(0xFFD44200)
   private val dark: Boolean @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < .5f
   val blue: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.blueContainer else Color(0xFFEDF6FF)

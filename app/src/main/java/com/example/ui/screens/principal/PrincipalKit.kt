@@ -44,10 +44,11 @@ internal data class PrincipalModule(val title:String,val icon:ImageVector,val ro
     val bg=when(item.tone){0->PrincipalColors.blue;1->PrincipalColors.mint;2->PrincipalColors.lavender;else->PrincipalColors.peach}
     val ink=when(item.tone){0->PrincipalColors.blueInk;1->PrincipalColors.mintInk;2->PrincipalColors.lavenderInk;else->PrincipalColors.peachInk}
     Column(Modifier.weight(1f).clickable {navigate(item.route)}.testTag("principal_module_${item.title.lowercase()}"),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-     Surface(shape=RoundedCornerShape(Radius.lg),color=bg,modifier=if(compact)Modifier.fillMaxWidth().heightIn(min=PrincipalLayout.moduleWell)else Modifier.size(PrincipalLayout.moduleWell)) {
-      Box(contentAlignment=Alignment.Center){Icon(item.icon,null,Modifier.size(PrincipalLayout.moduleIcon),tint=ink)}
+     Surface(shape=RoundedCornerShape(if(compact)Radius.sm else Radius.lg),color=bg,modifier=if(compact)Modifier.fillMaxWidth().heightIn(min=PrincipalLayout.compactModuleHeight)else Modifier.size(PrincipalLayout.moduleWell)) {
+      if(compact)Column(Modifier.padding(Spacing.md12),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {Icon(item.icon,null,Modifier.size(PrincipalLayout.moduleIcon),tint=ink);Text(item.title,style=MaterialTheme.typography.bodySmall,textAlign=TextAlign.Center)}
+      else Box(contentAlignment=Alignment.Center){Icon(item.icon,null,Modifier.size(PrincipalLayout.moduleIcon),tint=ink)}
      }
-     Text(item.title,style=MaterialTheme.typography.bodyMedium,textAlign=TextAlign.Center)
+     if(!compact)Text(item.title,style=MaterialTheme.typography.bodyMedium,textAlign=TextAlign.Center)
     }
    };repeat(3-row.size){Spacer(Modifier.weight(1f))}
   }}

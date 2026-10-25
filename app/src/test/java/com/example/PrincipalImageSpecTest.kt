@@ -32,19 +32,22 @@ class PrincipalImageSpecTest {
   val repo=ErpDataRepository.getInstance();repo.setDataMode(DataMode.DEMO);repo.switchRole(UserRole.PRINCIPAL)
   org.robolectric.shadows.ShadowLooper.idleMainLooper()
   var page by mutableIntStateOf(0);var dark by mutableStateOf(false);var route=""
-  val routes=listOf(Screen.Dashboard.route,Screen.Students.route,Screen.Teachers.route,Screen.PrincipalAttendance.route)
+  val routes=listOf(Screen.Dashboard.route,Screen.Students.route,Screen.Teachers.route,Screen.PrincipalAttendance.route,Screen.Academics.route,Screen.Fees.route,Screen.Reports.route)
   compose.setContent {val user by repo.currentUser.collectAsState();ScholaTheme(dark,principal=true){Box(Modifier.fillMaxWidth().height(if(page==0)820.dp else 640.dp).testTag("reference_viewport")){ScholaResponsiveScaffold(routes[page],user,2,{route=it},{},{},{},{},onBack={}){
    key(page,dark){when(page){
     0->PrincipalDashboardScreen(repo,{route=it},{},{},{})
     1->PrincipalStudents(repo,{route=Screen.StudentDetail.createRoute(it)},{})
     2->PrincipalStaff(repo,{route=Screen.TeacherDetail.createRoute(it)},{})
-    else->PrincipalAttendanceOverview(repo,{c,d->route=Screen.PrincipalClass.createRoute(c,d)},{route=Screen.Reports.route})
+    3->PrincipalAttendanceOverview(repo,{c,d->route=Screen.PrincipalClass.createRoute(c,d)},{route=Screen.Reports.route})
+    4->PrincipalAcademics(repo){route=it}
+    5->PrincipalFees(repo){route=it}
+    else->PrincipalReports(repo)
    }}
   }}}}
   File("build/reports/principal-spec/batch-a").mkdirs()
   for(palette in listOf(false,true))for(index in routes.indices){
    compose.runOnIdle {page=index;dark=palette};compose.waitForIdle()
-   val name=listOf("home","students","staff","attendance")[index]
+   val name=listOf("home","students","staff","attendance","academics","fees","reports")[index]
    compose.onNodeWithTag("reference_viewport").captureRoboImage("build/reports/principal-spec/batch-a/${name}_${if(palette)"dark" else "light"}.png")
   }
   compose.runOnIdle {page=0;dark=false}

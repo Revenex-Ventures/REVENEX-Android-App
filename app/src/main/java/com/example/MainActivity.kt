@@ -531,7 +531,10 @@ fun ScholaErpApp(
       }
 
       composable(Screen.Fees.route) {
-        FeeManagementScreen(
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalFees(repository) {feeId->
+          val invoice=repository.invoices.value.firstOrNull{it.id==feeId}
+          if(invoice!=null){onResetPayment();paymentModalFeeId=feeId;paymentModalStudentName=invoice.studentName;paymentModalAmount=0L;showFeePaymentModal=true;onCheckPayment(feeId)}
+        } else FeeManagementScreen(
           repository = repository,
           onShowPaymentModal = { name, amt ->
             paymentModalStudentName = name
@@ -639,8 +642,17 @@ fun ScholaErpApp(
       }
 
       composable(Screen.Academics.route) {
-        OperationsHubScreen(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalAcademics(repository){navController.navigate(it)}
+        else OperationsHubScreen(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},
           {showCreateNoticeDialog=true},{showApplyLeaveDialog=true},initialArea=WorkspaceArea.ACADEMICS)
+      }
+      composable(Screen.PrincipalSubjects.route) {
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalSubjects(repository)
+        else EmptyStateView("Access unavailable","This school workspace requires Principal access.")
+      }
+      composable(Screen.PrincipalCalendar.route) {
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalCalendar(repository)
+        else EmptyStateView("Access unavailable","This school workspace requires Principal access.")
       }
       composable(Screen.Audit.route) {
         NoticesScreen(repository,{showCreateNoticeDialog=true},initialAudit=true)
@@ -648,7 +660,8 @@ fun ScholaErpApp(
 
       // Reports & AI
       composable(Screen.Reports.route) {
-        ReportsAnalyticsScreen(repository = repository)
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalReports(repository)
+        else ReportsAnalyticsScreen(repository = repository)
       }
 
       composable(Screen.AiAssistant.route) {
