@@ -103,7 +103,7 @@ class TeacherImageSpecTest {
   var page by mutableIntStateOf(0)
   compose.setContent{val density=androidx.compose.ui.platform.LocalDensity.current;val user by repo.currentUser.collectAsState()
    CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,1.5f)){
-    ScholaTheme(false,teacher=true){Box(Modifier.fillMaxSize().testTag("teacher_adaptive")){ScholaResponsiveScaffold(Screen.TeacherClasses.route,user,0,{},{},{},{},{},onBack={}){
+    ScholaTheme(false,teacher=true){Box(Modifier.fillMaxSize().testTag("teacher_adaptive")){ScholaResponsiveScaffold(if(page==0)Screen.TeacherClasses.route else Screen.ReportCard.route,user,0,{},{},{},{},{},onBack={}){
      key(page){if(page==0)TeacherClasses(repo){}else TeacherMarks(repo){}}
     }}}
    }
