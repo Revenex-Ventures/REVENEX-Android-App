@@ -78,11 +78,12 @@ private data class PendingReport(val actor:String,val name:String,val csv:String
  val back=LocalWorkspaceBack.current
  CompositionLocalProvider(LocalWorkspaceBack provides if(detail)({detail=false})else back) {
  Scaffold(containerColor=MaterialTheme.colorScheme.background,bottomBar={Column(Modifier.padding(horizontal=Spacing.screenPadding,vertical=Spacing.sm8)) {
+  Text("$category · $scopeLabel",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
   message?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   Button(onClick={if(!busy){val name="Revenex-${category.lowercase()}-${LocalDate.now()}.csv";pending=PendingReport(actor.id,name,principalCsv(rows));busy=true;message=null;try{launcher.launch(name)}catch(e:Exception){pending=null;busy=false;message="No document picker available"}}},enabled=!busy&&rows.size>1,modifier=Modifier.fillMaxWidth().testTag("principal_export"),shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.xs)){Icon(Icons.Outlined.FileUpload,null);Spacer(Modifier.width(Spacing.sm8));Text(if(busy)"Saving…"else"Export $category")}
  }}) {padding->
  LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("principal_reports"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
-  item {PrincipalPageHeader(if(detail)category else "Reports"){if(!detail||category in listOf("Attendance","Admissions"))PrincipalSelect(period,listOf("All records","This week","This month"),{period=it},Modifier.width(PrincipalLayout.contextWidth))};if(detail&&category !in listOf("Attendance","Admissions"))Text("Loaded school session",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  item {PrincipalPageHeader(if(detail)category else "Reports"){if(category in listOf("Attendance","Admissions"))PrincipalSelect(period,listOf("All records","This week","This month"),{period=it},Modifier.width(PrincipalLayout.contextWidth))else Text("Loaded session",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
   if(!detail) {
    item {PrincipalModules(listOf(PrincipalModule("Attendance",PrincipalIcons.Students,"Attendance",0),PrincipalModule("Results",PrincipalIcons.Reports,"Results",2),PrincipalModule("Fees",Icons.Outlined.CurrencyRupee,"Fees",3),PrincipalModule("Admissions",Icons.Outlined.PersonAdd,"Admissions",3),PrincipalModule("Staff",Icons.Outlined.People,"Staff",0)),{category=it;detail=true;message=null},compact=true)}
    item {PrincipalHeading("Recent") {

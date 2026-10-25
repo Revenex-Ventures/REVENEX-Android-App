@@ -19,7 +19,8 @@ import com.example.ui.theme.*
  val cards by repository.reportCards.collectAsState()
  val students by repository.students.collectAsState()
  val sessions=students.map{it.sessionId}.distinct()
- val session=sessions.singleOrNull()?.removePrefix("session_")?.replace('_','–') ?: "Loaded session"
+ val session=Regex("(20\\d{2})[_-](20\\d{2})").find(sessions.singleOrNull().orEmpty())
+  ?.let{"${it.groupValues[1]}–${it.groupValues[2].takeLast(2)}"} ?: "Current session"
  val ready=cards.count{!it.published&&it.scores.isNotEmpty()}
  LazyColumn(Modifier.fillMaxSize().testTag("principal_academics"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
   item {PrincipalPageHeader("Academics"){Surface(shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.xs),color=MaterialTheme.colorScheme.surfaceVariant){Text(session,Modifier.padding(Spacing.sm8),style=MaterialTheme.typography.labelMedium)}}}

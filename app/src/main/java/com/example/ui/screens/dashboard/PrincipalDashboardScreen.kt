@@ -82,6 +82,6 @@ fun PrincipalDashboardScreen(repository:ErpDataRepository,onNavigateTo:(String)-
  }
  if(context)AlertDialog(onDismissRequest={context=false},title={Text("School context")},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
   SchoolDetailRow("School",actor.schoolId);SchoolDetailRow("Session",session.ifBlank {"Not available"})
-  Text("Students: active records. Attendance: ${date ?: "no saved date"}. Collected: loaded session ledger.",style=MaterialTheme.typography.bodySmall)
+  Text("Students: active records. Attendance: ${date ?: "no saved date"} · $total saved student entries. Collected: loaded session ledger.",style=MaterialTheme.typography.bodySmall)
  }},confirmButton={TextButton(onClick={context=false}){Text("Done")}})
 }
