@@ -92,6 +92,8 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
   val invoices by repository.invoices.collectAsState()
   val reports by repository.reportCards.collectAsState()
   val grades by repository.gradebookEntries.collectAsState()
+  val actor by repository.currentUser.collectAsState()
+  val principal=actor.role==UserRole.PRINCIPAL
   val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
   val invoice=invoices.firstOrNull {it.studentId==student.id}
   val assessments=grades.filter {it.studentId==student.id}
@@ -144,8 +146,8 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
           Text(invoice.title,style=MaterialTheme.typography.titleSmall)
           InfoRow("Invoice",invoice.invoiceNumber)
           InfoRow("Billed",profileCurrency(invoice.totalAmount));InfoRow("Paid",profileCurrency(invoice.paidAmount));InfoRow("Outstanding",profileCurrency(invoice.pendingAmount))
-          if(invoice.pendingAmount>0) AppButton(text="Pay",onClick={onPayFee(student.name,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth())
-          if(cloud) Text("Razorpay TEST checkout. Receipt confirmation is handled by the server.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          if(invoice.pendingAmount>0||principal) AppButton(text=if(principal)"View fees"else"Pay",onClick={onPayFee(student.name,invoice.pendingAmount)},modifier=Modifier.fillMaxWidth())
+          if(cloud) Text(if(principal)"Review invoices and confirmed receipts in Fees."else"Razorpay TEST checkout. Receipt confirmation is handled by the server.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
     }}}

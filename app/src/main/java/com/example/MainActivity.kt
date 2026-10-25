@@ -447,7 +447,9 @@ fun ScholaErpApp(
           repository = repository,
           onBack = { navController.popBackStack() },
           onPayFee = { name, amt ->
-            if(dataMode!=DataMode.SUPABASE_DEMO) {
+            if(currentUser.role==UserRole.PRINCIPAL) {
+              navController.navigate(Screen.Fees.route) { launchSingleTop = true }
+            } else if(dataMode!=DataMode.SUPABASE_DEMO) {
               repository.setDataMode(DataMode.SUPABASE_DEMO);navController.navigate(Screen.Auth.route)
             } else {
               val feeId=repository.feeRecords.value.filter { it.studentId==studentId && it.pendingAmount==amt }.singleOrNull()?.id
