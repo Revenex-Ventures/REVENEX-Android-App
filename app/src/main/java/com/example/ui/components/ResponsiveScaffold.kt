@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -28,6 +29,7 @@ import com.example.data.model.UserRole
 import com.example.ui.navigation.NavConfig
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
+import com.example.ui.screens.principal.PrincipalBottomNavigation
 import java.util.Locale
 
 // Device Form Factor Breakpoints
@@ -64,8 +66,12 @@ fun ScholaResponsiveScaffold(
   onOpenNotifications: () -> Unit,
   onOpenProfile: () -> Unit,
   onLogout: () -> Unit,
+  onBack: (() -> Unit)? = null,
   content: @Composable (PaddingValues) -> Unit
 ) {
+  val pageContent: @Composable () -> Unit = {
+    CompositionLocalProvider(LocalWorkspaceBack provides onBack) { content(PaddingValues(0.dp)) }
+  }
   val windowSizeClass = rememberWindowSizeClass()
   val navItems = remember(currentUser.role) {
     NavConfig.getBottomNavItems(currentUser.role).filterNot {
@@ -80,6 +86,7 @@ fun ScholaResponsiveScaffold(
     }
   }
 
+  val selectedPrimaryRoute = NavConfig.selectedPrimaryRoute(currentUser.role, currentRoute)
   val isTopLevelRoute = currentRoute in navItems.map { it.route } || currentRoute == Screen.Loading.route
 
   // Own device insets once at the shell boundary. Descendant scaffolds see
@@ -87,7 +94,7 @@ fun ScholaResponsiveScaffold(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(ScholaLinen)
+      .background(MaterialTheme.colorScheme.background)
       .windowInsetsPadding(WindowInsets.safeDrawing)
       .imePadding()
   ) {
@@ -97,7 +104,7 @@ fun ScholaResponsiveScaffold(
       Scaffold(
         containerColor = GlassBgTransparent,
         topBar = {
-          if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
+          if (currentRoute == Screen.Dashboard.route) {
             ScholaTopAppBar(
               title = "REVENEX",
               subtitle = "School ERP demonstration",
@@ -112,10 +119,12 @@ fun ScholaResponsiveScaffold(
           }
         },
         bottomBar = {
-          if (isTopLevelRoute && currentRoute != Screen.Auth.route) {
+          if (currentUser.role == UserRole.PRINCIPAL && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route)) {
+            PrincipalBottomNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               onItemSelected = onNavigateToRoute,
               modifier = Modifier.padding(
                 start = Spacing.s2,
@@ -129,7 +138,7 @@ fun ScholaResponsiveScaffold(
       ) { paddingValues ->
         GlassBackground {
           Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
         }
       }
@@ -146,7 +155,7 @@ fun ScholaResponsiveScaffold(
           if (currentRoute != Screen.Auth.route) {
             TabletNavigationRail(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               onItemSelected = onNavigateToRoute,
               onOpenCommandPalette = onOpenCommandPalette,
               currentUser = currentUser
@@ -157,7 +166,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
+              if (currentRoute == Screen.Dashboard.route) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
@@ -174,7 +183,7 @@ fun ScholaResponsiveScaffold(
           ) { paddingValues ->
             GlassBackground {
               Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
             }
           }
@@ -193,7 +202,7 @@ fun ScholaResponsiveScaffold(
           if (currentRoute != Screen.Auth.route) {
             DesktopNavigationDrawer(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               currentUser = currentUser,
               unreadCount = unreadNotificationsCount,
               onItemSelected = onNavigateToRoute,
@@ -208,7 +217,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
+              if (currentRoute == Screen.Dashboard.route) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
@@ -225,7 +234,7 @@ fun ScholaResponsiveScaffold(
           ) { paddingValues ->
             GlassBackground {
               Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
             }
           }
@@ -250,7 +259,7 @@ private fun TabletNavigationRail(
     modifier = Modifier
       .width(80.dp)
       .fillMaxHeight(),
-    color = ScholaOnyx,
+    color = MaterialTheme.colorScheme.surfaceVariant,
     tonalElevation = Elev.e2
   ) {
     Column(
@@ -265,20 +274,8 @@ private fun TabletNavigationRail(
     ) {
       // Top Crest Emblem
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-Box(
-            modifier = Modifier
-              .size(44.dp)
-              .clip(RoundedCornerShape(Radius.md))
-              .background(ScholaTerracotta),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.AccountBalance,
-              contentDescription = "REVENEX",
-              tint = ScholaSlateNavyDark,
-              modifier = Modifier.size(24.dp)
-            )
-          }
+androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(
+          if(MaterialTheme.colorScheme.background.luminance()<.5f)com.example.R.drawable.revenex_monogram else com.example.R.drawable.revenex_monogram_ink),"Revenex RV logo",Modifier.size(Spacing.xxl32))
 
         Spacer(modifier = Modifier.height(Spacing.s4))
 
@@ -288,12 +285,12 @@ Box(
           modifier = Modifier
             .size(42.dp)
             .clip(CircleShape)
-            .background(ScholaOnyxSurface)
+            .background(MaterialTheme.colorScheme.surface)
         ) {
           Icon(
             imageVector = Icons.Default.Search,
             contentDescription = "Command Palette",
-            tint = ScholaGoldLight,
+            tint = SemanticColors.onWarning,
             modifier = Modifier.size(20.dp)
           )
         }
@@ -307,7 +304,7 @@ Box(
             modifier = Modifier
               .width(76.dp).heightIn(min = 64.dp)
               .clip(RoundedCornerShape(Radius.md))
-              .background(if (isSelected) ScholaTerracottaDark else Color.Transparent)
+              .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
               .clickable { onItemSelected(item.route) }
               .padding(4.dp),
             contentAlignment = Alignment.Center
@@ -316,12 +313,12 @@ Box(
               Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                 contentDescription = item.label,
-                tint = if (isSelected) Color.White else ScholaOnyxMuted,
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(22.dp)
               )
               Text(
                 text = item.label,
-                color = if (isSelected) Color.White else ScholaOnyxMuted,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
               )
@@ -341,7 +338,7 @@ Box(
       ) {
         Text(
           text = currentUser.name.take(2).uppercase(Locale.getDefault()),
-          color = ScholaTextPrimary,
+          color = RoleAccent.onAccent,
           fontWeight = FontWeight.Bold,
           fontSize = 12.sp
         )
@@ -367,7 +364,7 @@ private fun DesktopNavigationDrawer(
     modifier = Modifier
       .width(260.dp)
       .fillMaxHeight(),
-    color = ScholaOnyx,
+    color = MaterialTheme.colorScheme.surfaceVariant,
     tonalElevation = Elev.e3
   ) {
     Column(
@@ -381,50 +378,16 @@ private fun DesktopNavigationDrawer(
     ) {
       // Top section: Crest Branding + ⌘K trigger pill + nav links
       Column {
-        // Institutional Header
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier.padding(bottom = Spacing.s4)
-        ) {
-Box(
-              modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(Radius.md))
-                .background(ScholaTerracotta),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.AccountBalance,
-                contentDescription = "REVENEX crest",
-                tint = ScholaSlateNavyDark,
-                modifier = Modifier.size(24.dp)
-              )
-            }
-          Spacer(modifier = Modifier.width(Spacing.s3))
-          Column {
-            Text(
-              text = "REVENEX",
-              color = ScholaOnyxText,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "School ERP demonstration",
-              color = ScholaOnyxMuted,
-              style = MaterialTheme.typography.bodySmall,
-              fontSize = 10.sp
-            )
-          }
-        }
+        RevenexBrand(Modifier.padding(bottom=Spacing.lg16))
 
         // ⌘K Search Pill Trigger
         Surface(
           shape = RoundedCornerShape(Radius.lg),
-          color = ScholaOnyxSurface,
+          color = MaterialTheme.colorScheme.surface,
           modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Radius.lg))
-            .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.lg))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))
             .clickable(onClick = onOpenCommandPalette)
         ) {
           Row(
@@ -433,15 +396,15 @@ Box(
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.Search, contentDescription = null, tint = ScholaOnyxMuted, modifier = Modifier.size(16.dp))
+              Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.width(Spacing.s2))
-              Text("Omni Command...", color = ScholaOnyxMuted, fontSize = 12.sp)
+              Text("Omni Command...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             Surface(
               shape = RoundedCornerShape(Radius.sm),
               color = ScholaSlateNavyDark
             ) {
-              Text("⌘K", color = ScholaTerracottaLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+              Text("⌘K", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
             }
           }
         }
@@ -450,7 +413,7 @@ Box(
 
         Text(
           text = "CORE WORKSPACES",
-          color = ScholaOnyxMuted,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
           style = MaterialTheme.typography.labelSmall,
           letterSpacing = TypeTokens.trackingMicroLabel,
           fontSize = 12.sp,
@@ -462,7 +425,7 @@ Box(
           val isSelected = currentRoute == item.route
           Surface(
             shape = RoundedCornerShape(Radius.md),
-            color = if (isSelected) ScholaTerracotta else Color.Transparent,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(Radius.md))
@@ -475,13 +438,13 @@ Box(
               Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                 contentDescription = item.label,
-                tint = if (isSelected) Color.White else ScholaOnyxMuted,
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(Spacing.s3))
               Text(
                 text = item.label,
-                color = if (isSelected) Color.White else ScholaOnyxText,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
               )
@@ -494,11 +457,11 @@ Box(
       // User Profile Footer
       Surface(
         shape = RoundedCornerShape(Radius.lg),
-        color = ScholaOnyxSurface,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(Radius.lg))
-          .border(1.dp, ScholaOnyxBorder, RoundedCornerShape(Radius.lg))
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))
       ) {
         Row(
           modifier = Modifier.padding(Spacing.s3),
@@ -518,7 +481,7 @@ Box(
             ) {
               Text(
                 text = currentUser.name.take(2).uppercase(Locale.getDefault()),
-                color = ScholaTextPrimary,
+                color = RoleAccent.onAccent,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp
               )
@@ -527,7 +490,7 @@ Box(
             Column {
               Text(
                 text = currentUser.name,
-                color = ScholaOnyxText,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -535,14 +498,14 @@ Box(
               )
               Text(
                 text = currentUser.role.displayName,
-                color = ScholaOnyxMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 maxLines = 1
               )
             }
           }
           IconButton(onClick = onLogout, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = StatusDangerText, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = SemanticColors.onDanger, modifier = Modifier.size(16.dp))
           }
         }
       }

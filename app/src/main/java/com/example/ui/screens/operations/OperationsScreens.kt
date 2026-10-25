@@ -1,5 +1,6 @@
 package com.example.ui.screens.operations
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,155 +26,59 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.example.data.model.LeaveStatus
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
+import com.example.ui.components.*
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.StatusBadge
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun OperationsHubScreen(
-  repository: ErpDataRepository,
-  onNavigateTo: (String) -> Unit,
-  onShowAddStudent: () -> Unit,
-  onShowAddTeacher: () -> Unit,
-  onShowCreateNotice: () -> Unit,
-  onShowApplyLeave: () -> Unit
-) {
-  val currentUser by repository.currentUser.collectAsState()
-
-  data class HubModule(
-    val title: String,
-    val description: String,
-    val icon: ImageVector,
-    val iconTint: Color,
-    val bgColor: Color,
-    val route: String,
-    val allowedRoles: Set<UserRole> = UserRole.values().toSet()
-  )
-
-  val allRoles = UserRole.values().toSet()
-  val adminOnly = setOf(UserRole.PRINCIPAL, UserRole.ADMIN)
-  val staffOnly = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
-  val noStudents = setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER, UserRole.PARENT)
-
-  val modules = listOf(
-    HubModule("My faculty profile", "Personal and professional details", Icons.Default.Person, ScholaSlateNavy, ScholaSlateContainer, Screen.TeacherProfile.route, setOf(UserRole.TEACHER)),
-    HubModule("Student Directory", "Admissions & 360 Profiles", Icons.Default.Groups, ScholaSlateNavy, ScholaSlateContainer, Screen.Students.route, adminOnly),
-    HubModule("Faculty & Staff", "Teacher Workloads & Departments", Icons.Default.School, ScholaSlateNavy, ScholaSlateContainer, Screen.Teachers.route, adminOnly),
-    HubModule("Daily Attendance", "Mark and Review Registers", Icons.Default.FactCheck, ScholaSlateNavy, ScholaSlateContainer, Screen.Attendance.route, allRoles),
-    HubModule("Fee Accounts", "Dues, Ledger & Receipts", Icons.Default.AccountBalanceWallet, ScholaSlateNavy, ScholaSlateContainer, Screen.Fees.route, setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.PARENT, UserRole.STUDENT)),
-    HubModule("Leave Management", "Staff & Student Absences", Icons.Default.EventBusy, ScholaSlateNavy, ScholaSlateContainer, Screen.Leaves.route, noStudents),
-    HubModule("Transport & Bus", "Routes, Stops & Drivers", Icons.Default.DirectionsBus, ScholaSlateNavy, ScholaSlateContainer, Screen.Transport.route, allRoles),
-    HubModule("Digital Library", "Book Catalog, Issue & Return", Icons.Default.LocalLibrary, ScholaSlateNavy, ScholaSlateContainer, Screen.Library.route, allRoles),
-    HubModule("School Assets", "Smart Boards, Labs & IT", Icons.Default.Inventory, ScholaSlateNavy, ScholaSlateContainer, Screen.Inventory.route, adminOnly),
-    HubModule("Executive Reports", "KPI Charts & Export Analytics", Icons.Default.Analytics, ScholaSlateNavy, ScholaSlateContainer, Screen.Reports.route, adminOnly),
-    HubModule("Timetable", "Class Schedule & Periods", Icons.Default.CalendarMonth, ScholaSlateNavy, ScholaSlateContainer, Screen.Timetable.route, allRoles),
-    HubModule("Notices & Circulars", "School Announcements", Icons.Default.Campaign, ScholaSlateNavy, ScholaSlateContainer, Screen.Notices.route, allRoles),
-    HubModule("Study Material", "Notes, PDFs & Resources", Icons.Default.MenuBook, ScholaSlateNavy, ScholaSlateContainer, Screen.StudyMaterial.route, allRoles),
-    HubModule("AI Assistant", "Smart School Q&A & Search", Icons.Default.AutoAwesome, ScholaTerracotta, ScholaTerracottaContainer, Screen.AiAssistant.route, allRoles)
-  ).filter { it.allowedRoles.contains(currentUser.role) }
-
-  val moduleColumns = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840) 3 else if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 2 else 1
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("operations_hub_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(14.dp)
-  ) {
+fun OperationsHubScreen(repository: ErpDataRepository,onNavigateTo: (String)->Unit,onShowAddStudent:()->Unit,onShowAddTeacher:()->Unit,onShowCreateNotice:()->Unit,onShowApplyLeave:()->Unit,initialArea:WorkspaceArea?=null) {
+  val actor by repository.currentUser.collectAsState()
+  var query by androidx.compose.runtime.saveable.rememberSaveable(actor.id){mutableStateOf("")}
+  var area by androidx.compose.runtime.saveable.rememberSaveable(actor.id,initialArea){mutableStateOf(initialArea?.name)}
+  var boundaries by remember {mutableStateOf(false)}
+  val administrator=actor.role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL)
+  val destinations=WorkspaceDirectory.visible(actor.role,query,WorkspaceArea.entries.find {it.name==area})
+  val available=WorkspaceDirectory.visible(actor.role).map {it.area}.distinct()
+  val columns=if(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp>=840)2 else 1
+  LazyColumn(Modifier.fillMaxSize().testTag("operations_hub_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+    item {WorkspacePageHeader(if(initialArea==WorkspaceArea.ACADEMICS)"Academics" else "Modules")
+      Text("Tools for your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
     item {
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = RevenexNavy)
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
-        ) {
-          Text(
-            text = "School workspaces",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-          )
-          Text(
-            text = "Your role’s tools, grouped in one place",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f)
-          )
-        }
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().testTag("module_search"),placeholder={Text("Search modules")},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotBlank())IconButton(onClick={query=""}){Icon(Icons.Default.Close,"Clear search")}},singleLine=true,shape=RoundedCornerShape(Radius.sm))
+      androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        item {SchoolFilterChip(area==null,{area=null},{Text("All")})}
+        items(available){value->SchoolFilterChip(area==value.name,{area=value.name},{Text(value.label)})}
+      }
+      if(query.isBlank()&&area==null) FlowRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+        if(administrator) {
+          OutlinedButton(onClick=onShowAddStudent){Text("Add student")};OutlinedButton(onClick=onShowAddTeacher){Text("Add faculty")};OutlinedButton(onClick=onShowCreateNotice){Text("Publish notice")}
+        } else if(actor.role!=UserRole.STUDENT) OutlinedButton(onClick=onShowApplyLeave){Text("Apply for leave")}
       }
     }
-
-    item {
-      Text(
-        text = "Available modules",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-      )
-    }
-
-    items(modules.chunked(moduleColumns)) { pair ->
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-      ) {
-        pair.forEach { mod ->
-          Card(
-            modifier = Modifier
-              .weight(1f)
-              .clip(RoundedCornerShape(16.dp))
-              .clickable { onNavigateTo(mod.route) }
-              .testTag("module_card_${mod.title.lowercase().replace(" ", "_")}"),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
-            Column(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(44.dp)
-                  .background(mod.bgColor, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = mod.icon,
-                  contentDescription = null,
-                  tint = mod.iconTint,
-                  modifier = Modifier.size(24.dp)
-                )
-              }
-              Spacer(modifier = Modifier.height(12.dp))
-              Text(
-                text = mod.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-              )
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                text = mod.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                maxLines = 2
-              )
-            }
+    if(destinations.isEmpty()) item {EmptyStateView(title="No matching modules",message="Try another search or category.")}
+    items(destinations.groupBy {it.area}.toList().chunked(columns)) {groups->
+      Row(horizontalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
+        groups.forEach {(group,modules)->Column(Modifier.weight(1f)) {SchoolSection(group.label){SchoolGroup {
+          modules.forEach {destination->
+            val icon=when(group){WorkspaceArea.PEOPLE->Icons.Default.Groups;WorkspaceArea.ACADEMICS->Icons.Default.MenuBook;WorkspaceArea.ATTENDANCE->Icons.Default.FactCheck;WorkspaceArea.FINANCE->Icons.Default.ReceiptLong;WorkspaceArea.OPERATIONS->Icons.Default.Apps;WorkspaceArea.COMMUNICATION->Icons.Default.Notifications;WorkspaceArea.REPORTS->Icons.Default.BarChart;WorkspaceArea.SETTINGS->Icons.Default.Settings}
+            SchoolRow(destination.title,destination.description,icon,{onNavigateTo(destination.route)},modifier=Modifier.testTag("workspace_${destination.route.substringBefore('?')}"))
+            if(destination!=modules.last()) HorizontalDivider()
           }
-        }
-        if (pair.size < moduleColumns) {
-          Spacer(modifier = Modifier.weight(1f))
-        }
+        }}}}
+        if(groups.size<columns) Spacer(Modifier.weight(1f))
       }
+    }
+    if(administrator) item {
+      TextButton(onClick={boundaries=!boundaries}){Text(if(boundaries)"Hide details" else "Integration details")}
+      if(boundaries) Text("Machine/RFID attendance, Tally, payroll, SMS/email and website tools need separate integrations. Hostel, counselling, scholarship and question-bank workflows are not implemented. These are not active modules; no device sync, payroll run or message dispatch happens here.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }
 }
@@ -186,427 +91,116 @@ fun LeaveManagementScreen(
   val leaveRequests by repository.leaveRequests.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
   var selectedTab by remember { mutableStateOf(0) }
+  val scope = rememberCoroutineScope()
+  var deciding by remember(currentUser.id) { mutableStateOf<String?>(null) }
+  var decisionError by remember(currentUser.id) { mutableStateOf<String?>(null) }
+  var confirmDecision by remember(currentUser.id) { mutableStateOf<Pair<String, LeaveStatus>?>(null) }
+  var remark by remember { mutableStateOf("") }
+  confirmDecision?.let { (id, status) ->
+    AlertDialog(onDismissRequest = { confirmDecision = null },
+      title = { Text(if (status == LeaveStatus.APPROVED) "Approve leave?" else "Reject leave?") },
+      text = { OutlinedTextField(remark, { remark = it }, label = { Text("Remark (optional)") }, supportingText = { Text("The applicant receives an in-app update after confirmation.") }) },
+      confirmButton = { TextButton(enabled = remark.length <= 1000, onClick = {
+        confirmDecision = null; deciding = id; decisionError = null
+        scope.launch {
+          try { repository.decideLeaveConfirmed(id,status,remark) }
+          catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            decisionError = "Decision not confirmed. Reload the request and check access or school setup before retrying."
+          } finally { deciding = null }
+        }
+      }) { Text("Confirm") } },
+      dismissButton = { TextButton(onClick = { confirmDecision = null }) { Text("Cancel") } })
+  }
 
-  val pendingLeaves = leaveRequests.filter { it.status == LeaveStatus.PENDING }
-  val historyLeaves = leaveRequests.filter { it.status != LeaveStatus.PENDING }
-
-  Scaffold(
-    floatingActionButton = {
-      ExtendedFloatingActionButton(
-        onClick = onShowApplyLeave,
-        icon = { Icon(Icons.Default.EventBusy, contentDescription = null) },
-        text = { Text("Apply Leave", fontWeight = FontWeight.Bold) },
-        containerColor = RevenexBlue,
-        contentColor = Color.White,
-        modifier = Modifier.testTag("fab_apply_leave")
-      )
+  val pending=leaveRequests.filter {it.status==LeaveStatus.PENDING}
+  val history=leaveRequests.filter {it.status!=LeaveStatus.PENDING}
+  val visible=if(selectedTab==0)pending else history
+  var expanded by remember(currentUser.id){mutableStateOf<String?>(null)}
+  Column(Modifier.fillMaxSize().testTag("leave_management_screen")) {
+    WorkspacePageHeader("Leave requests",Modifier.padding(horizontal=Spacing.screenPadding)) {
+      Button(onClick=onShowApplyLeave,modifier=Modifier.testTag("fab_apply_leave"),shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Default.Add,null);Text("Apply")}
     }
-  ) { paddingValues ->
-    LazyColumn(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .testTag("leave_management_screen"),
-      contentPadding = PaddingValues(bottom = Spacing.xl24)
-    ) {
-      item {
-        TabRow(
-          selectedTabIndex = selectedTab,
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Tab(
-            selected = selectedTab == 0,
-            onClick = { selectedTab = 0 },
-            text = { Text("Pending (${pendingLeaves.size})", fontWeight = FontWeight.Bold) }
-          )
-          Tab(
-            selected = selectedTab == 1,
-            onClick = { selectedTab = 1 },
-            text = { Text("Processed History (${historyLeaves.size})", fontWeight = FontWeight.Bold) }
-          )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-      }
-
-      val displayList = if (selectedTab == 0) pendingLeaves else historyLeaves
-
-      if (displayList.isEmpty()) {
-        item {
-          EmptyStateView(
-            icon = Icons.Default.EventAvailable,
-            title = if (selectedTab == 0) "No Pending Requests" else "No Processed History",
-            description = if (selectedTab == 0) "All student and staff leaves have been processed." else "No historical leave applications recorded."
-          )
-        }
-      } else {
-        items(displayList, key = { it.id }) { leave ->
-          Card(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 6.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Column {
-                  Text(
-                    text = leave.applicantName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                  )
-                  Text(
-                    text = "${leave.classOrDept} • ${leave.applicantRole.displayName}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                  )
-                }
-                StatusBadge(status = leave.status.label, type = "leave")
-              }
-
-              Spacer(modifier = Modifier.height(8.dp))
-
-              Text(
-                text = "${leave.leaveType}: ${leave.startDate} to ${leave.endDate} (${leave.daysCount} Day(s))",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-              )
-
-              Spacer(modifier = Modifier.height(4.dp))
-
-              Text(
-                text = "\"${leave.reason}\"",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-              )
-
-              if (leave.approverRemark.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Surface(
-                  shape = RoundedCornerShape(8.dp),
-                  color = MaterialTheme.colorScheme.surfaceVariant,
-                  modifier = Modifier.fillMaxWidth()
-                ) {
-                  Text(
-                    text = "Remark: ${leave.approverRemark}",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(8.dp)
-                  )
-                }
-              }
-
-              if (leave.status == LeaveStatus.PENDING && (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN)) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.End
-                ) {
-                  OutlinedButton(
-                    onClick = { repository.rejectLeave(leave.id) },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
-                  ) {
-                    Text("Reject")
-                  }
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Button(
-                    onClick = { repository.approveLeave(leave.id) },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess)
-                  ) {
-                    Text("Approve Leave")
-                  }
-                }
-              }
-            }
+    TabRow(selectedTabIndex=selectedTab,containerColor=MaterialTheme.colorScheme.background) {
+      Tab(selected=selectedTab==0,onClick={selectedTab=0},text={Text("Pending (${pending.size})")})
+      Tab(selected=selectedTab==1,onClick={selectedTab=1},text={Text("History (${history.size})")})
+    }
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      decisionError?.let {message->item {Text(message,color=MaterialTheme.colorScheme.error)}}
+      if(visible.isEmpty()) item {EmptyStateView(title="No requests in this view",message="Leave applications and confirmed decisions appear here.")}
+      items(visible,key={it.id}) {leave->SchoolGroup {
+        SchoolRow(leave.applicantName,"${leave.leaveType} · ${leave.startDate} – ${leave.endDate}",Icons.Default.EventBusy,{expanded=if(expanded==leave.id)null else leave.id},leave.status.label)
+        AnimatedVisibility(expanded==leave.id) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Text("${leave.applicantRole.displayName} · ${leave.classOrDept} · ${leave.daysCount} days",style=MaterialTheme.typography.bodySmall)
+          Text(leave.reason,style=MaterialTheme.typography.bodyMedium)
+          Text("Applied ${leave.appliedDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          if(leave.approverRemark.isNotBlank()) Text("School remark: ${leave.approverRemark}",style=MaterialTheme.typography.bodySmall)
+          if(leave.status==LeaveStatus.PENDING&&currentUser.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            OutlinedButton(enabled=deciding==null,onClick={remark="";confirmDecision=leave.id to LeaveStatus.REJECTED}){Text("Reject")}
+            Button(enabled=deciding==null,onClick={remark="";confirmDecision=leave.id to LeaveStatus.APPROVED}){Text(if(deciding==leave.id)"Saving…" else "Approve")}
           }
-        }
-      }
+        }}
+      }}
     }
   }
 }
 
 @Composable
-fun TransportScreen(
-  repository: ErpDataRepository
-) {
+fun TransportScreen(repository: ErpDataRepository) {
   val routes by repository.transportRoutes.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("transport_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(12.dp)
-  ) {
-    item {
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = RevenexNavy)
-      ) {
-        Column(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = "School Transport",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-              )
-              Text(
-                text = "${routes.size} routes • Scheduled stops and driver contacts",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f)
-              )
-            }
-            Surface(
-              shape = RoundedCornerShape(8.dp),
-              color = StatusSuccess
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Box(modifier = Modifier.size(8.dp).background(Color.White, CircleShape))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("ROUTES", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-              }
-            }
-          }
-        }
-      }
-    }
-
-    items(routes, key = { it.id }) { route ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Surface(
-              shape = RoundedCornerShape(6.dp),
-              color = RevenexPrimaryContainer
-            ) {
-              Text(
-                text = route.routeNumber,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = RevenexBlue,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-              )
-            }
-            Text(
-              text = "Bus: ${route.vehicleNumber}",
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold
-            )
-          }
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          Text(
-            text = route.routeName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-          )
-
-          Spacer(modifier = Modifier.height(6.dp))
-
-          Text(
-            text = "Driver: ${route.driverName} (${route.driverPhone})",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-
-          Spacer(modifier = Modifier.height(10.dp))
-
-          Text(
-            text = "Route Stops & Timings:",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold
-          )
-
-          Spacer(modifier = Modifier.height(4.dp))
-
-          route.stops.forEach { stop ->
-            Row(
-              modifier = Modifier.padding(vertical = 2.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Box(modifier = Modifier.size(6.dp).background(RevenexBlue, CircleShape))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(text = stop, style = MaterialTheme.typography.bodySmall)
-            }
-          }
-        }
+  var query by remember {mutableStateOf("")}
+  val visible=routes.filter {query.isBlank()||it.routeName.contains(query,true)||it.routeNumber.contains(query,true)||it.stops.any {stop->stop.contains(query,true)}}
+  LazyColumn(Modifier.fillMaxSize().testTag("transport_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {WorkspacePageHeader("School transport")
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search route or stop")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching routes",message="Routes appear when configured and available to your school account.")}
+    items(visible,key={it.id}) {route->var expanded by remember(route.id){mutableStateOf(false)}
+      SchoolGroup {
+        SchoolRow(route.routeName,"${route.routeNumber} · ${route.vehicleNumber}",Icons.Default.DirectionsBus,{expanded=!expanded},"${route.stops.size} stops")
+        AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          SchoolDetailRow("Driver",route.driverName)
+          SchoolDetailRow("Contact",route.driverPhone)
+          Text("Stops & timings",style=MaterialTheme.typography.titleSmall)
+          route.stops.forEachIndexed {index,stop->Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12)){Text((index+1).toString(),style=MaterialTheme.typography.labelLarge);Text(stop,style=MaterialTheme.typography.bodySmall)}}
+        }}
       }
     }
   }
 }
 
 @Composable
-fun LibraryScreen(
-  repository: ErpDataRepository
-) {
+fun LibraryScreen(repository: ErpDataRepository) {
   val books by repository.libraryBooks.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("library_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(10.dp)
-  ) {
-    items(books, key = { it.id }) { book ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Row(
-          modifier = Modifier.padding(16.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Box(
-            modifier = Modifier
-              .size(48.dp)
-              .background(ScholaSlateContainer, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.Book,
-              contentDescription = null,
-              tint = ScholaSlateNavy,
-              modifier = Modifier.size(24.dp)
-            )
-          }
-
-          Spacer(modifier = Modifier.width(14.dp))
-
-          Column(modifier = Modifier.weight(1f)) {
-            Text(
-              text = book.title,
-              style = MaterialTheme.typography.titleSmall,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "By ${book.author}",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-              text = "${book.shelfLocation} • Available: ${book.availableCopies} / ${book.totalCopies}",
-              style = MaterialTheme.typography.labelSmall,
-              color = if (book.availableCopies > 0) StatusSuccessText else StatusErrorText,
-              fontWeight = FontWeight.Bold,
-              fontSize = 12.sp
-            )
-          }
-
-          if (book.availableCopies > 0) {
-            OutlinedButton(
-              onClick = { repository.issueBook(book.id) },
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-            ) {
-              Text("Issue", fontSize = 12.sp)
-            }
-          } else {
-            Button(
-              onClick = { repository.returnBook(book.id) },
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
-            ) {
-              Text("Return", fontSize = 12.sp)
-            }
-          }
-        }
-      }
-    }
+  val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  var query by remember {mutableStateOf("")}
+  val visible=books.filter {query.isBlank()||it.title.contains(query,true)||it.author.contains(query,true)||it.shelfLocation.contains(query,true)}
+  LazyColumn(Modifier.fillMaxSize().testTag("library_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {WorkspacePageHeader("School library")
+      Text(if(cloud)"Catalogue only. Cloud borrower tracking and circulation are not configured." else "Local sample catalogue and circulation preview.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search title, author or shelf")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching books",message="No accessible catalogue records match this search.")}
+    items(visible,key={it.id}) {book->SchoolGroup {Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Icon(Icons.Default.MenuBook,null,tint=MaterialTheme.colorScheme.primary)
+      Column(Modifier.weight(1f)){Text(book.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);Text(book.author,style=MaterialTheme.typography.bodySmall);Text("${book.shelfLocation} · ${book.availableCopies}/${book.totalCopies} available",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+      if(!cloud) TextButton(onClick={if(book.availableCopies>0)repository.issueBook(book.id)else repository.returnBook(book.id)}){Text(if(book.availableCopies>0)"Issue" else "Return")}
+    }}}
   }
 }
 
 @Composable
-fun InventoryScreen(
-  repository: ErpDataRepository
-) {
+fun InventoryScreen(repository: ErpDataRepository) {
   val inventory by repository.inventory.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .testTag("inventory_screen"),
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(10.dp)
-  ) {
-    items(inventory, key = { it.id }) { item ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = CardDefaults.outlinedCardBorder()
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = item.itemName,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-              modifier = Modifier.weight(1f)
-            )
-            StatusBadge(status = item.condition)
-          }
-
-          Spacer(modifier = Modifier.height(6.dp))
-
-          Text(
-            text = "Category: ${item.category} • Location: ${item.location}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(
-              text = "Units: ${item.quantity}",
-              style = MaterialTheme.typography.labelMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "Estimated Asset Value: ₹${item.estimatedValue.toInt()}",
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.primary,
-              fontWeight = FontWeight.Bold
-            )
-          }
-        }
-      }
-    }
+  var query by remember {mutableStateOf("")}
+  val visible=inventory.filter {query.isBlank()||it.itemName.contains(query,true)||it.category.contains(query,true)||it.location.contains(query,true)}
+  LazyColumn(Modifier.fillMaxSize().testTag("inventory_screen"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {WorkspacePageHeader("School inventory")
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search asset, category or location")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching assets",message="No accessible inventory records match this search.")}
+    items(visible,key={it.id}) {asset->SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      Row(Modifier.fillMaxWidth()){Text(asset.itemName,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);StatusBadge(status=asset.condition)}
+      Text("${asset.category} · ${asset.location}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      SchoolDetailRow("Quantity", "${asset.quantity} units")
+      SchoolDetailRow("Estimated value", java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(asset.estimatedValue))
+    }}}
   }
 }

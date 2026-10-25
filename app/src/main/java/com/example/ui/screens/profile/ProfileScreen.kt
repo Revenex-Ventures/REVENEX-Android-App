@@ -26,196 +26,59 @@ import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(
-  repository: ErpDataRepository,
-  onBack: () -> Unit,
-  onNavigateTo: (String) -> Unit
-) {
-  val currentUser by repository.currentUser.collectAsState()
-  val isAppLockEnabled by repository.isAppLockEnabled.collectAsState()
-
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {
-          Text(
-            text = "User Profile & Security",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-          )
-        },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+fun ProfileScreen(repository: ErpDataRepository, onBack: () -> Unit, onNavigateTo: (String) -> Unit) {
+  val user by repository.currentUser.collectAsState()
+  val locked by repository.isAppLockEnabled.collectAsState()
+  val cloud = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val session = if(cloud && user.id.isNotBlank()) runCatching {repository.supabaseDataSource.sessionId()}.getOrDefault("Not loaded") else "Local sample session"
+  var details by remember { mutableStateOf(false) }
+  var help by remember { mutableStateOf(false) }
+  var security by remember(user.id) {mutableStateOf(false)}
+  Scaffold(topBar={TopAppBar(title={Text("Settings",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Back")}})}) { padding ->
+    LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("profile_screen_list"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+      item { SchoolGroup {
+        Row(Modifier.fillMaxWidth().clickable{details=true}.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+          Avatar(user.name,size=Spacing.xxl32)
+          Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+            Text(user.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+            Text(schoolRoleLabel(user.role),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(cloud)"School account · Supabase" else "Local Demo",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
           }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-          containerColor = MaterialTheme.colorScheme.surface
-        )
-      )
-    }
-  ) { paddingValues ->
-    LazyColumn(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .testTag("profile_screen_list"),
-      contentPadding = PaddingValues(bottom = 96.dp)
-    ) {
-      // 1. HERO USER CARD
-      item {
-        AppCard(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(Spacing.screenPadding),
-          containerColor = RevenexInk,
-          elevation = Elev.e2
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Box(
-              modifier = Modifier
-                .size(64.dp)
-                .background(ScholaOnyx, CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = currentUser.avatarInitials.ifBlank { "U" },
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = ScholaTextPrimary
-              )
-            }
-            Spacer(modifier = Modifier.width(Spacing.s4))
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = currentUser.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-              )
-              Text(
-                text = "${currentUser.role.displayName} • ${currentUser.email}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.85f)
-              )
-              Text(
-                text = "Phone: ${currentUser.phone}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f)
-              )
-            }
+          Icon(Icons.Default.ChevronRight,null)
+        }
+      } }
+      item { SchoolGroup {
+        SchoolRow("Notifications","Your school inbox",Icons.Default.Notifications,{onNavigateTo(com.example.ui.navigation.Screen.Notifications.route)})
+        HorizontalDivider()
+        SchoolRow("Documents","Notes and shared resources",Icons.Default.Folder,{onNavigateTo(com.example.ui.navigation.Screen.StudyMaterial.route)})
+        HorizontalDivider()
+        SchoolRow("Help","School access and support",Icons.Default.HelpOutline,{help=true})
+      } }
+      item { SchoolSection("Appearance") {
+        val appearance=LocalAppearance.current
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+          Appearance.entries.forEachIndexed { index,option ->
+            SegmentedButton(selected=appearance?.selection==option,onClick={appearance?.select(option)},shape=SegmentedButtonDefaults.itemShape(index,Appearance.entries.size),
+              colors=SegmentedButtonDefaults.colors(activeContainerColor=MaterialTheme.colorScheme.primary,activeContentColor=MaterialTheme.colorScheme.onPrimary)) {Text(option.label)}
           }
         }
-      }
-
-      // 2. SECURITY SETTINGS
-      item {
-        SectionHeader(title = "App Security & Biometrics")
-        AppCard(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.screenPadding)
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier.weight(1f)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(40.dp)
-                  .background(RevenexPrimaryContainer, RoundedCornerShape(Radius.sm)),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Default.Fingerprint,
-                  contentDescription = null,
-                  tint = RevenexPrimary,
-                  modifier = Modifier.size(24.dp)
-                )
-              }
-              Spacer(modifier = Modifier.width(Spacing.s3))
-              Column {
-                Text(
-                  text = "Biometric & App Lock",
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold
-                )
-                Text(
-                  text = "Require fingerprint / PIN when resuming the app",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-            }
-
-            Switch(
-              checked = isAppLockEnabled,
-              onCheckedChange = { repository.setAppLockEnabled(it) }
-            )
-          }
-        }
-      }
-
-      // 3. INSTITUTIONAL INFO
-      item {
-        Spacer(modifier = Modifier.height(Spacing.s4))
-        SectionHeader(title = "Institutional Affiliation")
-        AppCard(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.screenPadding)
-        ) {
-          Column(verticalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-            Text(
-              text = "Institution: Revenex Public School",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.SemiBold
-            )
-            Text(
-              text = "Affiliation: CBSE Board New Delhi (Affil # 1130492)",
-              style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-              text = "Academic Session: 2026-2027 (Active Term 1)",
-              style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-              text = "ERP Version: 2.4.0 (Enterprise Native)",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-        }
-      }
-
-      // 4. LOGOUT ACTION
-      item {
-        Spacer(modifier = Modifier.height(Spacing.s5))
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.screenPadding)
-        ) {
-          OutlinedButton(
-            onClick = { repository.logout() },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Radius.md),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusError)
-          ) {
-            Icon(Icons.Default.Logout, contentDescription = null)
-            Spacer(modifier = Modifier.width(Spacing.s2))
-            Text("Sign Out of ERP", fontWeight = FontWeight.Bold)
-          }
-        }
-      }
+      } }
+      item {SchoolGroup {
+        SchoolRow("App lock",if(locked)"On" else "Off",Icons.Default.Fingerprint,{security=true})
+        HorizontalDivider()
+        SchoolRow("School",if(cloud)"ID …${user.schoolId.takeLast(6)} · Session …${session.takeLast(6)}" else "Revenex Public School · sample",Icons.Default.School,{details=true})
+      }}
+      item { OutlinedButton(onClick={repository.logout();onNavigateTo(com.example.ui.navigation.Screen.Auth.route)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.sm),colors=ButtonDefaults.outlinedButtonColors(contentColor=MaterialTheme.colorScheme.error)) {
+        Icon(Icons.Default.Logout,null);Spacer(Modifier.width(Spacing.sm8));Text("Sign out")
+      } }
     }
   }
+  if(security) AlertDialog(onDismissRequest={security=false},title={Text("App lock")},text={Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    Text("Require fingerprint or PIN when resuming",Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
+    Switch(checked=locked,onCheckedChange={repository.setAppLockEnabled(it)})
+  }},confirmButton={TextButton(onClick={security=false}){Text("Done")}})
+  if(details) AlertDialog(onDismissRequest={details=false},title={Text(user.name)},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+    Text(user.role.displayName);Text(user.email);Text("Phone: ${user.phone.ifBlank { "Not provided" }}");Text("School: ${user.schoolId}");Text("Session: $session")
+  }},confirmButton={TextButton(onClick={details=false}) {Text("Done")}})
+  if(help) AlertDialog(onDismissRequest={help=false},title={Text("School support")},text={Text("Contact your school administrator for account access, school records and password recovery. Your signed-in account determines which school information is available. Device push notifications are not configured in this demo; use the in-app inbox.")},confirmButton={TextButton(onClick={help=false}) {Text("Done")}})
 }

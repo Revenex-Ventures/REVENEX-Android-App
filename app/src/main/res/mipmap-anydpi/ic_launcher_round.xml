@@ -1,0 +1,1 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"><item android:drawable="@color/revenex_brand_black"/><item android:drawable="@drawable/revenex_launch_brand"/></layer-list>

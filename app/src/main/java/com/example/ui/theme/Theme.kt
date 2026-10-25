@@ -4,16 +4,21 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.ui.graphics.Color
 
 private val ScholaLightColorScheme = lightColorScheme(
   primary = ScholaTerracotta,
-  onPrimary = ScholaSlateNavyDark,
+  onPrimary = Color.White,
   primaryContainer = ScholaTerracottaContainer,
   onPrimaryContainer = ScholaOnTerracottaContainer,
-  secondary = ScholaTerracottaLight,
-  onSecondary = ScholaSlateNavyDark,
+  secondary = Color(0xFF5B6650),
+  onSecondary = Color.White,
   secondaryContainer = ScholaSlateContainer,
   onSecondaryContainer = ScholaTextPrimary,
   tertiary = Color(0xFF78350F),
@@ -26,8 +31,19 @@ private val ScholaLightColorScheme = lightColorScheme(
   onSurface = ScholaTextPrimary,
   surfaceVariant = ScholaSurfaceWarm,
   onSurfaceVariant = ScholaTextSecondary,
-  outline = ScholaBorder,
+  outline = Color(0xFF85786D),
   outlineVariant = ScholaBorder,
+  surfaceTint = ScholaTerracotta,
+  surfaceDim = Color(0xFFE9E0D5),
+  surfaceBright = Color.White,
+  surfaceContainerLowest = Color.White,
+  surfaceContainerLow = Color(0xFFFFFAF4),
+  surfaceContainer = Color(0xFFF8F1E7),
+  surfaceContainerHigh = Color(0xFFF1E8DC),
+  surfaceContainerHighest = Color(0xFFEAE0D2),
+  inverseSurface = Color(0xFF332A23),
+  inverseOnSurface = Color(0xFFFFF8F0),
+  inversePrimary = ScholaTerracottaLight,
   error = StatusDangerText,
   onError = Color.White,
   errorContainer = StatusDangerBg,
@@ -37,15 +53,15 @@ private val ScholaLightColorScheme = lightColorScheme(
 private val ScholaDarkColorScheme = darkColorScheme(
   primary = ScholaTerracottaLight,
   onPrimary = ScholaSlateNavyDark,
-  primaryContainer = Color(0xFF442113),
+  primaryContainer = Color(0xFF603311),
   onPrimaryContainer = ScholaTerracottaLight,
   secondary = ScholaTerracottaLight,
   onSecondary = ScholaSlateNavyDark,
-  secondaryContainer = Color(0xFF34343B),
+  secondaryContainer = Color(0xFF3B3530),
   onSecondaryContainer = DarkTextPrimary,
-  tertiary = Color(0xFF78350F),
-  onTertiary = Color.White,
-  tertiaryContainer = Color(0xFF3A3423),
+  tertiary = Color(0xFFF1BD9F),
+  onTertiary = Color(0xFF412A1D),
+  tertiaryContainer = Color(0xFF533C2D),
   onTertiaryContainer = ScholaGoldLight,
   background = DarkBackground,
   onBackground = DarkTextPrimary,
@@ -55,6 +71,17 @@ private val ScholaDarkColorScheme = darkColorScheme(
   onSurfaceVariant = DarkTextSecondary,
   outline = DarkBorder,
   outlineVariant = DarkBorder,
+  surfaceTint = ScholaTerracottaLight,
+  surfaceDim = DarkBackground,
+  surfaceBright = Color(0xFF46392F),
+  surfaceContainerLowest = Color(0xFF191510),
+  surfaceContainerLow = Color(0xFF252019),
+  surfaceContainer = DarkSurface,
+  surfaceContainerHigh = Color(0xFF393027),
+  surfaceContainerHighest = Color(0xFF45392E),
+  inverseSurface = Color(0xFFF0E3D3),
+  inverseOnSurface = Color(0xFF292621),
+  inversePrimary = ScholaTerracotta,
   error = Color(0xFFE09078),
   onError = ScholaSlateNavyDark,
   errorContainer = Color(0xFF4A2B24),
@@ -63,10 +90,28 @@ private val ScholaDarkColorScheme = darkColorScheme(
 
 @Composable
 fun ScholaTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
+  darkTheme: Boolean? = null,
+  principal: Boolean = false,
   content: @Composable () -> Unit
 ) {
-  val colorScheme = if (darkTheme) ScholaDarkColorScheme else ScholaLightColorScheme
+  val preference = LocalAppearance.current ?: rememberAppearancePreference()
+  val dark = darkTheme ?: preference.selection.usesDark(isSystemInDarkTheme())
+  val colorScheme = (if (dark) ScholaDarkColorScheme else ScholaLightColorScheme).let { base ->
+    if(principal)base.copy(background=if(dark)base.background else PrincipalColors.canvasLight,onSurface=if(dark)base.onSurface else PrincipalColors.inkLight,onBackground=if(dark)base.onBackground else PrincipalColors.inkLight,onSurfaceVariant=if(dark)base.onSurfaceVariant else PrincipalColors.mutedLight,primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight) else base
+  }
+  val view = LocalView.current
+  SideEffect {
+    if (android.os.Build.VERSION.SDK_INT >= 29) view.isForceDarkAllowed = false
+    val activity = view.context.findActivity()
+    if (activity != null) {
+      WindowCompat.getInsetsController(activity.window, view).apply {
+        isAppearanceLightStatusBars = !dark
+        isAppearanceLightNavigationBars = !dark
+      }
+    }
+  }
+  CompositionLocalProvider(LocalAppearance provides preference,
+    androidx.compose.material3.LocalContentColor provides colorScheme.onBackground) {
 
   MaterialTheme(
     colorScheme = colorScheme,
@@ -80,12 +125,20 @@ fun ScholaTheme(
     ),
     content = content
   )
+  }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+  is Activity -> this
+  is ContextWrapper -> if (baseContext !== this) baseContext.findActivity() else null
+  else -> null
 }
 
 // Backward-compatible alias
 @Composable
 fun RevenexTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
+  darkTheme: Boolean? = null,
+  principal: Boolean = false,
   content: @Composable () -> Unit
 ) {
   ScholaTheme(darkTheme = darkTheme, content = content)

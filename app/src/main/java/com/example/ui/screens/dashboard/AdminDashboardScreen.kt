@@ -1,279 +1,84 @@
 package com.example.ui.screens.dashboard
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.FactCheck
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.ManageAccounts
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.example.data.model.LeaveStatus
 import com.example.data.repository.ErpDataRepository
-import com.example.ui.components.AnimatedFadeIn
-import com.example.ui.components.AppCard
-import com.example.ui.components.CompactStatTile
-import com.example.ui.components.FeatureHeroCard
-import com.example.ui.components.SectionHeader
-import com.example.ui.components.StatusBadge
-import com.example.ui.components.WorkflowQuickPill
+import com.example.ui.components.*
 import com.example.ui.navigation.Screen
-import com.example.ui.theme.GlassBgTransparent
-import com.example.ui.theme.ScholaGold
-import com.example.ui.theme.ScholaGoldContainer
-import com.example.ui.theme.ScholaSlateContainer
-import com.example.ui.theme.ScholaSlateNavy
-import com.example.ui.theme.ScholaTerracotta
-import com.example.ui.theme.ScholaTerracottaContainer
-import com.example.ui.theme.Spacing
-import com.example.ui.theme.StatusDangerBg
-import com.example.ui.theme.StatusDangerText
-import com.example.ui.theme.StatusInfoBg
-import com.example.ui.theme.StatusInfoText
-import com.example.ui.theme.StatusSuccessBg
-import com.example.ui.theme.StatusSuccessText
-import java.util.Locale
+import com.example.ui.screens.attendance.attendanceDateMatches
+import com.example.ui.theme.*
+import java.time.LocalDate
 
-private data class AdminModule(
-  val title: String,
-  val description: String,
-  val icon: ImageVector,
-  val route: String,
-  val tint: Color,
-  val container: Color
-)
-
-/**
- * Operational workspace for the school employee entrusted with day-to-day ERP
- * maintenance. It deliberately routes to real modules only; server-side role
- * claims remain the authority for every write.
- */
 @Composable
-fun AdminDashboardScreen(
-  repository: ErpDataRepository,
-  onNavigateTo: (String) -> Unit,
-  onShowAddStudent: () -> Unit,
-  onShowAddTeacher: () -> Unit,
-  onShowCreateNotice: () -> Unit
-) {
+fun AdminDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String) -> Unit,
+  onShowAddStudent: () -> Unit, onShowAddTeacher: () -> Unit, onShowCreateNotice: () -> Unit) {
   val students by repository.students.collectAsState()
   val teachers by repository.teachers.collectAsState()
   val invoices by repository.invoices.collectAsState()
-  val notices by repository.notices.collectAsState()
-  val timetable by repository.timetable.collectAsState()
-  val auditLogs by repository.auditLogs.collectAsState()
-  val classAttendanceMap by repository.classAttendance.collectAsState()
-
-  val pendingInvoices = invoices.count { it.pendingAmount > 0L }
-  val overdueInvoices = invoices.count { it.status.name == "OVERDUE" }
-  val modules = listOf(
-    AdminModule("Admissions", "Student records and enrolment", Icons.Default.Groups, Screen.Students.route, ScholaTerracotta, ScholaTerracottaContainer),
-    AdminModule("Faculty", "Staff directory and workloads", Icons.Default.School, Screen.Teachers.route, ScholaSlateNavy, ScholaSlateContainer),
-    AdminModule("Academic setup", "Periods, classes and timetables", Icons.Default.CalendarMonth, Screen.Timetable.route, ScholaGold, ScholaGoldContainer),
-    AdminModule("Attendance", "Registers and exception review", Icons.Default.FactCheck, Screen.Attendance.route, StatusSuccessText, StatusSuccessBg),
-    AdminModule("Finance", "Dues, receipts and reconciliation", Icons.Default.AccountBalanceWallet, Screen.Fees.route, StatusInfoText, StatusInfoBg),
-    AdminModule("Communication", "Notices and recipient delivery", Icons.Default.Campaign, Screen.Notices.route, ScholaTerracotta, ScholaTerracottaContainer),
-    AdminModule("Assets", "Library, transport and inventory", Icons.Default.Inventory, Screen.Inventory.route, ScholaSlateNavy, ScholaSlateContainer),
-    AdminModule("Reports", "Operational review and exports", Icons.Default.Analytics, Screen.Reports.route, ScholaGold, ScholaGoldContainer)
-  )
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxWidth()
-      .background(GlassBgTransparent)
-      .testTag("admin_dashboard_list"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s4)
-  ) {
+  val leaves by repository.leaveRequests.collectAsState()
+  val records by repository.classAttendance.collectAsState()
+  val audit by repository.auditLogs.collectAsState()
+  val actor by repository.currentUser.collectAsState()
+  val cloud = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
+  val session = if(cloud) runCatching {repository.supabaseDataSource.sessionId()}.getOrDefault("") else "Local sample session"
+  var contextOpen by remember {mutableStateOf(false)}
+  if(contextOpen) AlertDialog(onDismissRequest={contextOpen=false},title={Text("School context")},text={Column {
+    Text(if(cloud) "School ID: ${actor.schoolId}" else "Revenex Public School · sample")
+    Text("Session: ${session.ifBlank { "Not loaded" }}")
+  }},confirmButton={TextButton(onClick={contextOpen=false}){Text("Done")}})
+  val today = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+  val registers = records.values.filter { attendanceDateMatches(it.date,today.toString()) }
+  LazyColumn(Modifier.fillMaxSize().testTag("admin_dashboard_list"), contentPadding = PaddingValues(Spacing.screenPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xl24)) {
     item {
-      AnimatedFadeIn {
-        FeatureHeroCard(
-          cycleTitle = "SCHOOL OPERATIONS • 2026–27",
-          categoryBadge = "ADMIN CONTROL ROOM",
-          primaryStatistic = students.size.toString(),
-          statisticLabel = "Active student records",
-          secondaryKeyMetric = pendingInvoices.toString(),
-          secondaryMetricLabel = "Invoices needing follow-up",
-          actionButtonText = "Open module directory",
-          onActionClick = { onNavigateTo(Screen.OperationsHub.route) },
-          badgeBgColor = ScholaTerracottaContainer,
-          badgeTextColor = ScholaTerracotta,
-          heroHighlightColor = ScholaTerracotta
-        )
+      Text("School operations", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      TextButton(onClick={contextOpen=true},contentPadding=PaddingValues(Spacing.xs4)) {
+        Text(if(cloud) "School ID …${actor.schoolId.takeLast(6)} · Session …${session.takeLast(6)}" else "Revenex Public School · Local sample session",style=MaterialTheme.typography.bodySmall)
+      }
+      Spacer(Modifier.height(Spacing.md12))
+      Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        SchoolMetric(students.size.toString(),"Students",Icons.Default.Groups,Modifier.weight(1f)) { onNavigateTo(Screen.Students.route) }
+        SchoolMetric(teachers.size.toString(),"Faculty",Icons.Default.School,Modifier.weight(1f)) { onNavigateTo(Screen.Teachers.route) }
+        SchoolMetric(invoices.count { it.pendingAmount>0 }.toString(),"Unpaid",Icons.Default.ReceiptLong,Modifier.weight(1f),SchoolMetricTone.FINANCE) { onNavigateTo(Screen.Fees.route) }
       }
     }
-
-    item {
-      AnimatedFadeIn(delayMillis = 80) {
-        Column {
-          SectionHeader(title = "Priority actions")
-          LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s2)) {
-            item { WorkflowQuickPill("Add student", Icons.Default.Groups, onShowAddStudent, isHighlighted = true) }
-            item { WorkflowQuickPill("Add faculty", Icons.Default.School, onShowAddTeacher) }
-            item { WorkflowQuickPill("Publish notice", Icons.Default.Campaign, onShowCreateNotice) }
-            item { WorkflowQuickPill("Review schedule", Icons.Default.CalendarMonth, onClick = { onNavigateTo(Screen.Timetable.route) }) }
-          }
-        }
-      }
-    }
-
-    item {
-      AnimatedFadeIn(delayMillis = 140) {
-        Column {
-          SectionHeader(title = "School operations at a glance")
-          Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s3)) {
-            CompactStatTile(
-              categoryLabel = "Faculty profiles",
-              statCounter = teachers.size.toString(),
-              icon = Icons.Default.School,
-              iconTint = ScholaSlateNavy,
-              iconContainerColor = ScholaSlateContainer,
-              deltaText = "Directory",
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Teachers.route) }
-            )
-            CompactStatTile(
-              categoryLabel = "Timetable slots",
-              statCounter = timetable.size.toString(),
-              icon = Icons.Default.CalendarMonth,
-              iconTint = ScholaGold,
-              iconContainerColor = ScholaGoldContainer,
-              deltaText = "Configured",
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Timetable.route) }
-            )
-          }
-          Spacer(modifier = Modifier.height(Spacing.s3))
-          Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s3)) {
-            CompactStatTile(
-              categoryLabel = "Recorded registers",
-              statCounter = classAttendanceMap.size.toString(),
-              icon = Icons.Default.FactCheck,
-              iconTint = StatusSuccessText,
-              iconContainerColor = StatusSuccessBg,
-              deltaText = "Recorded",
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Attendance.route) }
-            )
-            CompactStatTile(
-              categoryLabel = "Overdue accounts",
-              statCounter = overdueInvoices.toString(),
-              icon = Icons.Default.WarningAmber,
-              iconTint = if (overdueInvoices == 0) StatusSuccessText else StatusDangerText,
-              iconContainerColor = if (overdueInvoices == 0) StatusSuccessBg else StatusDangerBg,
-              deltaText = if (overdueInvoices == 0) "Clear" else "Needs review",
-              isPositiveDelta = overdueInvoices == 0,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Fees.route) }
-            )
-          }
-        }
-      }
-    }
-
-    item {
-      AnimatedFadeIn(delayMillis = 200) {
-        Column {
-          SectionHeader(title = "Manage the school")
-          modules.chunked(2).forEach { row ->
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
-            ) {
-              row.forEach { module ->
-                AdminModuleCard(module, Modifier.weight(1f)) { onNavigateTo(module.route) }
-              }
-              if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
-            }
-            Spacer(modifier = Modifier.height(Spacing.s3))
-          }
-        }
-      }
-    }
-
-    item {
-      AnimatedFadeIn(delayMillis = 260) {
-        Column {
-          SectionHeader(title = "Access and change control")
-          AppCard(modifier = Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.Security, contentDescription = null, tint = ScholaSlateNavy)
-              Spacer(modifier = Modifier.width(Spacing.s3))
-              Column(modifier = Modifier.weight(1f)) {
-                Text("Role grants are server controlled", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(
-                  "Firebase claims and backend authorization decide access. Every operational change should be recorded in the audit trail.",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = ScholaSlateNavy.copy(alpha = 0.72f)
-                )
-              }
-              StatusBadge("Policy enforced")
-            }
-          }
-        }
-      }
-    }
-
-    item {
-      AnimatedFadeIn(delayMillis = 320) {
-        Column {
-          SectionHeader(title = "Recent operational activity", actionText = "View notices", onActionClick = { onNavigateTo(Screen.Notices.route) })
-          if (auditLogs.isEmpty()) {
-            AppCard(modifier = Modifier.fillMaxWidth()) {
-              Text("No recorded activity is available for this demo session.", style = MaterialTheme.typography.bodyMedium)
-            }
-          } else {
-            auditLogs.take(3).forEach { log ->
-              AppCard(modifier = Modifier.fillMaxWidth()) {
-                Text(log.actionSummary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                Spacer(modifier = Modifier.height(Spacing.xs4))
-                Text(log.actorName, style = MaterialTheme.typography.bodySmall, color = ScholaSlateNavy.copy(alpha = 0.7f))
-              }
-              Spacer(modifier = Modifier.height(Spacing.s2))
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun AdminModuleCard(module: AdminModule, modifier: Modifier, onClick: () -> Unit) {
-  AppCard(modifier = modifier.testTag("admin_module_${module.title.lowercase().replace(" ", "_")}"), onClick = onClick) {
-    Icon(module.icon, contentDescription = null, tint = module.tint)
-    Spacer(modifier = Modifier.height(Spacing.s3))
-    Text(module.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-    Spacer(modifier = Modifier.height(Spacing.xs4))
-    Text(module.description, style = MaterialTheme.typography.bodySmall, color = module.tint.copy(alpha = 0.8f))
+    item { SchoolSection("Needs attention", "View all", { onNavigateTo(Screen.OperationsHub.route) }) { SchoolGroup {
+      SchoolRow("Leave requests", "Awaiting a decision",Icons.Default.EventBusy,{onNavigateTo(Screen.Leaves.route)},leaves.count {it.status==LeaveStatus.PENDING}.toString())
+      HorizontalDivider()
+      SchoolRow("Attendance", "${registers.size} registers saved today",Icons.Default.FactCheck,{onNavigateTo(Screen.PrincipalAttendance.route)},registers.sumOf {it.absentCount+it.lateCount}.toString())
+      HorizontalDivider()
+      SchoolRow("Fees", "Dues and collections",Icons.Default.AccountBalanceWallet,{onNavigateTo(Screen.Fees.route)})
+    } } }
+    item { SchoolSection("Quick actions") { SchoolGroup {
+      SchoolRow("Add student","Admission and class",Icons.Default.PersonAdd,onShowAddStudent)
+      HorizontalDivider()
+      SchoolRow("Add faculty","Staff setup",Icons.Default.PersonAddAlt,onShowAddTeacher)
+      HorizontalDivider()
+      SchoolRow("Publish notice","School communication",Icons.Default.Campaign,onShowCreateNotice)
+    } } }
+    item { SchoolSection("Modules") { SchoolGroup {
+      SchoolRow("People","Student and faculty records",Icons.Default.Groups,{onNavigateTo(Screen.Students.route)})
+      SchoolRow("Academics","Classes and periods",Icons.Default.CalendarMonth,{onNavigateTo(Screen.Timetable.route)})
+      SchoolRow("Reports","Operational summaries",Icons.Default.BarChart,{onNavigateTo(Screen.Reports.route)})
+      SchoolRow("View all","Search all modules",Icons.Default.Apps,{onNavigateTo(Screen.OperationsHub.route)})
+    } } }
+    item { SchoolSection("Collections", "View all", {onNavigateTo(Screen.Fees.route)}) { SchoolGroup {
+      val collected = invoices.filter {it.paidAmount > 0}.take(3)
+      if(collected.isEmpty()) Text("No collections loaded.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
+      collected.forEach { invoice -> SchoolRow(invoice.invoiceNumber,
+        java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("en-IN")).format(java.math.BigDecimal(invoice.paidAmount).movePointLeft(2)),
+        Icons.Default.ReceiptLong,{onNavigateTo(Screen.Fees.route)}) }
+    } } }
+    item { SchoolSection("Recent activity","View all",{onNavigateTo(Screen.Audit.route)}) { SchoolGroup {
+      if(audit.isEmpty()) Text("No recorded activity.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall)
+      audit.take(3).forEach { SchoolRow(it.actionSummary,"${it.actorName} · ${it.timestamp}",Icons.Default.History,{onNavigateTo(Screen.Audit.route)}) }
+    } } }
   }
 }

@@ -39,6 +39,14 @@ sealed class Screen(val route: String) {
   object AiAssistant : Screen("ai_assistant")
   object GlobalSearch : Screen("global_search")
   object OperationsHub : Screen("operations_hub")
+  object Academics : Screen("academic_hub")
+  object Audit : Screen("school_activity")
+  object PrincipalSubjects : Screen("principal_subjects")
+  object PrincipalCalendar : Screen("principal_calendar")
+  object PrincipalAllocations : Screen("principal_allocations")
+  object PrincipalClass : Screen("principal_class/{cohort}?date={date}") {
+    fun createRoute(cohort:String,date:String)="principal_class/${android.net.Uri.encode(cohort)}?date=$date"
+  }
   object PrincipalAttendance : Screen("principal_attendance")
 }
 
@@ -50,45 +58,57 @@ data class BottomNavItem(
 )
 
 object NavConfig {
+  /** Presentation selection only; authorization remains with the backend. */
+  fun selectedPrimaryRoute(role: UserRole, route: String?): String? {
+    val primary = getBottomNavItems(role).map { it.route }
+    if (route in primary) return route
+    return when {
+      route == Screen.Auth.route || route == null -> route
+      route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route,Screen.PrincipalAllocations.route) &&
+        role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL) -> Screen.Students.route
+      route in setOf(Screen.PrincipalAttendance.route,Screen.PrincipalClass.route) && role == UserRole.PRINCIPAL -> Screen.OperationsHub.route
+      role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL) && route in setOf(Screen.Homework.route, Screen.Timetable.route,
+        Screen.Exams.route, Screen.ReportCard.route, Screen.StudyMaterial.route,Screen.PrincipalSubjects.route,Screen.PrincipalCalendar.route) -> Screen.Academics.route
+      else -> Screen.OperationsHub.route
+    }
+  }
   fun getBottomNavItems(role: UserRole): List<BottomNavItem> {
     return when (role) {
       UserRole.PRINCIPAL -> listOf(
-        BottomNavItem(Screen.Dashboard.route, "Overview", Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
-        BottomNavItem(Screen.Students.route, "Students", Icons.Filled.People, Icons.Outlined.People),
-        BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.HowToReg, Icons.Outlined.HowToReg),
-        BottomNavItem(Screen.Fees.route, "Fees", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
-        BottomNavItem(Screen.OperationsHub.route, "ERP Hub", Icons.Filled.Apps, Icons.Outlined.Apps)
+        BottomNavItem(Screen.Dashboard.route,"Home",Icons.Filled.Home,Icons.Outlined.Home),
+        BottomNavItem(Screen.Students.route,"People",Icons.Filled.People,Icons.Outlined.People),
+        BottomNavItem(Screen.Academics.route,"Academics",Icons.Filled.MenuBook,Icons.Outlined.MenuBook),
+        BottomNavItem(Screen.Fees.route,"Finance",Icons.Filled.CreditCard,Icons.Outlined.CreditCard),
+        BottomNavItem(Screen.OperationsHub.route,"More",Icons.Filled.MoreHoriz,Icons.Outlined.MoreHoriz)
       )
       UserRole.ADMIN -> listOf(
-        BottomNavItem(Screen.Dashboard.route, "Control", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
-        BottomNavItem(Screen.Students.route, "Admissions", Icons.Filled.Groups, Icons.Outlined.Groups),
-        BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
+        BottomNavItem(Screen.Students.route, "People", Icons.Filled.Groups, Icons.Outlined.Groups),
+        BottomNavItem(Screen.Academics.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Fees.route, "Finance", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
-        BottomNavItem(Screen.OperationsHub.route, "Modules", Icons.Filled.Apps, Icons.Outlined.Apps)
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Apps, Icons.Outlined.Apps)
       )
       UserRole.TEACHER -> listOf(
-        BottomNavItem(Screen.Dashboard.route, "My Class", Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
+        BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.FactCheck, Icons.Outlined.FactCheck),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
         BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
-        BottomNavItem(Screen.TeacherProfile.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu)
       )
       UserRole.STUDENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
-        BottomNavItem(Screen.ReportCard.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
+        BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
       )
-      // Parent/Parent-Portal is folded into the Student Portal: a parent accessing via a
-      // guardian link lands in the Student portal. There is no 4th portal.
+      // Shared navigation presentation; parent identity and linked-child scope remain distinct.
       UserRole.PARENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
         BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.OperationsHub.route, "Resources", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
-        BottomNavItem(Screen.ReportCard.route, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
+        BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
       )
     }
   }

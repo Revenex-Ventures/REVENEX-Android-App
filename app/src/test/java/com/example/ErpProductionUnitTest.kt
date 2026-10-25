@@ -193,6 +193,14 @@ class ErpProductionUnitTest {
     val term = targetCard.term
     val subject = "Mathematics"
 
+    // Corrections must not silently change a result families can already see.
+    if (targetCard.published) {
+      var rejected = false
+      try { dataSource.saveStudentMarks(studentId, term, subject, 95, 100) }
+      catch (_: IllegalStateException) { rejected = true }
+      assertTrue("Published results require explicit unpublication", rejected)
+      dataSource.publishReportCard(studentId, term, false)
+    }
     dataSource.saveStudentMarks(studentId, term, subject, 95, 100)
     val afterMarks = dataSource.getReportCardsFlow().first().first { it.id == targetCard.id }
     val mathScore = afterMarks.scores.first { it.subjectName == subject }

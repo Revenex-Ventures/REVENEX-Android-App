@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android uses the persisted application night mode for its pre-process window. -->
+    <style name="Theme.Revenex.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#090C12</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/revenex_launch_brand</item>
+        <item name="postSplashScreenTheme">@style/Theme.Revenex.Dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

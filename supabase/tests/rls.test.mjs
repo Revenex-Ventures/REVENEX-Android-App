@@ -146,5 +146,82 @@ await check('anonymous cannot reserve model quota',()=>denied('anon','select res
 await check('assistant rate limit is server enforced',async()=>{for(let i=0;i<5;i++)assert.equal((await as('student','select reserve_assistant_request() as allowed'))[0].allowed,true);assert.equal((await as('student','select reserve_assistant_request() as allowed'))[0].allowed,false);});
 await check('another actor has an independent request quota',async()=>assert.equal((await as('parent','select reserve_assistant_request() as allowed'))[0].allowed,true));
 await check('Android cannot reset assistant quota rows',()=>denied('student','delete from assistant_request_limits'));
+await check('teacher assignment publication persists and reaches linked student',async()=>{
+ await as('teacher',`insert into assignments values('redesign_assignment','revenex_demo','demo_2026','demo_10a','{"title":"Redesign assignment fixture"}')`);
+ assert.equal((await as('student',"select id from assignments where id='redesign_assignment'")).length,1);
+ assert.equal((await as('other',"select id from assignments where id='redesign_assignment'")).length,0);
+});
+await check('assignment creates separate unread student and parent inbox rows',async()=>{
+ const st=await as('student',"select * from notifications where message='Redesign assignment fixture'");
+ const pa=await as('parent',"select * from notifications where message='Redesign assignment fixture'");
+ assert.equal(st.length,1);assert.equal(pa.length,1);assert.notEqual(st[0].id,pa[0].id);
+ assert.equal(st[0].is_read,false);assert.equal(pa[0].is_read,false);
+ await as('parent',"update notifications set is_read=true where id=$1",[pa[0].id]);
+ assert.equal((await as('student',"select is_read from notifications where id=$1",[st[0].id]))[0].is_read,false);
+});
+await check('principal notice publication persists and notifies school recipients only',async()=>{
+ await as('principal',`insert into notices values('redesign_notice','revenex_demo','demo_2026','{"title":"Redesign notice fixture"}')`);
+ assert.equal((await as('parent',"select * from notices where id='redesign_notice'")).length,1);
+ assert.equal((await as('student',"select * from notifications where message='Redesign notice fixture'")).length,1);
+ assert.equal((await as('other',"select * from notifications where message='Redesign notice fixture'")).length,0);
+});
+const resultInboxBefore={
+ student:(await as('student',"select * from notifications where category='EXAMS'")).length,
+ parent:(await as('parent',"select * from notifications where category='EXAMS'")).length
+};
+await check('draft result does not announce to student or parent',async()=>{
+ await as('teacher',"update marks set published=false where id='mark1'");
+ assert.equal((await as('student',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.student);
+ assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent);
+});
+await check('publishing result notifies linked recipients and no other school',async()=>{
+ await as('teacher',"update marks set published=true where id='mark1'");
+ assert.equal((await as('student',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.student+1);
+ assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent+1);
+ assert.equal((await as('other',"select * from notifications where category='EXAMS'")).length,0);
+});
+await check('repeated result publication does not duplicate inbox entries',async()=>{
+ await as('teacher',"update marks set published=true where id='mark1'");
+ assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent+1);
+});
+await check('draft RPC rejects family and wrong school',async()=>{
+ await denied('parent',"select save_draft_mark('demo_student','RPC Term','Math',70,100)");
+ await denied('other',"select save_draft_mark('demo_student','RPC Term','Math',70,100)");
+});
+await check('draft save stays private, upserts and validates scores',async()=>{
+ await as('teacher',"select save_draft_mark('demo_student','RPC Term','Math',70,100)");
+ await as('teacher',"select save_draft_mark('demo_student','RPC Term','Math',71,100)");
+ assert.equal((await as('student',"select * from marks where term='RPC Term'")).length,0);
+ assert.equal((await as('teacher',"select obtained from marks where term='RPC Term'"))[0].obtained,71);
+ await denied('teacher',"select save_draft_mark('demo_student','RPC Term','Math',101,100)");
+});
+await check('publication RPC is replay safe and blocks editing published terms',async()=>{
+ await as('teacher',"select set_result_publication('demo_student','RPC Term',true)");
+ const count=(await as('student',"select * from notifications where category='EXAMS'")).length;
+ await as('teacher',"select set_result_publication('demo_student','RPC Term',true)");
+ assert.equal((await as('student',"select * from notifications where category='EXAMS'")).length,count);
+ assert.equal((await as('parent',"select * from marks where term='RPC Term'")).length,1);
+ await denied('teacher',"select save_draft_mark('demo_student','RPC Term','English',70,100)");
+ await as('teacher',"select set_result_publication('demo_student','RPC Term',false)");
+ assert.equal((await as('student',"select * from marks where term='RPC Term'")).length,0);
+});
+await check('leave owners cannot approve themselves',async()=>{
+ await as('parent',`insert into leave_requests(id,school_id,session_id,payload) values('decision_fixture','revenex_demo','demo_2026','{"status":"PENDING"}')`);
+ await assert.rejects(()=>as('parent',`update leave_requests set payload='{"status":"APPROVED"}' where id='decision_fixture'`),e=>e.code==='P0001');
+ await denied('parent',"select decide_leave('decision_fixture','APPROVED','')");
+ await denied('other',"select decide_leave('decision_fixture','APPROVED','')");
+});
+await check('admin leave decision persists and notifies once',async()=>{
+ const before=(await as('parent',"select * from notifications where category='LEAVE'")).length;
+ await as('admin',"select decide_leave('decision_fixture','APPROVED','Approved by school')");
+ await as('admin',"select decide_leave('decision_fixture','APPROVED','Approved by school')");
+ assert.equal((await as('parent',"select payload from leave_requests where id='decision_fixture'"))[0].payload.status,'APPROVED');
+ assert.equal((await as('parent',"select * from notifications where category='LEAVE'")).length,before+1);
+ await denied('admin',"select decide_leave('decision_fixture','REJECTED','Changed')");
+});
+await check('operator rollback acceptance script validates without retaining test rows',async()=>{
+ await db.exec(await readFile(new URL('../verify_staff_workflows_rollback.sql',import.meta.url),'utf8'));
+ assert.equal((await db.query("select count(*)::int as n from marks where term='Rollback verification 20261024'")).rows[0].n,0);
+});
 console.log(`${passed} PostgreSQL schema/RLS checks passed. Auth/Storage service/Realtime transport require hosted verification.`);
 await db.close();

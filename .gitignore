@@ -31,6 +31,7 @@ node_modules/
 
 # Local build caches, credentials and packaged artifacts
 /.audit-gradle/
+/.gradle-presentation-cache/
 **/build/
 *.apk
 *.aab
@@ -39,3 +40,6 @@ node_modules/
 *.pem
 *.key
 /supabase/.env*
+
+# Archived local Firebase emulator output (backend source has been removed)
+/functions/*-debug.log

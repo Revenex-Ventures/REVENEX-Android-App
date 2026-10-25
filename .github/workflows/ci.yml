@@ -29,7 +29,6 @@ jobs:
           cache: npm
           cache-dependency-path: |
             supabase/tests/package-lock.json
-            functions/package-lock.json
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
         with:
           deno-version: v2.9.7
@@ -49,12 +48,6 @@ jobs:
         run: npm test --prefix supabase/tests
       - name: AI and payment handler security tests
         run: node --test supabase/tests/assistant-edge.test.mjs supabase/tests/razorpay-edge.test.mjs
-      - name: Install retained legacy backend test dependencies
-        run: npm ci --ignore-scripts --prefix functions
-      - name: Verify retained legacy code without deploying Firebase
-        run: |
-          npm run check --prefix functions
-          npm test --prefix functions
 
   android:
     name: Android build, tests and lint
@@ -83,14 +76,23 @@ jobs:
       - name: Build and run Android quality checks
         run: |
           chmod +x gradlew
-          ./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 assembleDebug testDebugUnitTest lintDebug --console=plain
+          ./gradlew '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Proborazzi.test.record=true assembleDebug assembleReview testDebugUnitTest lintDebug lintReview verifyNoFirebaseDependencies --console=plain
       - name: Verify server prompt and private configuration stay out of APK
-        run: python3 scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          python3 scripts/check_apk_boundary.py app/build/outputs/apk/debug/app-debug.apk
+          python3 scripts/check_apk_boundary.py app/build/outputs/apk/review/app-review.apk
       - name: Upload tested demo APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Revenex-demo-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload side-by-side review APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Revenex-review-${{ github.sha }}
+          path: app/build/outputs/apk/review/app-review.apk
           if-no-files-found: error
           retention-days: 14
       - name: Upload verification reports

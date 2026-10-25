@@ -1,397 +1,87 @@
 package com.example.ui.screens.dashboard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.model.*
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
+import com.example.ui.screens.principal.*
+import com.example.ui.screens.attendance.parseSchoolRecordDate
+import java.time.*
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun PrincipalDashboardScreen(
-  repository: ErpDataRepository,
-  onNavigateTo: (String) -> Unit,
-  onShowAddStudent: () -> Unit,
-  onShowAddTeacher: () -> Unit,
-  onShowCreateNotice: () -> Unit
-) {
-  val currentUser by repository.currentUser.collectAsState()
-  val students by repository.students.collectAsState()
-  val teachers by repository.teachers.collectAsState()
-  val invoices by repository.invoices.collectAsState()
-  val auditLogs by repository.auditLogs.collectAsState()
-  val classAttendanceMap by repository.classAttendance.collectAsState()
-  val notices by repository.notices.collectAsState()
-  val examSchedules by repository.examSchedules.collectAsState()
-
-  val totalStudents = students.size
-  val totalFaculty = teachers.size
-
-  val totalBilled = invoices.sumOf { it.totalAmount }
-  val totalCollected = invoices.sumOf { it.paidAmount }
-  val totalReceivables = invoices.sumOf { it.pendingAmount }
-  val overdueInvoices = invoices.filter { it.status == FeeStatus.OVERDUE }
-
-  val overallAttendance = remember(classAttendanceMap, students) {
-    repository.getOverallSchoolAttendanceRate()
+fun PrincipalDashboardScreen(repository:ErpDataRepository,onNavigateTo:(String)->Unit,
+ onShowAddStudent:()->Unit,onShowAddTeacher:()->Unit,onShowCreateNotice:()->Unit) {
+ val actor by repository.currentUser.collectAsState()
+ val students by repository.students.collectAsState()
+ val invoices by repository.invoices.collectAsState()
+ val records by repository.classAttendance.collectAsState()
+ val leaves by repository.leaveRequests.collectAsState()
+ val events by repository.events.collectAsState()
+ val date=records.values.mapNotNull {parseSchoolRecordDate(it.date)}.maxOrNull()
+ val latest=records.values.filter {parseSchoolRecordDate(it.date)==date}
+ val total=latest.sumOf {it.totalStudents}
+ val attendance=if(total>0)latest.sumOf {it.presentCount+it.lateCount+it.excusedCount}*100.0/total else null
+ val hour=ZonedDateTime.now(ZoneId.of("Asia/Kolkata")).hour
+ val greeting=when(hour){in 5..11->"Good morning";in 12..16->"Good afternoon";else->"Good evening"}
+ val name=actor.name.replace(Regex("^(Dr\\.?|Prof\\.?|Mr\\.?|Mrs\\.?|Ms\\.?)\\s+"),"").substringBefore(" ")
+ val session=students.map {it.sessionId}.distinct().singleOrNull().orEmpty()
+ val year=Regex("(20\\d{2})[_-](20\\d{2})").find(session)?.let {"${it.groupValues[1]}–${it.groupValues[2].takeLast(2)}"} ?: "Current session"
+ var context by remember {mutableStateOf(false)}
+ val shortcuts=listOf(
+  PrincipalModule("Students",PrincipalIcons.Students,Screen.Students.route,0),
+  PrincipalModule("Staff",PrincipalIcons.Staff,Screen.Teachers.route,2),
+  PrincipalModule("Attendance",PrincipalIcons.Attendance,Screen.PrincipalAttendance.route,1),
+  PrincipalModule("Academics",PrincipalIcons.Academics,Screen.Academics.route,3),
+  PrincipalModule("Fees",PrincipalIcons.Fees,Screen.Fees.route,0),
+  PrincipalModule("Reports",PrincipalIcons.Reports,Screen.Reports.route,2))
+ LazyColumn(Modifier.fillMaxSize().testTag("principal_dashboard_list"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+  item {
+   Text("$greeting, $name",style=MaterialTheme.typography.headlineSmall.copy(fontSize=PrincipalLayout.titleSize),fontWeight=FontWeight.Bold)
+   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    Text("Principal",style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(shape=RoundedCornerShape(Radius.sm),color=MaterialTheme.colorScheme.surfaceVariant){Row(Modifier.clickable{context=true}.padding(horizontal=Spacing.sm8,vertical=Spacing.xs4),verticalAlignment=Alignment.CenterVertically){Text(year,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant);Icon(Icons.Outlined.ExpandMore,null,Modifier.size(Spacing.lg16),tint=MaterialTheme.colorScheme.onSurfaceVariant)}}
+   }
+   Spacer(Modifier.height(Spacing.sm8))
+   Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+    PrincipalMetric(students.count {it.status=="ACTIVE"}.toString(),"Students",PrincipalIcons.Students,PrincipalColors.blue,PrincipalColors.blueInk,Modifier.weight(1f)){onNavigateTo(Screen.Students.route)}
+    PrincipalMetric(attendance?.let {String.format(Locale.US,"%.0f%%",it)} ?: "—","Attendance",Icons.Outlined.CheckCircle,PrincipalColors.mint,PrincipalColors.mintInk,Modifier.weight(1f)){onNavigateTo(Screen.PrincipalAttendance.route)}
+    PrincipalMetric(compactSchoolMoney(invoices.sumOf {it.paidAmount}),"Collected",PrincipalIcons.Fees,PrincipalColors.peach,PrincipalColors.peachInk,Modifier.weight(1f)){onNavigateTo(Screen.Fees.route)}
+   }
   }
-  val formattedAttendance = String.format(Locale.US, "%.1f", overallAttendance)
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(GlassBgTransparent)
-      .testTag("principal_dashboard_list"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24)
-  ) {
-    // 1. OPERATIONS HERO CARD (Dark Onyx Surface, 22dp corners, 1px border)
-    item {
-      AnimatedFadeIn(delayMillis = 0) {
-        FeatureHeroCard(
-          cycleTitle = "Academic Cycle 2026-2027 • Executive Desk",
-          categoryBadge = "Q3 Operations Active",
-          primaryStatistic = "₹${String.format(Locale.US, "%,.1f", (totalCollected / 100000.0))}k",
-          statisticLabel = "Net Tuition Revenue Realized",
-          secondaryKeyMetric = "$formattedAttendance%",
-          secondaryMetricLabel = "Daily Roll Call Rate",
-          actionButtonText = "Review Institutional Ledger",
-          onActionClick = { onNavigateTo(Screen.Fees.route) },
-          badgeBgColor = ScholaTerracottaContainer,
-          badgeTextColor = ScholaOnTerracottaContainer,
-          heroHighlightColor = ScholaTerracotta,
-          modifier = Modifier.padding(bottom = Spacing.s4)
-        )
-      }
+  item {PrincipalHeading("School","View all",{onNavigateTo(Screen.OperationsHub.route)}){PrincipalModules(shortcuts,onNavigateTo)}}
+  item {PrincipalHeading("Needs attention") {SchoolGroup {
+   listOf(Triple("Approvals",leaves.count {it.status==LeaveStatus.PENDING},Screen.Leaves.route),Triple("Fee dues",invoices.count {it.pendingAmount>0},Screen.Fees.route)).forEachIndexed {i,(label,count,route)->
+    Row(Modifier.fillMaxWidth().clickable{onNavigateTo(route)}.heightIn(min=PrincipalLayout.attentionRowHeight).testTag("principal_attention_$i").padding(horizontal=Spacing.lg16,vertical=Spacing.sm8),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
+     Surface(shape=RoundedCornerShape(Radius.pill),color=if(i==0)MaterialTheme.colorScheme.primary else PrincipalColors.lavenderInk){Box(Modifier.size(Spacing.xxl32),contentAlignment=Alignment.Center){Text(count.toString(),color=MaterialTheme.colorScheme.surface,style=MaterialTheme.typography.titleMedium)}}
+     Text(label,Modifier.weight(1f),fontWeight=FontWeight.SemiBold,style=MaterialTheme.typography.titleMedium)
+     Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
     }
-
-    // 2. HORIZONTAL WORKFLOW PILLS
-    item {
-      AnimatedFadeIn(delayMillis = 100) {
-        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(title = "Workflow Shortcuts")
-          LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-          ) {
-            item {
-              WorkflowQuickPill(
-                title = "Command Palette",
-                icon = Icons.Default.Terminal,
-                onClick = { onNavigateTo(Screen.GlobalSearch.route) },
-                isHighlighted = true
-              )
-            }
-            item {
-              WorkflowQuickPill(
-                title = "Take Roll Call",
-                icon = Icons.Default.FactCheck,
-                onClick = { onNavigateTo(Screen.Attendance.route) }
-              )
-            }
-            item {
-              WorkflowQuickPill(
-                title = "Enroll Scholar",
-                icon = Icons.Default.PersonAdd,
-                onClick = onShowAddStudent
-              )
-            }
-            item {
-              WorkflowQuickPill(
-                title = "View Ledger",
-                icon = Icons.Default.AccountBalanceWallet,
-                onClick = { onNavigateTo(Screen.Fees.route) }
-              )
-            }
-            item {
-              WorkflowQuickPill(
-                title = "Broadcast Alert",
-                icon = Icons.Default.Campaign,
-                onClick = onShowCreateNotice
-              )
-            }
-          }
-        }
-      }
-    }
-
-    // 3. 2x2 GRID OF COMPACT STAT TILES
-    item {
-      AnimatedFadeIn(delayMillis = 200) {
-        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(title = "Operational Health Matrix")
-
-          // Row 1: Active Scholars & Daily Attendance
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
-          ) {
-            CompactStatTile(
-              categoryLabel = "Active Scholars",
-              statCounter = totalStudents.toString(),
-              icon = Icons.Default.Groups,
-              iconTint = ScholaTerracotta,
-              iconContainerColor = ScholaTerracottaContainer,
-              deltaText = "Demo dataset",
-              isPositiveDelta = true,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Students.route) }
-            )
-
-            CompactStatTile(
-              categoryLabel = "Daily Attendance",
-              statCounter = "$formattedAttendance%",
-              icon = Icons.Default.HowToReg,
-              iconTint = Color(0xFF15803D),
-              iconContainerColor = StatusSuccessBg,
-              deltaText = "Recorded rate",
-              isPositiveDelta = true,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Attendance.route) }
-            )
-          }
-
-          Spacer(modifier = Modifier.height(Spacing.s3))
-
-          // Row 2: Outstanding Receivables & Active Faculty
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s3)
-          ) {
-            CompactStatTile(
-              categoryLabel = "Receivables Due",
-              statCounter = "₹${totalReceivables / 100000L}k",
-              icon = Icons.Default.ReceiptLong,
-              iconTint = StatusDangerText,
-              iconContainerColor = StatusDangerBg,
-              deltaText = "${overdueInvoices.size} Overdue",
-              isPositiveDelta = false,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Fees.route) }
-            )
-
-            CompactStatTile(
-              categoryLabel = "Active Faculty",
-              statCounter = totalFaculty.toString(),
-              icon = Icons.Default.Groups,
-              iconTint = ScholaGold,
-              iconContainerColor = ScholaGoldContainer,
-              deltaText = "Demo dataset",
-              isPositiveDelta = true,
-              modifier = Modifier.weight(1f),
-              onClick = { onNavigateTo(Screen.Teachers.route) }
-            )
-          }
-        }
-      }
-    }
-
-    // 4. OVERDUE ALERTS CARD
-    if (overdueInvoices.isNotEmpty()) {
-      item {
-        AnimatedFadeIn(delayMillis = 250) {
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(bottom = Spacing.s4)
-              .clip(RoundedCornerShape(Radius.lg))
-              .background(StatusDangerBg)
-              .border(1.dp, StatusDangerText.copy(alpha = 0.3f), RoundedCornerShape(Radius.lg))
-              .padding(Spacing.cardPadding)
-          ) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-              ) {
-                Box(
-                  modifier = Modifier
-                    .size(40.dp)
-                    .background(StatusDangerText, CircleShape),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(
-                    imageVector = Icons.Default.WarningAmber,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                  )
-                }
-                Spacer(modifier = Modifier.width(Spacing.s3))
-                Column {
-                  Text(
-                    text = "${overdueInvoices.size} Accounts Overdue (>10 Days)",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = StatusDangerText
-                  )
-                  Text(
-                    text = "₹${overdueInvoices.sumOf { it.pendingAmount } / 100000L}k outstanding tuition requiring bursar review.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = StatusDangerText.copy(alpha = 0.85f),
-                    fontSize = 12.sp
-                  )
-                }
-              }
-              Surface(
-                shape = RoundedCornerShape(Radius.pill),
-                color = StatusDangerText,
-                modifier = Modifier
-                  .clip(RoundedCornerShape(Radius.pill))
-                  .clickable { onNavigateTo(Screen.Fees.route) }
-              ) {
-                Text(
-                  text = "Review",
-                  color = Color.White,
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
-                )
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // 5. ATTENDANCE & ACADEMIC TREND CHARTS
-    item {
-      AnimatedFadeIn(delayMillis = 300) {
-        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(
-            title = "Cohort Attendance Analytics",
-            actionText = "Full Matrix",
-            onActionClick = { onNavigateTo(Screen.Attendance.route) }
-          )
-          SimpleBarChart(
-            title = "Weekly Attendance Trend (Mon - Fri)",
-            data = listOf(
-              "Mon" to 96.8f,
-              "Tue" to 97.4f,
-              "Wed" to 96.2f,
-              "Thu" to 95.8f,
-              "Fri" to 97.1f
-            ),
-            barColor = ScholaTerracotta
-          )
-        }
-      }
-    }
-
-    // 6. RECENT AUDIT STREAM FEED
-    item {
-      AnimatedFadeIn(delayMillis = 350) {
-        Column(modifier = Modifier.padding(bottom = Spacing.s4)) {
-          SectionHeader(
-            title = "Real-Time Institutional Audit Stream",
-            actionText = "Audit Hub",
-            onActionClick = { onNavigateTo(Screen.Notices.route) }
-          )
-
-          Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.s2)
-          ) {
-            auditLogs.take(4).forEach { log ->
-              AppCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Box(
-                    modifier = Modifier
-                      .size(38.dp)
-                      .clip(CircleShape)
-                      .background(
-                        when (log.actionType) {
-                          "ROLL_CALL" -> StatusSuccessBg
-                          "FEE_PAYMENT" -> ScholaTerracottaContainer
-                          "GRADEBOOK" -> Color(0xFFEDE9FE)
-                          else -> ScholaSlateContainer
-                        }
-                      ),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(
-                      imageVector = when (log.actionType) {
-                        "ROLL_CALL" -> Icons.Default.CheckCircle
-                        "FEE_PAYMENT" -> Icons.Default.AttachMoney
-                        "GRADEBOOK" -> Icons.Default.Grade
-                        else -> Icons.Default.HistoryEdu
-                      },
-                      contentDescription = null,
-                      tint = when (log.actionType) {
-                        "ROLL_CALL" -> StatusSuccessText
-                        "FEE_PAYMENT" -> ScholaTerracotta
-                        "GRADEBOOK" -> ScholaTerracottaDark
-                        else -> ScholaSlateNavy
-                      },
-                      modifier = Modifier.size(20.dp)
-                    )
-                  }
-
-                  Spacer(modifier = Modifier.width(Spacing.s3))
-
-                  Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                      modifier = Modifier.fillMaxWidth(),
-                      horizontalArrangement = Arrangement.SpaceBetween,
-                      verticalAlignment = Alignment.CenterVertically
-                    ) {
-                      Text(
-                        text = log.actionSummary,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                      )
-                      Text(
-                        text = log.timestamp,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ScholaMuted,
-                        fontSize = 12.sp
-                      )
-                    }
-                    Text(
-                      text = "${log.actorName} (${log.actorRole}) • ${log.details}",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = ScholaTextSecondary,
-                      fontSize = 12.sp,
-                      maxLines = 2,
-                      overflow = TextOverflow.Ellipsis
-                    )
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+    if(i==0)HorizontalDivider(Modifier.padding(horizontal=Spacing.md12))
+   }
+  }}}
+  item {PrincipalHeading("Upcoming") {
+   val event=events.filter {dashboardEventIsUpcoming(it.date)}.minByOrNull {parseSchoolRecordDate(it.date) ?: LocalDate.MAX}
+   if(event==null)SchoolGroup {Text("No upcoming events",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodyMedium)}
+   else SchoolGroup {SchoolRow(event.title,"${event.date} · ${event.time}",Icons.Outlined.CalendarMonth,{onNavigateTo(Screen.Notices.route)})}
+  }}
+ }
+ if(context)AlertDialog(onDismissRequest={context=false},title={Text("School context")},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+  SchoolDetailRow("School",actor.schoolId);SchoolDetailRow("Session",session.ifBlank {"Not available"})
+  Text("Students: active records. Attendance: ${date ?: "no saved date"}. Collected: loaded session ledger.",style=MaterialTheme.typography.bodySmall)
+ }},confirmButton={TextButton(onClick={context=false}){Text("Done")}})
 }

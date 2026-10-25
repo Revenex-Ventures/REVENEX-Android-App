@@ -1,4 +1,6 @@
-# Razorpay test payments with the original black/orange app
+> Latest hosted status (2026-10-23): migrations 6–9 applied; payment function deployed; operator saved all three correctly named payment secrets. Auth health 200; payment relation and unsigned user requests rejected (401); unsigned webhook rejected (400 invalid signature). Credential pairing, checkout/capture and real webhook delivery remain unverified. See [current delivery evidence](../docs/IVORY_DELIVERY_VERIFICATION.md). Current redesign CI passed 81 Android tests; historical build details below are retained for context. Do not rerun already-applied migrations.
+
+# Razorpay test payments — current Revenex app
 
 This adds Razorpay **test mode only** to the existing Supabase demo. The Android app never receives a Razorpay secret or a Supabase service-role key. Local demo remains independent of payment services. No Firebase Functions are used.
 

@@ -32,20 +32,6 @@
         </trust-anchors>
     </debug-overrides>
 
-    <!--
-      Trusted domains for Firebase and backend services.
-      All connections must use HTTPS.
-    -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">firebase.googleapis.com</domain>
-        <domain includeSubdomains="true">firebasestorage.googleapis.com</domain>
-        <domain includeSubdomains="true">identitytoolkit.googleapis.com</domain>
-        <domain includeSubdomains="true">firebaseio.com</domain>
-        <domain includeSubdomains="true">firebaseraw.googleapis.com</domain>
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-    </domain-config>
 
     <!--
       Trusted domains for the backend API (Razorpay + Cloudflare Workers).
