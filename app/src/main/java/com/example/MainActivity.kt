@@ -43,6 +43,7 @@ import com.example.ui.components.*
 import com.example.ui.screens.principal.*
 import com.example.ui.navigation.NavConfig
 import com.example.ui.navigation.Screen
+import com.example.ui.navigation.navigatePortalPrimary
 import com.example.ui.screens.academics.ExamsScreen
 import com.example.ui.screens.academics.HomeworkScreen
 import com.example.ui.screens.academics.ReportCardScreen
@@ -65,6 +66,7 @@ import com.example.ui.screens.profile.ProfileScreen
 import com.example.ui.screens.reports.ReportsAnalyticsScreen
 import com.example.ui.screens.search.GlobalSearchScreen
 import com.example.ui.screens.students.StudentDetailScreen
+import com.example.ui.screens.students.portal.*
 import com.example.ui.screens.students.StudentListScreen
 import com.example.ui.screens.teachers.TeacherDetailScreen
 import com.example.ui.screens.teachers.TeacherListScreen
@@ -108,7 +110,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
           runCatching { Checkout.preload(applicationContext) }
         }
       }
-      ScholaTheme(principal=paymentUser.role==UserRole.PRINCIPAL,teacher=paymentUser.role==UserRole.TEACHER) {
+      ScholaTheme(principal=paymentUser.role==UserRole.PRINCIPAL,teacher=paymentUser.role==UserRole.TEACHER,student=paymentUser.role==UserRole.STUDENT) {
         RevenexLaunchHost(showBrand, splashExited) {
         ScholaErpApp(
           isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
@@ -229,7 +231,7 @@ fun ScholaErpApp(
   val notifications by repository.notifications.collectAsState()
   val backendState by repository.backendState.collectAsState()
   val dataMode by repository.dataMode.collectAsState()
-  val unreadNotificationsCount = notifications.count { !it.isRead }
+  val unreadNotificationsCount = if(currentUser.role==UserRole.STUDENT)studentInboxEntries(currentUser,notifications).count{!it.isRead} else notifications.count { !it.isRead }
   val initialRoute = remember {
     if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isNotBlank() &&
       runCatching { repository.supabaseDataSource.sessionId().isNotBlank() }.getOrDefault(false))
@@ -240,6 +242,7 @@ fun ScholaErpApp(
   val currentRoute = navBackStackEntry?.destination?.route
   val clearAccountNavigation: () -> Unit = {
     (WorkspaceDirectory.destinations.map {it.route} + listOf(Screen.Dashboard.route,Screen.Academics.route,
+      Screen.StudentLearn.route,Screen.StudentIdentity.route,Screen.StudentAssignment.route,Screen.StudentNotice.route,Screen.StudentInvoice.route,Screen.StudentReport.route,
       Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.TeacherClasses.route,Screen.TeacherClass.route,Screen.Auth.route))
       .distinct().filter { navController.graph.findNode(it) != null }.forEach {
       navController.clearBackStack(it)
@@ -288,22 +291,12 @@ fun ScholaErpApp(
     currentUser = currentUser,
     unreadNotificationsCount = unreadNotificationsCount,
     onNavigateToRoute = { route ->
-      if (currentRoute != route) {
-        navController.navigate(route) {
-          popUpTo(Screen.Dashboard.route) {
-            saveState = true
-          }
-          launchSingleTop = true
-          // Dashboard is the retained authenticated anchor. Restoring its saved
-          // child stack here can reopen Students instead of the Home destination.
-          restoreState = route != Screen.Dashboard.route
-        }
-      }
+      navController.navigatePortalPrimary(route,currentUser.role)
     },
-    onOpenCommandPalette = { showCommandPalette = true },
+    onOpenCommandPalette = { if(currentUser.role==UserRole.STUDENT)navController.navigate(Screen.GlobalSearch.route) else showCommandPalette = true },
     onOpenNotifications = { navController.navigate(Screen.Notifications.route) },
     onOpenProfile = {
-      val route = Screen.Profile.route
+      val route = if(currentUser.role==UserRole.STUDENT)Screen.StudentIdentity.route else Screen.Profile.route
       navController.navigate(route)
     },
     onLogout = {
@@ -329,6 +322,8 @@ fun ScholaErpApp(
     // Auth must survive switching from local demo to cloud and loading the profile.
     // Logout already clears the graph and account-scoped repository state.
     key(Unit) {
+    val reduceStudentMotion=rememberReducedMotion()
+    val studentMotion=currentUser.role==UserRole.STUDENT
     NavHost(
       navController = navController,
       startDestination = initialRoute,
@@ -338,6 +333,8 @@ fun ScholaErpApp(
         val isLoadingOrDashboard = targetState.destination.route == Screen.Loading.route ||
           targetState.destination.route == Screen.Dashboard.route
         when {
+          studentMotion&&reduceStudentMotion -> EnterTransition.None
+          studentMotion -> slideInHorizontally(tween(com.example.ui.theme.StudentLayout.navigationMillis)){it/8}+fadeIn(tween(com.example.ui.theme.StudentLayout.navigationMillis))
           fromAuth && isLoadingOrDashboard -> fadeIn(animationSpec = tween(220))
           initialState.destination.route == Screen.Loading.route &&
             targetState.destination.route == Screen.Dashboard.route ->
@@ -351,6 +348,8 @@ fun ScholaErpApp(
         val isLoadingOrDashboard = targetState.destination.route == Screen.Loading.route ||
           targetState.destination.route == Screen.Dashboard.route
         when {
+          studentMotion&&reduceStudentMotion -> ExitTransition.None
+          studentMotion -> slideOutHorizontally(tween(com.example.ui.theme.StudentLayout.navigationMillis)){-it/8}+fadeOut(tween(com.example.ui.theme.StudentLayout.navigationMillis))
           fromAuth && isLoadingOrDashboard -> fadeOut(animationSpec = tween(220))
           initialState.destination.route == Screen.Loading.route &&
             targetState.destination.route == Screen.Dashboard.route ->
@@ -360,11 +359,11 @@ fun ScholaErpApp(
         }
       },
       popEnterTransition = {
-        slideInHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { -it / 6 } +
+        if(studentMotion&&reduceStudentMotion)EnterTransition.None else if(studentMotion)slideInHorizontally(tween(com.example.ui.theme.StudentLayout.navigationMillis)){-it/8}+fadeIn(tween(com.example.ui.theme.StudentLayout.navigationMillis)) else slideInHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { -it / 6 } +
           fadeIn(animationSpec = tween(150))
       },
       popExitTransition = {
-        slideOutHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { it / 6 } +
+        if(studentMotion&&reduceStudentMotion)ExitTransition.None else if(studentMotion)slideOutHorizontally(tween(com.example.ui.theme.StudentLayout.navigationMillis)){it/8}+fadeOut(tween(com.example.ui.theme.StudentLayout.navigationMillis)) else slideOutHorizontally(animationSpec = tween(150, easing = FastOutSlowInEasing)) { it / 6 } +
           fadeOut(animationSpec = tween(150))
       }
     ) {
@@ -497,7 +496,8 @@ fun ScholaErpApp(
       ) { backStackEntry ->
         val classGrade = backStackEntry.arguments?.getString("classGrade")
         val division = backStackEntry.arguments?.getString("division")
-        if(currentUser.role==UserRole.PRINCIPAL) {
+        if(currentUser.role==UserRole.STUDENT) StudentAttendance(repository)
+        else if(currentUser.role==UserRole.PRINCIPAL) {
           PrincipalAttendanceOverview(repository,{cohort,date->navController.navigate(Screen.PrincipalClass.createRoute(cohort,date))},{navController.navigate(Screen.Reports.route)})
         } else if (currentUser.role == UserRole.ADMIN) {
           PrincipalAttendanceScreen(
@@ -536,7 +536,8 @@ fun ScholaErpApp(
       }
 
       composable(Screen.Fees.route) {
-        if(currentUser.role==UserRole.PRINCIPAL) PrincipalFees(repository) {feeId->
+        if(currentUser.role==UserRole.STUDENT) StudentFees(repository){navController.navigate(it)}
+        else if(currentUser.role==UserRole.PRINCIPAL) PrincipalFees(repository) {feeId->
           val invoice=repository.invoices.value.firstOrNull{it.id==feeId}
           if(invoice!=null){onResetPayment();paymentModalFeeId=feeId;paymentModalStudentName=invoice.studentName;paymentModalAmount=0L;showFeePaymentModal=true;onCheckPayment(feeId)}
         } else FeeManagementScreen(
@@ -573,22 +574,22 @@ fun ScholaErpApp(
 
       // Academics & Gradebook
       composable(Screen.Timetable.route) {
-        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherTimetable(repository){navController.navigate(it)} else TimetableScreen(repository = repository)
+        if(currentUser.role==UserRole.STUDENT) StudentTimetable(repository) else if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherTimetable(repository){navController.navigate(it)} else TimetableScreen(repository = repository)
       }
 
       composable(Screen.Homework.route) {
-        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherAssignments(repository){showCreateAssignmentDialog=true} else HomeworkScreen(
+        if(currentUser.role==UserRole.STUDENT) StudentAssignments(repository){navController.navigate(it)} else if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherAssignments(repository){showCreateAssignmentDialog=true} else HomeworkScreen(
           repository = repository,
           onShowCreateAssignment = { showCreateAssignmentDialog = true }
         )
       }
 
       composable(Screen.StudyMaterial.route) {
-        StudyMaterialScreen(repository = repository)
+        if(currentUser.role==UserRole.STUDENT) StudentResources(repository) else StudyMaterialScreen(repository = repository)
       }
 
       composable(Screen.ReportCard.route) {
-        ReportCardScreen(repository = repository)
+        if(currentUser.role==UserRole.STUDENT) StudentResults(repository) else ReportCardScreen(repository = repository)
       }
 
       composable(Screen.TeacherProfile.route) {
@@ -602,19 +603,19 @@ fun ScholaErpApp(
       }
 
       composable(Screen.Exams.route) {
-        ExamsScreen(repository = repository)
+        if(currentUser.role==UserRole.STUDENT) StudentExaminations(repository) else ExamsScreen(repository = repository)
       }
 
       // Communication & Audit Trail
       composable(Screen.Notices.route) {
-        NoticesScreen(
+        if(currentUser.role==UserRole.STUDENT) StudentNotices(repository,{navController.navigate(it)}) else NoticesScreen(
           repository = repository,
           onShowCreateNotice = { showCreateNoticeDialog = true }
         )
       }
 
       composable(Screen.Notifications.route) {
-        NotificationsScreen(
+        if(currentUser.role==UserRole.STUDENT) StudentInbox(repository){navController.navigate(it){launchSingleTop=true}} else NotificationsScreen(
           repository = repository,
           onBack = { navController.popBackStack() },
           onNavigateTo = { navController.navigate(it) { launchSingleTop = true } }
@@ -640,7 +641,7 @@ fun ScholaErpApp(
       }
 
       composable(Screen.Library.route) {
-        LibraryScreen(repository = repository)
+        if(currentUser.role==UserRole.STUDENT) StudentLibrary(repository) else LibraryScreen(repository = repository)
       }
 
       composable(Screen.Inventory.route) {
@@ -648,7 +649,8 @@ fun ScholaErpApp(
       }
 
       composable(Screen.OperationsHub.route) {
-        if(currentUser.role==UserRole.PRINCIPAL) PrincipalMore(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},{showCreateNoticeDialog=true})
+        if(currentUser.role==UserRole.STUDENT) StudentMore{navController.navigate(it)}
+        else if(currentUser.role==UserRole.PRINCIPAL) PrincipalMore(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},{showCreateNoticeDialog=true})
         else OperationsHubScreen(
           repository = repository,
           onNavigateTo = { navController.navigate(it) },
@@ -690,15 +692,40 @@ fun ScholaErpApp(
       }
 
       composable(Screen.GlobalSearch.route) {
-        GlobalSearchScreen(
+        if(currentUser.role==UserRole.STUDENT) StudentSearch(repository){navController.navigate(it)} else GlobalSearchScreen(
           repository = repository,
           onNavigateTo = { navController.navigate(it) },
           onBack = { navController.popBackStack() }
         )
       }
 
+      composable(Screen.StudentLearn.route) {
+        if(currentUser.role==UserRole.STUDENT) StudentLearn{navController.navigate(it)} else EmptyStateView("Access unavailable","Open your own portal.")
+      }
+      composable(Screen.StudentIdentity.route) {
+        if(currentUser.role==UserRole.STUDENT) StudentIdentity(repository) else EmptyStateView("Access unavailable","Open your own portal.")
+      }
+      composable(Screen.StudentAssignment.route,arguments=listOf(navArgument("id"){type=NavType.StringType})) {entry->
+        if(currentUser.role==UserRole.STUDENT) StudentAssignment(repository,entry.arguments?.getString("id").orEmpty()) else EmptyStateView("Access unavailable","Open your own portal.")
+      }
+      composable(Screen.StudentNotice.route,arguments=listOf(navArgument("id"){type=NavType.StringType})) {entry->
+        if(currentUser.role==UserRole.STUDENT) StudentNotices(repository,{navController.navigate(it)},entry.arguments?.getString("id")) else EmptyStateView("Access unavailable","Open your own portal.")
+      }
+      composable(Screen.StudentReport.route,arguments=listOf(navArgument("id"){type=NavType.StringType})) {entry->
+        if(currentUser.role==UserRole.STUDENT) StudentResults(repository,entry.arguments?.getString("id")) else EmptyStateView("Access unavailable","Open your own portal.")
+      }
+      composable(Screen.StudentInvoice.route,arguments=listOf(navArgument("id"){type=NavType.StringType})) {entry->
+        if(currentUser.role==UserRole.STUDENT) StudentInvoice(repository,entry.arguments?.getString("id").orEmpty(),pay={id,name,amount->
+          if(dataMode!=DataMode.SUPABASE_DEMO){repository.setDataMode(DataMode.SUPABASE_DEMO);navController.navigate(Screen.Auth.route)}
+          else{onResetPayment();paymentModalFeeId=id;paymentModalStudentName=name;paymentModalAmount=amount;showFeePaymentModal=true}
+        },check={id->
+          val invoice=repository.invoices.value.firstOrNull{it.id==id&&it.studentId==currentUser.associatedStudentId}
+          if(invoice!=null&&dataMode==DataMode.SUPABASE_DEMO){onResetPayment();paymentModalFeeId=id;paymentModalStudentName=invoice.studentName;paymentModalAmount=0L;showFeePaymentModal=true;onCheckPayment(id)}
+        }) else EmptyStateView("Access unavailable","Open your own portal.")
+      }
       composable(Screen.Profile.route) {
-        if(currentUser.role==UserRole.PRINCIPAL) PrincipalAccount(repository) {route->
+        if(currentUser.role==UserRole.STUDENT) StudentSettings(repository,{navController.navigate(it)},{clearAccountNavigation();navController.navigate(Screen.Auth.route){popUpTo(navController.graph.id){inclusive=true};launchSingleTop=true}})
+        else if(currentUser.role==UserRole.PRINCIPAL) PrincipalAccount(repository) {route->
           if(route==Screen.Auth.route)clearAccountNavigation()
           navController.navigate(route){if(route==Screen.Auth.route)popUpTo(navController.graph.id){inclusive=true};launchSingleTop=true}
         } else ProfileScreen(

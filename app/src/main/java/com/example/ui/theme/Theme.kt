@@ -95,13 +95,17 @@ fun ScholaTheme(
   darkTheme: Boolean? = null,
   principal: Boolean = false,
   teacher: Boolean = false,
+  student: Boolean = false,
   content: @Composable () -> Unit
 ) {
   val preference = LocalAppearance.current ?: rememberAppearancePreference()
   val dark = darkTheme ?: preference.selection.usesDark(isSystemInDarkTheme())
+  val studentExperience=if(student)rememberStudentExperience()else null
   val colorScheme = (if (dark) ScholaDarkColorScheme else ScholaLightColorScheme).let { original ->
-    val base=if(!teacher)original else if(dark)original.copy(background=Color(0xFF151B24),surface=Color(0xFF1D2530),onSurface=Color(0xFFEAF0F8),onBackground=Color(0xFFEAF0F8),onSurfaceVariant=Color(0xFFB5C0D0),surfaceVariant=Color(0xFF283241),outlineVariant=Color(0xFF364253),primary=Color(0xFFFFB581),onPrimary=Color(0xFF3E1900),primaryContainer=Color(0xFF53301F),onPrimaryContainer=Color(0xFFFFDCC5),surfaceTint=Color.Transparent) else original.copy(background=TeacherColors.canvas,surface=TeacherColors.surface,onBackground=TeacherColors.ink,onSurface=TeacherColors.ink,onSurfaceVariant=TeacherColors.muted,primary=TeacherColors.orange,onPrimary=Color(0xFF241000),primaryContainer=Color(0xFFFFF0E5),onPrimaryContainer=TeacherColors.pressed,outlineVariant=TeacherColors.border,outline=TeacherColors.muted,surfaceVariant=TeacherColors.canvas,surfaceTint=Color.Transparent,error=Color(0xFFB42318))
-    if(principal)base.copy(background=if(dark)base.background else PrincipalColors.canvasLight,onSurface=if(dark)base.onSurface else PrincipalColors.inkLight,onBackground=if(dark)base.onBackground else PrincipalColors.inkLight,onSurfaceVariant=if(dark)base.onSurfaceVariant else PrincipalColors.mutedLight,primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight) else base
+    val base=if(!(teacher||student))original else if(dark)original.copy(background=Color(0xFF151B24),surface=Color(0xFF1D2530),onSurface=Color(0xFFEAF0F8),onBackground=Color(0xFFEAF0F8),onSurfaceVariant=Color(0xFFB5C0D0),surfaceVariant=Color(0xFF283241),outlineVariant=Color(0xFF364253),primary=Color(0xFFFFB581),onPrimary=Color(0xFF3E1900),primaryContainer=Color(0xFF53301F),onPrimaryContainer=Color(0xFFFFDCC5),surfaceTint=Color.Transparent) else original.copy(background=TeacherColors.canvas,surface=TeacherColors.surface,onBackground=TeacherColors.ink,onSurface=TeacherColors.ink,onSurfaceVariant=TeacherColors.muted,primary=TeacherColors.orange,onPrimary=Color(0xFF241000),primaryContainer=Color(0xFFFFF0E5),onPrimaryContainer=TeacherColors.pressed,outlineVariant=TeacherColors.border,outline=TeacherColors.muted,surfaceVariant=TeacherColors.canvas,surfaceTint=Color.Transparent,error=Color(0xFFB42318))
+    if(principal)base.copy(background=if(dark)base.background else PrincipalColors.canvasLight,onSurface=if(dark)base.onSurface else PrincipalColors.inkLight,onBackground=if(dark)base.onBackground else PrincipalColors.inkLight,onSurfaceVariant=if(dark)base.onSurfaceVariant else PrincipalColors.mutedLight,primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight)
+    else if(student)base.copy(primary=if(dark)Color(0xFFFFB581)else Color(0xFFC24807),onPrimary=if(dark)Color(0xFF3E1900)else Color.White,onPrimaryContainer=if(dark)Color(0xFFFFDCC5)else Color(0xFFA33B07),surfaceContainerLowest=base.surface,surfaceContainerLow=base.surface,surfaceContainer=base.surface,surfaceContainerHigh=base.surface,surfaceContainerHighest=base.surfaceVariant,surfaceDim=base.background,surfaceBright=base.surface,secondaryContainer=if(dark)Color(0xFF1D3A2E)else Color(0xFFEAF6EF),onSecondaryContainer=if(dark)Color(0xFF8EDACB)else Color(0xFF006C65))
+    else base
   }
   val view = LocalView.current
   SideEffect {
@@ -114,7 +118,7 @@ fun ScholaTheme(
       }
     }
   }
-  CompositionLocalProvider(LocalAppearance provides preference, LocalTeacherPresentation provides teacher,
+  CompositionLocalProvider(LocalAppearance provides preference, LocalTeacherPresentation provides teacher, LocalStudentExperience provides studentExperience,
     androidx.compose.material3.LocalContentColor provides colorScheme.onBackground) {
 
   MaterialTheme(

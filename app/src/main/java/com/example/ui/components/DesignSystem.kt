@@ -776,7 +776,8 @@ fun Badge(
 @Composable
 fun rememberReducedMotion(): Boolean {
   val context = LocalContext.current
-  return android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+  val preference=com.example.ui.theme.LocalStudentExperience.current?:com.example.ui.theme.rememberStudentExperience()
+  return preference.reduced || android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 }
 
 

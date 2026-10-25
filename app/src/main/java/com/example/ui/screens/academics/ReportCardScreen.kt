@@ -898,6 +898,12 @@ private object CertificatePdfRenderer {
     saveSchoolPdf(context, "$fileName.pdf") { doc.writeTo(it) }
 }
 
+/** Student route exports only a report already authorized and published. */
+internal fun exportPublishedStudentReport(context: Context, student: Student, report: ReportCard): Uri? {
+  if (!report.published || report.studentId != student.id || report.schoolId != student.schoolId || report.sessionId != student.sessionId) return null
+  return runCatching { ReportPdfRenderer.renderAndSave(context, student, report) }.getOrNull()
+}
+
 private object ReportPdfRenderer {
 
   private const val W = 595

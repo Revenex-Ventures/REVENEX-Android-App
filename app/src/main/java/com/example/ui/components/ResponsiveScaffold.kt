@@ -105,7 +105,7 @@ fun ScholaResponsiveScaffold(
         containerColor = GlassBgTransparent,
         topBar = {
           if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
-            ScholaTopAppBar(
+            if(currentUser.role==UserRole.STUDENT)com.example.ui.screens.students.portal.StudentHeader(currentUser,unreadNotificationsCount,onOpenNotifications,onOpenProfile) else ScholaTopAppBar(
               title = "REVENEX",
               subtitle = "School ERP demonstration",
               currentRole = currentUser.role,
@@ -123,6 +123,8 @@ fun ScholaResponsiveScaffold(
             PrincipalBottomNavigation(selectedPrimaryRoute,onNavigateToRoute)
           } else if(currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route,Screen.Attendance.route)) {
             com.example.ui.screens.teachers.TeacherNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if(currentUser.role==UserRole.STUDENT && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route)) {
+            com.example.ui.screens.students.portal.StudentNavigation(selectedPrimaryRoute,onNavigateToRoute)
           } else if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
@@ -169,7 +171,7 @@ fun ScholaResponsiveScaffold(
             containerColor = GlassBgTransparent,
             topBar = {
               if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
-                ScholaTopAppBar(
+                if(currentUser.role==UserRole.STUDENT)com.example.ui.screens.students.portal.StudentHeader(currentUser,unreadNotificationsCount,onOpenNotifications,onOpenProfile) else ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
                   currentRole = currentUser.role,
@@ -220,7 +222,7 @@ fun ScholaResponsiveScaffold(
             containerColor = GlassBgTransparent,
             topBar = {
               if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
-                ScholaTopAppBar(
+                if(currentUser.role==UserRole.STUDENT)com.example.ui.screens.students.portal.StudentHeader(currentUser,unreadNotificationsCount,onOpenNotifications,onOpenProfile) else ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
                   currentRole = currentUser.role,

@@ -47,6 +47,11 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun StudentDashboardScreen(repository: ErpDataRepository, onNavigateTo: (String) -> Unit) {
+  val portalActor by repository.currentUser.collectAsState()
+  if(portalActor.role==UserRole.STUDENT) {
+    com.example.ui.screens.students.portal.StudentHome(repository,onNavigateTo)
+    return
+  }
   val students by repository.students.collectAsState()
   val actor by repository.currentUser.collectAsState()
   val selected by repository.selectedStudentId.collectAsState()

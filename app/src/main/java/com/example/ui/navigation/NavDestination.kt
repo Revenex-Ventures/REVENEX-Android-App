@@ -6,6 +6,19 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.data.model.UserRole
 
+/** Restore a tab's saved presentation, then return Student tabs to their landing page.
+ * A restored secondary stack must not make a primary-tab tap reopen a notice/detail.
+ */
+fun androidx.navigation.NavHostController.navigatePortalPrimary(route:String,role:UserRole) {
+  if(currentBackStackEntry?.destination?.route==route)return
+  navigate(route){
+    popUpTo(Screen.Dashboard.route){saveState=true}
+    launchSingleTop=true
+    restoreState=route!=Screen.Dashboard.route
+  }
+  if(role==UserRole.STUDENT&&NavConfig.getBottomNavItems(role).any{it.route==route})popBackStack(route,false)
+}
+
 sealed class Screen(val route: String) {
   object Auth : Screen("auth")
   object Loading : Screen("loading")
@@ -21,6 +34,12 @@ sealed class Screen(val route: String) {
   }
   object TeacherProfile : Screen("teacher_profile")
   object TeacherClasses : Screen("teacher_classes")
+  object StudentLearn : Screen("student_learn")
+  object StudentIdentity : Screen("student_identity")
+  object StudentAssignment : Screen("student_assignment/{id}") {fun createRoute(id:String)="student_assignment/${android.net.Uri.encode(id)}"}
+  object StudentNotice : Screen("student_notice/{id}") {fun createRoute(id:String)="student_notice/${android.net.Uri.encode(id)}"}
+  object StudentInvoice : Screen("student_invoice/{id}") {fun createRoute(id:String)="student_invoice/${android.net.Uri.encode(id)}"}
+  object StudentReport : Screen("student_report/{id}") {fun createRoute(id:String)="student_report/${android.net.Uri.encode(id)}"}
   object TeacherClass : Screen("teacher_class/{cohort}") { fun createRoute(cohort:String)="teacher_class/${android.net.Uri.encode(cohort)}" }
   object Attendance : Screen("attendance?classGrade={classGrade}&division={division}") {
     fun createRoute(classGrade: String, division: String) = "attendance?classGrade=$classGrade&division=$division"
@@ -67,6 +86,9 @@ object NavConfig {
     if (route in primary) return route
     return when {
       route == Screen.Auth.route || route == null -> route
+      role==UserRole.STUDENT && route in setOf(Screen.Homework.route,Screen.StudentAssignment.route,Screen.ReportCard.route,Screen.StudentReport.route,Screen.Library.route,Screen.StudyMaterial.route,Screen.Exams.route) -> Screen.StudentLearn.route
+      role==UserRole.STUDENT && route==Screen.Attendance.route -> Screen.Dashboard.route
+      role==UserRole.STUDENT && route in setOf(Screen.Notices.route,Screen.StudentNotice.route) -> Screen.Notifications.route
       role==UserRole.TEACHER && route in setOf(Screen.TeacherClass.route,Screen.Students.route,Screen.StudentDetail.route,Screen.Attendance.route) -> Screen.TeacherClasses.route
       role==UserRole.TEACHER && route==Screen.ReportCard.route -> Screen.Homework.route
       route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route,Screen.PrincipalAllocations.route) &&
@@ -102,10 +124,10 @@ object NavConfig {
       )
       UserRole.STUDENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-        BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu),
-        BottomNavItem(Screen.ReportCard.route, "Results", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomNavItem(Screen.StudentLearn.route,"Learn",com.example.ui.screens.students.portal.StudentIcons.Book,com.example.ui.screens.students.portal.StudentIcons.Book),
+        BottomNavItem(Screen.Timetable.route,"Schedule",com.example.ui.screens.students.portal.StudentIcons.Calendar,com.example.ui.screens.students.portal.StudentIcons.Calendar),
+        BottomNavItem(Screen.Notifications.route,"Inbox",Icons.Outlined.Mail,Icons.Outlined.Mail),
+        BottomNavItem(Screen.OperationsHub.route,"More",Icons.Filled.MoreHoriz,Icons.Outlined.MoreHoriz)
       )
       // Shared navigation presentation; parent identity and linked-child scope remain distinct.
       UserRole.PARENT -> listOf(

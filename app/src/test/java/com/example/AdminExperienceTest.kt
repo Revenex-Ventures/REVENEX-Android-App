@@ -23,12 +23,13 @@ class AdminExperienceTest {
   }
 
   @Test fun familyScheduleKeepsItsTimetableDestination() {
-    listOf(UserRole.STUDENT,UserRole.PARENT).forEach {role ->
-      assertEquals(Screen.Timetable.route,NavConfig.getBottomNavItems(role).single {it.label=="Timetable"}.route)
-    }
+    assertEquals(Screen.Timetable.route,NavConfig.getBottomNavItems(UserRole.STUDENT).single {it.label=="Schedule"}.route)
+    assertEquals(Screen.Timetable.route,NavConfig.getBottomNavItems(UserRole.PARENT).single {it.label=="Timetable"}.route)
+    assertEquals(listOf("Home","Learn","Schedule","Inbox","More"),NavConfig.getBottomNavItems(UserRole.STUDENT).map{it.label})
   }
 
   @Test fun nestedDestinationsRetainTheirPrimarySelection() {
+    assertEquals(Screen.StudentLearn.route,NavConfig.selectedPrimaryRoute(UserRole.STUDENT,Screen.Exams.route))
     assertEquals(Screen.Students.route, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.TeacherDetail.route))
     assertEquals(Screen.Academics.route, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.Homework.route))
     assertEquals(Screen.OperationsHub.route, NavConfig.selectedPrimaryRoute(UserRole.PRINCIPAL, Screen.PrincipalAttendance.route))
