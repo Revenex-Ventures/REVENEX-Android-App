@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -163,4 +164,32 @@ object Presentation {
   val chartHeight = 112.dp
   val timelineTimeWidth = 64.dp
   val timelineStem = 28.dp
+}
+
+/** Geometry and functional colors taken from the approved Principal panels. */
+object PrincipalLayout {
+  val summaryHeight = 80.dp
+  val historyHeight = 320.dp
+  val attentionRowHeight = 52.dp
+  val wordmarkWidth = 108.dp
+  val metricHeight = 108.dp
+  val moduleWell = 64.dp
+  val moduleIcon = 30.dp
+  val listAvatar = 40.dp
+  val rowHeight = 72.dp
+  val titleSize = 24.sp
+  val sectionSize = 20.sp
+  val metricSize = 26.sp
+}
+object PrincipalColors {
+  val actionLight = Color(0xFFD44200)
+  private val dark: Boolean @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < .5f
+  val blue: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.blueContainer else Color(0xFFEDF6FF)
+  val blueInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onBlue else Color(0xFF1460D9)
+  val mint: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.successContainer else Color(0xFFECFAF2)
+  val mintInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onSuccess else Color(0xFF087741)
+  val peach: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.peachContainer else Color(0xFFFFF4E7)
+  val peachInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onPeach else Color(0xFFD54500)
+  val lavender: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.lavenderContainer else Color(0xFFF2EDFF)
+  val lavenderInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onLavender else Color(0xFF4816AA)
 }

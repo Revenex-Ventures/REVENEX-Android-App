@@ -29,6 +29,7 @@ import com.example.data.model.UserRole
 import com.example.ui.navigation.NavConfig
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
+import com.example.ui.screens.principal.PrincipalBottomNavigation
 import java.util.Locale
 
 // Device Form Factor Breakpoints
@@ -118,7 +119,9 @@ fun ScholaResponsiveScaffold(
           }
         },
         bottomBar = {
-          if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
+          if (currentUser.role == UserRole.PRINCIPAL && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route)) {
+            PrincipalBottomNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
               currentRoute = selectedPrimaryRoute,

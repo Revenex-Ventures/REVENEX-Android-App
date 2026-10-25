@@ -45,7 +45,7 @@ class PresentationRebuildGateTest {
     var destination = ""
     compose.setContent {
       val user by repo.currentUser.collectAsState()
-      ScholaTheme(dark) {
+      ScholaTheme(dark,principal=role==UserRole.PRINCIPAL) {
         ScholaResponsiveScaffold(Screen.Dashboard.route,user,2,{ destination=it },{},{},{},{}) {
           if (role == UserRole.PRINCIPAL) PrincipalDashboardScreen(repo,{destination=it},{},{},{})
           else TeacherDashboardScreen(repo,{destination=it},{},{})
@@ -55,20 +55,20 @@ class PresentationRebuildGateTest {
     val name = "${role.name.lowercase()}_${if(dark) "dark" else "light"}"
     capture(name)
     if (role == UserRole.PRINCIPAL) {
-      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Manage school"))
-      capture(name+"_actions")
-      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Attendance register"))
-      compose.onNodeWithText("Attendance register").performClick()
+      listOf("students","staff","attendance","academics","fees","reports").forEach {
+        compose.onNodeWithTag("principal_module_$it").performScrollTo().assertExists()
+      }
+      compose.onNodeWithTag("principal_module_attendance").performClick()
     } else {
       compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
     }
     if (role == UserRole.TEACHER) {
       val cohort = repo.teachers.value.firstOrNull { it.email.equals(repo.currentUser.value.email,true) }?.assignedClasses?.firstOrNull() ?: repo.currentUser.value.associatedClass
       assertEquals(Screen.Attendance.createRoute(cohort.substringBeforeLast("-"),cohort.substringAfterLast("-")),destination)
-    } else assertEquals(Screen.Attendance.route,destination)
+    } else assertEquals(Screen.PrincipalAttendance.route,destination)
     if (role == UserRole.PRINCIPAL) {
-      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Manage school")); capture(name+"_management")
-      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Recent activity")); capture(name+"_activity")
+      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Needs attention")); capture(name+"_attention")
+      compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Upcoming")); capture(name+"_upcoming")
     } else {
       compose.onNodeWithTag("teacher_dashboard_list").performScrollToNode(hasText("Teaching tools")); capture(name+"_tools")
     }

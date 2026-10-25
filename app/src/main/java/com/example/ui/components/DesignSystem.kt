@@ -783,7 +783,7 @@ fun rememberReducedMotion(): Boolean {
 /** Official company-card contours; shared by launch, account entry and app bars. */
 @Composable
 fun RevenexBrand(modifier: Modifier = Modifier, stacked: Boolean = false,
-  onDark: Boolean = MaterialTheme.colorScheme.background.luminance() < .5f) {
+  onDark: Boolean = MaterialTheme.colorScheme.background.luminance() < .5f, nameWidth: Dp = EntryTokens.compactName) {
   val mark = if(onDark) com.example.R.drawable.revenex_monogram else com.example.R.drawable.revenex_monogram_ink
   val ink = if(onDark) EntryTokens.brandWhite else MaterialTheme.colorScheme.onSurface
   if(stacked) Column(modifier,horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
@@ -791,6 +791,6 @@ fun RevenexBrand(modifier: Modifier = Modifier, stacked: Boolean = false,
     Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(EntryTokens.formWidth/2).aspectRatio(490f/54f),tint=ink)
   } else Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
     Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(EntryTokens.compactMark).aspectRatio(184f/135f))
-    Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(EntryTokens.compactName).aspectRatio(490f/54f),tint=ink)
+    Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(nameWidth).aspectRatio(490f/54f),tint=ink)
   }
 }

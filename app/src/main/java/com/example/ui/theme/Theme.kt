@@ -91,11 +91,14 @@ private val ScholaDarkColorScheme = darkColorScheme(
 @Composable
 fun ScholaTheme(
   darkTheme: Boolean? = null,
+  principal: Boolean = false,
   content: @Composable () -> Unit
 ) {
   val preference = LocalAppearance.current ?: rememberAppearancePreference()
   val dark = darkTheme ?: preference.selection.usesDark(isSystemInDarkTheme())
-  val colorScheme = if (dark) ScholaDarkColorScheme else ScholaLightColorScheme
+  val colorScheme = (if (dark) ScholaDarkColorScheme else ScholaLightColorScheme).let { base ->
+    if(principal)base.copy(primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight) else base
+  }
   val view = LocalView.current
   SideEffect {
     if (android.os.Build.VERSION.SDK_INT >= 29) view.isForceDarkAllowed = false
@@ -135,6 +138,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 fun RevenexTheme(
   darkTheme: Boolean? = null,
+  principal: Boolean = false,
   content: @Composable () -> Unit
 ) {
   ScholaTheme(darkTheme = darkTheme, content = content)

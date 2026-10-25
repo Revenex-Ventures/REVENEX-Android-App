@@ -41,6 +41,10 @@ sealed class Screen(val route: String) {
   object OperationsHub : Screen("operations_hub")
   object Academics : Screen("academic_hub")
   object Audit : Screen("school_activity")
+  object PrincipalAllocations : Screen("principal_allocations")
+  object PrincipalClass : Screen("principal_class/{cohort}?date={date}") {
+    fun createRoute(cohort:String,date:String)="principal_class/${android.net.Uri.encode(cohort)}?date=$date"
+  }
   object PrincipalAttendance : Screen("principal_attendance")
 }
 
@@ -58,10 +62,10 @@ object NavConfig {
     if (route in primary) return route
     return when {
       route == Screen.Auth.route || route == null -> route
-      route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route) &&
+      route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route,Screen.PrincipalAllocations.route) &&
         role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL) -> Screen.Students.route
-      route == Screen.PrincipalAttendance.route && role == UserRole.PRINCIPAL -> Screen.Attendance.route
-      role == UserRole.ADMIN && route in setOf(Screen.Homework.route, Screen.Timetable.route,
+      route in setOf(Screen.PrincipalAttendance.route,Screen.PrincipalClass.route) && role == UserRole.PRINCIPAL -> Screen.OperationsHub.route
+      role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL) && route in setOf(Screen.Homework.route, Screen.Timetable.route,
         Screen.Exams.route, Screen.ReportCard.route, Screen.StudyMaterial.route) -> Screen.Academics.route
       else -> Screen.OperationsHub.route
     }
@@ -69,11 +73,11 @@ object NavConfig {
   fun getBottomNavItems(role: UserRole): List<BottomNavItem> {
     return when (role) {
       UserRole.PRINCIPAL -> listOf(
-        BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Students.route, "Students", Icons.Filled.People, Icons.Outlined.People),
-        BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.HowToReg, Icons.Outlined.HowToReg),
-        BottomNavItem(Screen.Fees.route, "Fees", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Apps, Icons.Outlined.Apps)
+        BottomNavItem(Screen.Dashboard.route,"Home",Icons.Filled.Home,Icons.Outlined.Home),
+        BottomNavItem(Screen.Students.route,"People",Icons.Filled.People,Icons.Outlined.People),
+        BottomNavItem(Screen.Academics.route,"Academics",Icons.Filled.MenuBook,Icons.Outlined.MenuBook),
+        BottomNavItem(Screen.Fees.route,"Finance",Icons.Filled.CreditCard,Icons.Outlined.CreditCard),
+        BottomNavItem(Screen.OperationsHub.route,"More",Icons.Filled.MoreHoriz,Icons.Outlined.MoreHoriz)
       )
       UserRole.ADMIN -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),

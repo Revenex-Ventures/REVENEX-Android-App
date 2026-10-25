@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -135,11 +137,11 @@ fun ScholaTopAppBar(
   modifier: Modifier = Modifier
 ) {
   Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = if(currentRole==UserRole.PRINCIPAL)0.dp else Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
       navigationIcon?.invoke()
       Row(Modifier.weight(1f).padding(start = Spacing.sm8), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        RevenexBrand()
+        RevenexBrand(nameWidth=if(currentRole==UserRole.PRINCIPAL)PrincipalLayout.wordmarkWidth else EntryTokens.compactName)
       }
       IconButton(onClick = onSearchClick, modifier = Modifier.testTag("command_palette_trigger_pill")) {
         Icon(Icons.Default.Search, "Search school records")
@@ -151,7 +153,10 @@ fun ScholaTopAppBar(
       }
       var menu by remember { mutableStateOf(false) }
       Box {
-        IconButton(onClick = { menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) { Icon(Icons.Outlined.AccountCircle, "Account and settings") }
+        IconButton(onClick = { if(currentRole==UserRole.PRINCIPAL) onProfileClick() else menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) {
+          if(currentRole==UserRole.PRINCIPAL) Box(Modifier.semantics {contentDescription="Account and settings"}) {Avatar(currentUserName.replace(Regex("^(Dr\\.?|Prof\\.?)\\s+"),""),size=Spacing.xxl32,background=MaterialTheme.colorScheme.surfaceVariant,textColor=MaterialTheme.colorScheme.onSurface)}
+          else Icon(Icons.Outlined.AccountCircle, "Account and settings")
+        }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
           DropdownMenuItem(text = { Text("Settings") }, onClick = { menu = false; onProfileClick() })
           DropdownMenuItem(text = { Text("Sign out") }, onClick = { menu = false; onLogoutClick() })

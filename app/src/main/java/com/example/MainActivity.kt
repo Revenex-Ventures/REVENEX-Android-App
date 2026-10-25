@@ -40,6 +40,7 @@ import androidx.navigation.navArgument
 import com.example.data.model.UserRole
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
+import com.example.ui.screens.principal.*
 import com.example.ui.navigation.NavConfig
 import com.example.ui.navigation.Screen
 import com.example.ui.screens.academics.ExamsScreen
@@ -107,7 +108,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
           runCatching { Checkout.preload(applicationContext) }
         }
       }
-      ScholaTheme {
+      ScholaTheme(principal=paymentUser.role==UserRole.PRINCIPAL) {
         RevenexLaunchHost(showBrand, splashExited) {
         ScholaErpApp(
           isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
@@ -293,7 +294,9 @@ fun ScholaErpApp(
             saveState = true
           }
           launchSingleTop = true
-          restoreState = true
+          // Dashboard is the retained authenticated anchor. Restoring its saved
+          // child stack here can reopen Students instead of the Home destination.
+          restoreState = route != Screen.Dashboard.route
         }
       }
     },
@@ -423,7 +426,8 @@ fun ScholaErpApp(
 
       // Student Directory & 360 View
       composable(Screen.Students.route) {
-        StudentListScreen(
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalStudents(repository,{navController.navigate(Screen.StudentDetail.createRoute(it))},{showAddStudentDialog=true})
+        else StudentListScreen(
           repository = repository,
           onNavigateToStudentDetail = { studentId ->
             navController.navigate(Screen.StudentDetail.createRoute(studentId))
@@ -457,7 +461,8 @@ fun ScholaErpApp(
 
       // Faculty Directory & Details
       composable(Screen.Teachers.route) {
-        TeacherListScreen(
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalStaff(repository,{navController.navigate(Screen.TeacherDetail.createRoute(it))},{showAddTeacherDialog=true},{navController.navigate(Screen.PrincipalAllocations.route)})
+        else TeacherListScreen(
           repository = repository,
           onNavigateToTeacherDetail = { teacherId ->
             navController.navigate(Screen.TeacherDetail.createRoute(teacherId))
@@ -489,7 +494,9 @@ fun ScholaErpApp(
       ) { backStackEntry ->
         val classGrade = backStackEntry.arguments?.getString("classGrade")
         val division = backStackEntry.arguments?.getString("division")
-        if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
+        if(currentUser.role==UserRole.PRINCIPAL) {
+          PrincipalAttendanceOverview(repository,{cohort,date->navController.navigate(Screen.PrincipalClass.createRoute(cohort,date))},{navController.navigate(Screen.Reports.route)})
+        } else if (currentUser.role == UserRole.ADMIN) {
           PrincipalAttendanceScreen(
             repository = repository,
             onBack = { navController.popBackStack() }
@@ -507,10 +514,20 @@ fun ScholaErpApp(
       // Bursar & Financial Ledger
       composable(Screen.PrincipalAttendance.route) {
         if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
-          PrincipalAttendanceScreen(repository, onBack = { navController.popBackStack() })
+          if(currentUser.role==UserRole.PRINCIPAL) PrincipalAttendanceOverview(repository,{cohort,date->navController.navigate(Screen.PrincipalClass.createRoute(cohort,date))},{navController.navigate(Screen.Reports.route)})
+          else PrincipalAttendanceScreen(repository, onBack = { navController.popBackStack() })
         } else {
           EmptyStateView("Attendance overview unavailable", "Open your own attendance from the class portal.")
         }
+      }
+
+      composable(Screen.PrincipalAllocations.route) {
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalAllocations(repository){navController.navigate(Screen.TeacherDetail.createRoute(it))}
+      }
+
+      composable(Screen.PrincipalClass.route,arguments=listOf(navArgument("cohort"){type=NavType.StringType},navArgument("date"){type=NavType.StringType;nullable=true})) {entry->
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalClassHistory(repository,entry.arguments?.getString("cohort").orEmpty(),entry.arguments?.getString("date").orEmpty()){navController.popBackStack()}
+        else if(currentUser.role==UserRole.ADMIN) PrincipalAttendanceScreen(repository,{navController.popBackStack()},entry.arguments?.getString("cohort"),entry.arguments?.getString("date"))
       }
 
       composable(Screen.Fees.route) {

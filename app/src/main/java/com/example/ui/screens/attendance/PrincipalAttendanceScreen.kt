@@ -31,15 +31,15 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrincipalAttendanceScreen(repository: ErpDataRepository,onBack: () -> Unit) {
+fun PrincipalAttendanceScreen(repository: ErpDataRepository,onBack: () -> Unit,initialClass:String?=null,initialDate:String?=null) {
   val students by repository.students.collectAsState()
   val records by repository.classAttendance.collectAsState()
-  var cohort by remember {mutableStateOf<String?>(null)}
+  var cohort by remember {mutableStateOf<String?>(initialClass)}
   var historyStudent by remember {mutableStateOf<Student?>(null)}
   var query by remember {mutableStateOf("")}
   val classes=students.map {it.fullClass}.distinct().sorted()
-  val scoped=records.values.filter {cohort==null||"${it.classGrade}-${it.division}"==cohort}
-  Scaffold(topBar={TopAppBar(title={Text(if(cohort==null)"Attendance overview" else "Class $cohort",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)},navigationIcon={IconButton(onClick={if(cohort!=null){cohort=null;query=""}else onBack()}){Icon(Icons.Default.ArrowBack,"Back")}})}) {padding ->
+  val scoped=records.values.filter {(cohort==null||"${it.classGrade}-${it.division}"==cohort)&&(initialDate==null||attendanceDateMatches(it.date,initialDate))}
+  Scaffold(topBar={TopAppBar(title={Text(if(cohort==null)"Attendance overview" else "Class $cohort",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)},navigationIcon={IconButton(onClick={if(cohort!=null&&initialClass==null){cohort=null;query=""}else onBack()}){Icon(Icons.Default.ArrowBack,"Back")}})}) {padding ->
     LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("principal_attendance_overview"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
       item {
         Text("All loaded saved registers",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
