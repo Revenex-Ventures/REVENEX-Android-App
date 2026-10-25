@@ -1,6 +1,8 @@
 package com.example.ui.screens.principal
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -54,5 +56,5 @@ import com.example.ui.theme.*
   if(events.isEmpty())item {EmptyStateView("No events","No school events are available in the loaded records.")}
   items(events.sortedBy{it.date},key={it.id}) {event->PrincipalRecordRow(event.title,"${event.date} · ${event.time}",{selected=event.id})}
  }
- events.firstOrNull{it.id==selected}?.let {event->AlertDialog(onDismissRequest={selected=null},title={Text(event.title)},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){SchoolDetailRow("Date",event.date);SchoolDetailRow("Time",event.time);SchoolDetailRow("Location",event.location);Text(event.description)}},confirmButton={TextButton(onClick={selected=null}){Text("Done")}})}
+ events.firstOrNull{it.id==selected}?.let {event->AlertDialog(onDismissRequest={selected=null},title={Text(event.title)},text={Column(Modifier.heightIn(max=PrincipalLayout.historyHeight).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){SchoolDetailRow("Date",event.date);SchoolDetailRow("Time",event.time);SchoolDetailRow("Location",event.location);Text(event.description)}},confirmButton={TextButton(onClick={selected=null}){Text("Done")}})}
 }

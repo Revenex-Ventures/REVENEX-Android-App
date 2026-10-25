@@ -77,7 +77,7 @@ fun PrincipalDashboardScreen(repository:ErpDataRepository,onNavigateTo:(String)-
   item {PrincipalHeading("Upcoming") {
    val event=events.filter {dashboardEventIsUpcoming(it.date)}.minByOrNull {parseSchoolRecordDate(it.date) ?: LocalDate.MAX}
    if(event==null)SchoolGroup {Text("No upcoming events",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodyMedium)}
-   else SchoolGroup {SchoolRow(event.title,"${event.date} · ${event.time}",Icons.Outlined.CalendarMonth,{onNavigateTo(Screen.Notices.route)})}
+   else SchoolGroup {SchoolRow(event.title,"${event.date} · ${event.time}",Icons.Outlined.CalendarMonth,{onNavigateTo(Screen.PrincipalCalendar.route)})}
   }}
  }
  if(context)AlertDialog(onDismissRequest={context=false},title={Text("School context")},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {

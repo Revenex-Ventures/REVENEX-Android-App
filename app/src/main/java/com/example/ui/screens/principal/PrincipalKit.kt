@@ -56,7 +56,7 @@ internal data class PrincipalModule(val title:String,val icon:ImageVector,val ro
 }
 @Composable internal fun PrincipalRecordRow(name:String,detail:String,onClick:()->Unit,modifier:Modifier=Modifier,trailing:@Composable ()->Unit={}) {
  Row(modifier.fillMaxWidth().clickable(onClick=onClick).heightIn(min=PrincipalLayout.rowHeight).padding(vertical=Spacing.sm8),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
-  Avatar(name,size=PrincipalLayout.listAvatar,background=PrincipalColors.blue,textColor=PrincipalColors.blueInk)
+  Avatar(name.replace(Regex("^(Dr\\.?|Prof\\.?|Mr\\.?|Mrs\\.?|Ms\\.?)\\s+"),""),size=PrincipalLayout.listAvatar,background=PrincipalColors.blue,textColor=PrincipalColors.blueInk)
   Column(Modifier.weight(1f)){Text(name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold);Text(detail,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   trailing();Icon(Icons.Default.ChevronRight,null,Modifier.size(Spacing.lg16),tint=MaterialTheme.colorScheme.onSurfaceVariant)
  }
@@ -74,16 +74,26 @@ internal data class PrincipalModule(val title:String,val icon:ImageVector,val ro
 @Composable fun PrincipalBottomNavigation(route:String?,navigate:(String)->Unit) {
  val items=NavConfig.getBottomNavItems(UserRole.PRINCIPAL)
  Surface(color=MaterialTheme.colorScheme.surface) {
-  Column {HorizontalDivider();Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8),horizontalArrangement=Arrangement.SpaceEvenly) {
-   items.forEach {item->val selected=item.route==route
-    Surface(onClick={navigate(item.route)},modifier=Modifier.weight(1f).heightIn(min=PrincipalLayout.moduleWell),shape=RoundedCornerShape(Radius.md),color=if(selected&&item.route==Screen.Dashboard.route)PrincipalColors.peach else Color.Transparent) {
-     Column(Modifier.padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
-      Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,tint=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-      Text(item.label,style=MaterialTheme.typography.labelSmall,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+  BoxWithConstraints {
+   val largeText=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.2f
+   val rows=if(maxWidth<PrincipalLayout.navigationWrapWidth&&largeText)items.chunked(3) else listOf(items)
+   Column {
+    HorizontalDivider()
+    rows.forEach {row->
+     Row(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8),horizontalArrangement=Arrangement.SpaceEvenly) {
+      row.forEach {item->
+       val selected=item.route==route
+       Surface(onClick={navigate(item.route)},modifier=Modifier.weight(1f).heightIn(min=PrincipalLayout.moduleWell),shape=RoundedCornerShape(Radius.md),color=if(selected&&item.route==Screen.Dashboard.route)PrincipalColors.peach else Color.Transparent) {
+        Column(Modifier.padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+         Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,tint=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+         Text(item.label,style=MaterialTheme.typography.labelSmall,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+       }
+      }
      }
     }
    }
-  }}
+  }
  }
 }
 

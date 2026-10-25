@@ -141,5 +141,5 @@ fun RevenexTheme(
   principal: Boolean = false,
   content: @Composable () -> Unit
 ) {
-  ScholaTheme(darkTheme = darkTheme, content = content)
+  ScholaTheme(darkTheme = darkTheme, principal = principal, content = content)
 }

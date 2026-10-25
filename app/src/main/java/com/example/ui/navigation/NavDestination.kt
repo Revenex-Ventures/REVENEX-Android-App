@@ -41,6 +41,7 @@ sealed class Screen(val route: String) {
   object OperationsHub : Screen("operations_hub")
   object Academics : Screen("academic_hub")
   object Audit : Screen("school_activity")
+  object PrincipalApprovalDetail : Screen("principal_approval/{requestId}") {fun createRoute(id:String)="principal_approval/${android.net.Uri.encode(id)}"}
   object PrincipalSubjects : Screen("principal_subjects")
   object PrincipalCalendar : Screen("principal_calendar")
   object PrincipalAllocations : Screen("principal_allocations")

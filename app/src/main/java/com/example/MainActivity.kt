@@ -523,11 +523,13 @@ fun ScholaErpApp(
 
       composable(Screen.PrincipalAllocations.route) {
         if(currentUser.role==UserRole.PRINCIPAL) PrincipalAllocations(repository){navController.navigate(Screen.TeacherDetail.createRoute(it))}
+        else EmptyStateView("Access unavailable","This school workspace requires Principal access.")
       }
 
       composable(Screen.PrincipalClass.route,arguments=listOf(navArgument("cohort"){type=NavType.StringType},navArgument("date"){type=NavType.StringType;nullable=true})) {entry->
         if(currentUser.role==UserRole.PRINCIPAL) PrincipalClassHistory(repository,entry.arguments?.getString("cohort").orEmpty(),entry.arguments?.getString("date").orEmpty()){navController.popBackStack()}
         else if(currentUser.role==UserRole.ADMIN) PrincipalAttendanceScreen(repository,{navController.popBackStack()},entry.arguments?.getString("cohort"),entry.arguments?.getString("date"))
+        else EmptyStateView("Access unavailable","This school workspace requires school staff access.")
       }
 
       composable(Screen.Fees.route) {
@@ -612,12 +614,17 @@ fun ScholaErpApp(
 
       // Operations
       composable(Screen.Leaves.route) {
-        LeaveManagementScreen(
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalApprovals(repository){navController.navigate(Screen.PrincipalApprovalDetail.createRoute(it))}
+        else LeaveManagementScreen(
           repository = repository,
           onShowApplyLeave = { showApplyLeaveDialog = true }
         )
       }
 
+      composable(Screen.PrincipalApprovalDetail.route,arguments=listOf(navArgument("requestId"){type=NavType.StringType})) {entry->
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalApprovalDetail(repository,entry.arguments?.getString("requestId").orEmpty())
+        else EmptyStateView("Access unavailable","This school workspace requires Principal access.")
+      }
       composable(Screen.Transport.route) {
         TransportScreen(repository = repository)
       }
@@ -631,7 +638,8 @@ fun ScholaErpApp(
       }
 
       composable(Screen.OperationsHub.route) {
-        OperationsHubScreen(
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalMore(repository,{navController.navigate(it)},{showAddStudentDialog=true},{showAddTeacherDialog=true},{showCreateNoticeDialog=true})
+        else OperationsHubScreen(
           repository = repository,
           onNavigateTo = { navController.navigate(it) },
           onShowAddStudent = { showAddStudentDialog = true },
@@ -680,7 +688,10 @@ fun ScholaErpApp(
       }
 
       composable(Screen.Profile.route) {
-        ProfileScreen(
+        if(currentUser.role==UserRole.PRINCIPAL) PrincipalAccount(repository) {route->
+          if(route==Screen.Auth.route)clearAccountNavigation()
+          navController.navigate(route){if(route==Screen.Auth.route)popUpTo(navController.graph.id){inclusive=true};launchSingleTop=true}
+        } else ProfileScreen(
           repository = repository,
           onBack = { navController.popBackStack() },
           onNavigateTo = { route ->

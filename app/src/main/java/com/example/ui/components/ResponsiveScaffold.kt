@@ -119,7 +119,7 @@ fun ScholaResponsiveScaffold(
           }
         },
         bottomBar = {
-          if (currentUser.role == UserRole.PRINCIPAL && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route)) {
+          if (currentUser.role == UserRole.PRINCIPAL && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route,Screen.PrincipalApprovalDetail.route,Screen.Profile.route)) {
             PrincipalBottomNavigation(selectedPrimaryRoute,onNavigateToRoute)
           } else if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(

@@ -41,7 +41,7 @@ private data class PendingReport(val actor:String,val name:String,val csv:String
  val cards by repository.reportCards.collectAsState();val actor by repository.currentUser.collectAsState()
  var period by rememberSaveable(actor.id){mutableStateOf("All records")}
  var category by rememberSaveable(actor.id){mutableStateOf("Attendance")};var detail by rememberSaveable(actor.id){mutableStateOf(false)}
- val context=LocalContext.current;val scope=rememberCoroutineScope()
+ val context=LocalContext.current;val scope=rememberCoroutineScope();val tableScroll=rememberScrollState()
  var pending by remember(actor.id){mutableStateOf<PendingReport?>(null)}
  var busy by remember(actor.id){mutableStateOf(false)};var message by remember(actor.id){mutableStateOf<String?>(null)}
  val recent=remember(actor.id){mutableStateListOf<SavedReport>()}
@@ -94,7 +94,12 @@ private data class PendingReport(val actor:String,val name:String,val csv:String
   } else {
    item {Text("$scopeLabel · ${rows.size-1} records",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
    if(rows.size==1)item {EmptyStateView("No records","No authorized records match this report scope.")}
-   item {Column(Modifier.horizontalScroll(rememberScrollState())) {rows.forEachIndexed {i,row->Row(Modifier.padding(vertical=Spacing.md12)){row.forEach{cell->Text(cell,Modifier.width(PrincipalLayout.reportColumn).padding(end=Spacing.sm8),style=MaterialTheme.typography.bodyMedium,fontWeight=if(i==0)FontWeight.Bold else FontWeight.Normal)}};HorizontalDivider()}}}
+   itemsIndexed(rows) {index,row->
+    Row(Modifier.fillMaxWidth().horizontalScroll(tableScroll).padding(vertical=Spacing.md12)) {
+     row.forEach {cell->Text(cell,Modifier.width(PrincipalLayout.reportColumn).padding(end=Spacing.sm8),style=MaterialTheme.typography.bodyMedium,fontWeight=if(index==0)FontWeight.Bold else FontWeight.Normal)}
+    }
+    HorizontalDivider()
+   }
   }
  }
  }

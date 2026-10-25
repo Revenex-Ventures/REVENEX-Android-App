@@ -168,6 +168,8 @@ object Presentation {
 
 /** Geometry and functional colors taken from the approved Principal panels. */
 object PrincipalLayout {
+  val navigationWrapWidth = 360.dp
+  val appearanceBreakpoint = 340.dp
   val compactModuleHeight = 88.dp
   val contextWidth = 160.dp
   val reportColumn = 144.dp
