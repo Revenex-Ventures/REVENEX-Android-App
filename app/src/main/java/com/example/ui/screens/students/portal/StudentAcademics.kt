@@ -33,21 +33,6 @@ internal fun studentPublishedReports(student:Student?,reports:List<ReportCard>)=
  }
 }
 
-@Composable fun StudentTimetable(repository:ErpDataRepository) {
- val student=ownStudent(repository);val slots by repository.timetable.collectAsState()
- var day by rememberSaveable{mutableIntStateOf(studentToday().dayOfWeek.value-1)}
- val days=listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
- val visible=slots.filter{student!=null&&it.schoolId==student.schoolId&&it.sessionId==student.sessionId&&it.classGrade==student.classGrade&&it.division==student.division&&it.dayOfWeek.equals(days[day],true)}.sortedBy{it.periodNumber}
- LazyColumn(Modifier.fillMaxSize().testTag("student_timetable"),contentPadding=PaddingValues(StudentLayout.margin),verticalArrangement=Arrangement.spacedBy(StudentLayout.gap)){
-  item{WorkspacePageHeader("Timetable")}
-  item{LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){items(days.indices.toList()){index->FilterChip(day==index,{day=index},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=StudentColors.action,selectedLabelColor=StudentColors.onAction),label={Text(days[index].take(3))})}}}
-  if(visible.isEmpty())item{EmptyStateView("No lessons scheduled","No timetable has been provided for ${days[day]}.")}
-  items(visible,key={it.id}){slot->StudentCard(tone=studentSubjectTone(slot.subject)){Row(Modifier.padding(StudentLayout.gap),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(StudentLayout.gap)){
-   StudentIcon(studentSubjectIcon(slot.subject),studentSubjectTone(slot.subject));Column{Text("${slot.startTime} – ${slot.endTime}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(slot.subject,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(listOf(slot.roomNumber,slot.teacherName).filter{it.isNotBlank()}.joinToString(" · "),style=MaterialTheme.typography.bodySmall)}
-  }}}
- }
-}
-
 @Composable fun StudentResults(repository:ErpDataRepository,reportId:String?=null) {
  val student=ownStudent(repository);val reports by repository.reportCards.collectAsState()
  val published=studentPublishedReports(student,reports);var selected by rememberSaveable(student?.id){mutableStateOf(reportId.orEmpty())}

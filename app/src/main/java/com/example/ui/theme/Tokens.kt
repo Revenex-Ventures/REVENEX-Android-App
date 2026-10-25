@@ -214,6 +214,17 @@ object TeacherLayout {
   val radius=12.dp
   val header=64.dp
 }
+/** Student timetable rail: time column, connected stroke and readable lesson rows. */
+object StudentTimelineLayout {
+  val timeColumn = 56.dp
+  val largeTimeColumn = 72.dp
+  val rail = 24.dp
+  val rowHeight = 96.dp
+  val gapHeight = 52.dp
+  val stroke = 2.dp
+  val nodeRadius = 5.dp
+  val cursorTick = 10.dp
+}
 object PrincipalColors {
   val canvasLight = Color(0xFFFCFCFB)
   val inkLight = Color(0xFF111827)
