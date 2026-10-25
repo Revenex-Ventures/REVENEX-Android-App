@@ -104,7 +104,7 @@ fun ScholaResponsiveScaffold(
       Scaffold(
         containerColor = GlassBgTransparent,
         topBar = {
-          if (currentRoute == Screen.Dashboard.route) {
+          if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
             ScholaTopAppBar(
               title = "REVENEX",
               subtitle = "School ERP demonstration",
@@ -121,6 +121,8 @@ fun ScholaResponsiveScaffold(
         bottomBar = {
           if (currentUser.role == UserRole.PRINCIPAL && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route,Screen.PrincipalApprovalDetail.route,Screen.Profile.route)) {
             PrincipalBottomNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if(currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route,Screen.Attendance.route)) {
+            com.example.ui.screens.teachers.TeacherNavigation(selectedPrimaryRoute,onNavigateToRoute)
           } else if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
@@ -166,7 +168,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute == Screen.Dashboard.route) {
+              if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
@@ -217,7 +219,7 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute == Screen.Dashboard.route) {
+              if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
                 ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",

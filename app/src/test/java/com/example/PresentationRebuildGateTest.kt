@@ -45,7 +45,7 @@ class PresentationRebuildGateTest {
     var destination = ""
     compose.setContent {
       val user by repo.currentUser.collectAsState()
-      ScholaTheme(dark,principal=role==UserRole.PRINCIPAL) {
+      ScholaTheme(dark,principal=role==UserRole.PRINCIPAL,teacher=role==UserRole.TEACHER) {
         ScholaResponsiveScaffold(Screen.Dashboard.route,user,2,{ destination=it },{},{},{},{}) {
           if (role == UserRole.PRINCIPAL) PrincipalDashboardScreen(repo,{destination=it},{},{},{})
           else TeacherDashboardScreen(repo,{destination=it},{},{})
@@ -60,7 +60,7 @@ class PresentationRebuildGateTest {
       }
       compose.onNodeWithTag("principal_module_attendance").performClick()
     } else {
-      compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
+      compose.onNodeWithTag("teacher_module_attendance").performScrollTo().performClick()
     }
     if (role == UserRole.TEACHER) {
       val cohort = repo.teachers.value.firstOrNull { it.email.equals(repo.currentUser.value.email,true) }?.assignedClasses?.firstOrNull() ?: repo.currentUser.value.associatedClass
@@ -70,7 +70,7 @@ class PresentationRebuildGateTest {
       compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Needs attention")); capture(name+"_attention")
       compose.onNodeWithTag("principal_dashboard_list").performScrollToNode(hasText("Upcoming")); capture(name+"_upcoming")
     } else {
-      compose.onNodeWithTag("teacher_dashboard_list").performScrollToNode(hasText("Teaching tools")); capture(name+"_tools")
+      compose.onNodeWithTag("teacher_dashboard_list").performScrollToNode(hasText("Needs attention")); capture(name+"_tools")
     }
   }
   @Test fun principalLight() = dashboard(UserRole.PRINCIPAL,false)

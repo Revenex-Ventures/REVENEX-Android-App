@@ -94,9 +94,9 @@ class LaunchEntryTest {
     val actor=repository.currentUser.value
     val cohort=repository.teachers.value.firstOrNull {it.email.equals(actor.email,true)||it.name.equals(actor.name,true)}?.assignedClasses?.firstOrNull() ?: actor.associatedClass
     assertTrue(cohort.isNotBlank())
-    compose.onNodeWithText("Mark attendance").performScrollTo().performClick()
+    compose.onNodeWithTag("teacher_module_attendance").performScrollTo().performClick()
     compose.waitUntil(10000) {compose.onAllNodesWithTag("attendance_matrix_view").fetchSemanticsNodes().isNotEmpty()}
-    compose.onNodeWithText("Class $cohort").assertExists()
+    compose.onNodeWithText(cohort).assertExists()
     capture("routed_teacher_class_attendance")
   }
   @Test fun introInitializesContentConcurrentlyAndDoesNotReplayOnRecomposition() {

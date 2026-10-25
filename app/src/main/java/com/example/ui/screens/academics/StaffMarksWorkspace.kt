@@ -30,7 +30,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit = {}) {
   val actor by repository.currentUser.collectAsState()
-  val students by repository.students.collectAsState()
+  val loadedStudents by repository.students.collectAsState()
+  val allocation=com.example.ui.screens.teachers.teacherAllocation(repository)
+  val students=if(actor.role==com.example.data.model.UserRole.TEACHER)loadedStudents.filter{it.fullClass in allocation?.assignedClasses.orEmpty()}else loadedStudents
   val reports by repository.reportCards.collectAsState()
   var selectedId by rememberSaveable(actor.id) { mutableStateOf("") }
   var query by rememberSaveable(actor.id) { mutableStateOf("") }
@@ -107,7 +109,7 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
         Button(modifier=Modifier.fillMaxWidth().testTag("save_draft_mark"),shape=RoundedCornerShape(Radius.input),enabled=editable&&term.trim().length in 1..80&&subject.trim().length in 1..120&&score!=null&&total!=null&&total in 1..10000&&score in 0..total,
           onClick={perform("Draft save confirmed."){repository.saveMarksConfirmed(student!!.id,term,subject,score!!,total!!)}}){Text(if(busy)"Saving…" else "Save draft")}
       }}
-      if(report!=null)item {
+      if(report!=null && actor.role!=com.example.data.model.UserRole.TEACHER)item {
         OutlinedButton(enabled=!busy&&report.scores.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input),onClick={
           if(report.published)perform("Unpublication confirmed."){repository.publishResultsConfirmed(student!!.id,report.term,false)} else confirmPublish=true
         }){Text(if(report.published)"Unpublish term" else "Review & publish")}

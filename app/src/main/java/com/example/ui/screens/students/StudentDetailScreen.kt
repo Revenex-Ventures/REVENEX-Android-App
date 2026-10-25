@@ -139,7 +139,7 @@ fun Student360DetailPane(student: Student, repository: ErpDataRepository,
         Text("Attendance eligibility is determined by the school's policies. This summary does not certify examination eligibility.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }}}
-    item {SchoolSection("Fees") {SchoolGroup {
+    if(actor.role!=UserRole.TEACHER)item {SchoolSection("Fees") {SchoolGroup {
       Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         if(invoice==null) Text("No fee record available to this account.",style=MaterialTheme.typography.bodySmall)
         else {

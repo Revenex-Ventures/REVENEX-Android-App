@@ -137,11 +137,11 @@ fun ScholaTopAppBar(
   modifier: Modifier = Modifier
 ) {
   Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = if(currentRole==UserRole.PRINCIPAL)0.dp else Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER))0.dp else Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
       navigationIcon?.invoke()
       Row(Modifier.weight(1f).padding(start = Spacing.sm8), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        RevenexBrand(nameWidth=if(currentRole==UserRole.PRINCIPAL)PrincipalLayout.wordmarkWidth else EntryTokens.compactName)
+        RevenexBrand(nameWidth=if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER))PrincipalLayout.wordmarkWidth else EntryTokens.compactName)
       }
       IconButton(onClick = onSearchClick, modifier = Modifier.testTag("command_palette_trigger_pill")) {
         Icon(Icons.Default.Search, "Search school records")
@@ -153,8 +153,8 @@ fun ScholaTopAppBar(
       }
       var menu by remember { mutableStateOf(false) }
       Box {
-        IconButton(onClick = { if(currentRole==UserRole.PRINCIPAL) onProfileClick() else menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) {
-          if(currentRole==UserRole.PRINCIPAL) Box(Modifier.semantics {contentDescription="Account and settings"}) {Avatar(currentUserName.replace(Regex("^(Dr\\.?|Prof\\.?)\\s+"),""),size=Spacing.xxl32,background=MaterialTheme.colorScheme.surfaceVariant,textColor=MaterialTheme.colorScheme.onSurface)}
+        IconButton(onClick = { if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER)) onProfileClick() else menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) {
+          if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER)) Box(Modifier.semantics {contentDescription="Account and settings"}) {Avatar(currentUserName.replace(Regex("^(Dr\\.?|Prof\\.?)\\s+"),""),size=Spacing.xxl32,background=if(currentRole==UserRole.TEACHER)TeacherColors.peach else MaterialTheme.colorScheme.surfaceVariant,textColor=MaterialTheme.colorScheme.onSurface)}
           else Icon(Icons.Outlined.AccountCircle, "Account and settings")
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

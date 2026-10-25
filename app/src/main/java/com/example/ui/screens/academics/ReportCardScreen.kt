@@ -71,12 +71,19 @@ fun ReportCardScreen(
   val actor by repository.currentUser.collectAsState()
   val staff = actor.role in setOf(com.example.data.model.UserRole.PRINCIPAL, com.example.data.model.UserRole.ADMIN, com.example.data.model.UserRole.TEACHER)
   var manageMarks by androidx.compose.runtime.saveable.rememberSaveable(actor.id) { mutableStateOf(true) }
+  var teacherRows by androidx.compose.runtime.saveable.rememberSaveable(actor.id) {mutableStateOf(true)}
+  if(actor.role==com.example.data.model.UserRole.TEACHER && teacherRows) {
+    com.example.ui.screens.teachers.TeacherMarks(repository){teacherRows=false}
+    return
+  }
   if (staff && manageMarks) {
     StaffMarksWorkspace(repository, onViewReports = { manageMarks = false })
     return
   }
   val context = LocalContext.current
-  val students by repository.students.collectAsState()
+  val loadedStudents by repository.students.collectAsState()
+  val allocation=com.example.ui.screens.teachers.teacherAllocation(repository)
+  val students=if(actor.role==com.example.data.model.UserRole.TEACHER)loadedStudents.filter{it.fullClass in allocation?.assignedClasses.orEmpty()}else loadedStudents
   val reportCards by repository.reportCards.collectAsState()
   val cloudDemo = repository.dataMode.collectAsState().value == com.example.data.datasource.DataMode.SUPABASE_DEMO
   val selectedStudentId by repository.selectedStudentId.collectAsState()

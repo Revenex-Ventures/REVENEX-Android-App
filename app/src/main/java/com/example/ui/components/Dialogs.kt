@@ -60,7 +60,7 @@ internal fun ResponsiveFormFields(
 ) {
   val largeText = LocalDensity.current.fontScale > 1.2f
   BoxWithConstraints(Modifier.fillMaxWidth()) {
-    if (maxWidth < 360.dp || largeText) {
+    if (maxWidth < (if(LocalTeacherPresentation.current)300.dp else 360.dp) || largeText) {
       Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
         first(Modifier.fillMaxWidth()); second(Modifier.fillMaxWidth()); third?.invoke(Modifier.fillMaxWidth())
       }
@@ -776,6 +776,8 @@ fun CreateAssignmentDialog(
   onSubmitAssignment: (suspend (HomeworkAssignment) -> Unit)? = null
 ) {
   val assignmentId = remember { "hw_${java.util.UUID.randomUUID()}" }
+  val assignmentActor by repository.currentUser.collectAsState()
+  val assignmentTeacher = com.example.ui.screens.teachers.teacherAllocation(repository)
   var title by remember { mutableStateOf("") }
   var subject by remember { mutableStateOf("Mathematics") }
   var classGrade by remember { mutableStateOf("10") }
@@ -783,6 +785,12 @@ fun CreateAssignmentDialog(
   var dueDate by remember { mutableStateOf(SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date())) }
   var instructions by remember { mutableStateOf("") }
   var maxPoints by remember { mutableStateOf("20") }
+  LaunchedEffect(assignmentTeacher?.id) {
+    if(assignmentActor.role==UserRole.TEACHER) {
+      assignmentTeacher?.assignedClasses?.firstOrNull()?.let{classGrade=it.substringBeforeLast('-');division=it.substringAfterLast('-')}
+      subject=assignmentTeacher?.subjects?.firstOrNull().orEmpty()
+    }
+  }
   val context = LocalContext.current
 
   val todayDate = remember {
@@ -831,7 +839,7 @@ fun CreateAssignmentDialog(
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     CompactFormLayout(
-      header = {FormHeading("New assignment", "Set the subject, class, deadline and optional reference document.", enabled = !isUploading, onDismiss = onDismiss)},
+      header = {FormHeading("New assignment", "Publish to your class with a deadline and optional document.", enabled = !isUploading, onDismiss = onDismiss)},
       footer = {
         attachmentError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
@@ -898,14 +906,32 @@ fun CreateAssignmentDialog(
           },
           modifier = Modifier.fillMaxWidth(),
           enabled = title.isNotBlank() && instructions.isNotBlank() &&
-            classGrade.isNotBlank() && division.isNotBlank() && !isUploading
+            classGrade.isNotBlank() && division.isNotBlank() && !isUploading &&
+            (assignmentActor.role!=UserRole.TEACHER || ("$classGrade-$division" in assignmentTeacher?.assignedClasses.orEmpty() && subject in assignmentTeacher?.subjects.orEmpty()))
         ) {
           Icon(Icons.Default.Assignment, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text(if (isUploading) "Publishing…" else "Assign to class $classGrade-$division")
+          Text(if (isUploading) "Publishing…" else if(assignmentActor.role==UserRole.TEACHER)"Publish"else "Assign to class $classGrade-$division")
         }
       },
       content = {
+        if(assignmentActor.role==UserRole.TEACHER) {
+          OutlinedTextField(title,{title=it},Modifier.fillMaxWidth(),label={Text("Title *")},singleLine=true,enabled=!isUploading)
+          Spacer(Modifier.height(Spacing.md12))
+          ResponsiveFormFields(
+            first={field->com.example.ui.screens.teachers.TeacherSelect("Class","$classGrade-$division",assignmentTeacher?.assignedClasses.orEmpty(),{if(!isUploading){classGrade=it.substringBeforeLast('-');division=it.substringAfterLast('-')}},field)},
+            second={field->com.example.ui.screens.teachers.TeacherSelect("Subject",subject,assignmentTeacher?.subjects.orEmpty(),{if(!isUploading)subject=it},field)}
+          )
+          Spacer(Modifier.height(Spacing.md12))
+          OutlinedTextField(instructions,{instructions=it},Modifier.fillMaxWidth().heightIn(min=100.dp),label={Text("Instructions *")},enabled=!isUploading)
+          Spacer(Modifier.height(Spacing.md12))
+          ResponsiveFormFields(
+            first={field->OutlinedTextField(dueDate,{dueDate=it},field,label={Text("Due date")},singleLine=true,enabled=!isUploading)},
+            second={field->OutlinedTextField(maxPoints,{maxPoints=it.filter{c->c.isDigit()}.take(2)},field,label={Text("Max points")},singleLine=true,enabled=!isUploading)}
+          )
+          Spacer(Modifier.height(Spacing.md12))
+        } else {
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -986,6 +1012,7 @@ fun CreateAssignmentDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        }
         OutlinedTextField(
           value = if (selectedFileName.isEmpty()) "No file attached" else selectedFileName,
           onValueChange = {},

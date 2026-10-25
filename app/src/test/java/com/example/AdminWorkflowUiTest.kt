@@ -46,8 +46,8 @@ class AdminWorkflowUiTest {
     File("build/reports/redesign/admin").mkdirs()
     compose.onRoot().captureRoboImage("build/reports/redesign/admin/$name.png")
   }
-  @Test fun staffCanSaveReviewAndPublishDraftWithoutRemovingReports() {
-    val repository = repository(UserRole.TEACHER)
+  @Test fun principalCanSaveReviewAndPublishDraftWithoutRemovingReports() {
+    val repository = repository(UserRole.PRINCIPAL)
     var reportOpened = false
     compose.setContent { ScholaTheme(false) { Surface(Modifier.fillMaxSize()) { StaffMarksWorkspace(repository, { reportOpened = true }) } } }
     compose.onNodeWithTag("marks_term").performScrollTo().performTextInput("UI verification term")

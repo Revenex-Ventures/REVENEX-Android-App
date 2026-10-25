@@ -20,6 +20,8 @@ sealed class Screen(val route: String) {
     fun createRoute(teacherId: String) = "teacher_detail/$teacherId"
   }
   object TeacherProfile : Screen("teacher_profile")
+  object TeacherClasses : Screen("teacher_classes")
+  object TeacherClass : Screen("teacher_class/{cohort}") { fun createRoute(cohort:String)="teacher_class/${android.net.Uri.encode(cohort)}" }
   object Attendance : Screen("attendance?classGrade={classGrade}&division={division}") {
     fun createRoute(classGrade: String, division: String) = "attendance?classGrade=$classGrade&division=$division"
   }
@@ -65,6 +67,8 @@ object NavConfig {
     if (route in primary) return route
     return when {
       route == Screen.Auth.route || route == null -> route
+      role==UserRole.TEACHER && route in setOf(Screen.TeacherClass.route,Screen.Students.route,Screen.StudentDetail.route,Screen.Attendance.route) -> Screen.TeacherClasses.route
+      role==UserRole.TEACHER && route==Screen.ReportCard.route -> Screen.Homework.route
       route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route,Screen.PrincipalAllocations.route) &&
         role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL) -> Screen.Students.route
       route in setOf(Screen.PrincipalAttendance.route,Screen.PrincipalClass.route) && role == UserRole.PRINCIPAL -> Screen.OperationsHub.route
@@ -91,10 +95,10 @@ object NavConfig {
       )
       UserRole.TEACHER -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Attendance.route, "Attendance", Icons.Filled.FactCheck, Icons.Outlined.FactCheck),
-        BottomNavItem(Screen.Homework.route, "Homework", Icons.Filled.Assignment, Icons.Outlined.Assignment),
-        BottomNavItem(Screen.Timetable.route, "Timetable", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Menu, Icons.Outlined.Menu)
+        BottomNavItem(Screen.TeacherClasses.route, "Classes", Icons.Filled.Groups, Icons.Outlined.Groups),
+        BottomNavItem(Screen.Homework.route, "Tasks", Icons.Filled.Assignment, Icons.Outlined.Assignment),
+        BottomNavItem(Screen.Timetable.route, "Schedule", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz)
       )
       UserRole.STUDENT -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),

@@ -186,6 +186,34 @@ object PrincipalLayout {
   val sectionSize = 20.sp
   val metricSize = 26.sp
 }
+/** Teacher workspace reference palette; accents have stable semantic purposes. */
+object TeacherColors {
+  val canvas=Color(0xFFF8F9FC)
+  val surface=Color.White
+  val orange=Color(0xFFE85B0B)
+  val pressed=Color(0xFFC94B08)
+  val ink=Color(0xFF202735)
+  val muted=Color(0xFF647084)
+  val border=Color(0xFFE7EBF1)
+  private val dark: Boolean @androidx.compose.runtime.Composable get()=androidx.compose.material3.MaterialTheme.colorScheme.background.luminance()<.5f
+  val peach:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF382A23)else Color(0xFFFFF0E5)
+  val mint:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF20372D)else Color(0xFFEAF6EF)
+  val blue:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF233247)else Color(0xFFEAF1FC)
+  val lavender:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF302A42)else Color(0xFFF0ECFA)
+  val green:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF95D9B4)else Color(0xFF18794E)
+  val red:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFFFFB4AA)else Color(0xFFB42318)
+  val purple:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFFCDBBFF)else Color(0xFF51338F)
+  val blueInk:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFFA9C9FF)else Color(0xFF1859B7)
+}
+object TeacherLayout {
+  val margin=20.dp
+  val section=24.dp
+  val gap=12.dp
+  val iconWell=44.dp
+  val moduleHeight=88.dp
+  val radius=12.dp
+  val header=64.dp
+}
 object PrincipalColors {
   val canvasLight = Color(0xFFFCFCFB)
   val inkLight = Color(0xFF111827)

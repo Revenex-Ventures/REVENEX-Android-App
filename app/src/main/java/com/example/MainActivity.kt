@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
           runCatching { Checkout.preload(applicationContext) }
         }
       }
-      ScholaTheme(principal=paymentUser.role==UserRole.PRINCIPAL) {
+      ScholaTheme(principal=paymentUser.role==UserRole.PRINCIPAL,teacher=paymentUser.role==UserRole.TEACHER) {
         RevenexLaunchHost(showBrand, splashExited) {
         ScholaErpApp(
           isProcessing=isPaymentProcessing,paymentCompleted=isPaymentCompleted,razorpayPaymentId=razorpayPaymentId,
@@ -240,7 +240,7 @@ fun ScholaErpApp(
   val currentRoute = navBackStackEntry?.destination?.route
   val clearAccountNavigation: () -> Unit = {
     (WorkspaceDirectory.destinations.map {it.route} + listOf(Screen.Dashboard.route,Screen.Academics.route,
-      Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.Auth.route))
+      Screen.OperationsHub.route,Screen.StudentDetail.route,Screen.TeacherDetail.route,Screen.TeacherClasses.route,Screen.TeacherClass.route,Screen.Auth.route))
       .distinct().filter { navController.graph.findNode(it) != null }.forEach {
       navController.clearBackStack(it)
     }
@@ -426,7 +426,8 @@ fun ScholaErpApp(
 
       // Student Directory & 360 View
       composable(Screen.Students.route) {
-        if(currentUser.role==UserRole.PRINCIPAL) PrincipalStudents(repository,{navController.navigate(Screen.StudentDetail.createRoute(it))},{showAddStudentDialog=true})
+        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherClasses(repository){navController.navigate(it)}
+        else if(currentUser.role==UserRole.PRINCIPAL) PrincipalStudents(repository,{navController.navigate(Screen.StudentDetail.createRoute(it))},{showAddStudentDialog=true})
         else StudentListScreen(
           repository = repository,
           onNavigateToStudentDetail = { studentId ->
@@ -572,11 +573,11 @@ fun ScholaErpApp(
 
       // Academics & Gradebook
       composable(Screen.Timetable.route) {
-        TimetableScreen(repository = repository)
+        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherTimetable(repository){navController.navigate(it)} else TimetableScreen(repository = repository)
       }
 
       composable(Screen.Homework.route) {
-        HomeworkScreen(
+        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherAssignments(repository){showCreateAssignmentDialog=true} else HomeworkScreen(
           repository = repository,
           onShowCreateAssignment = { showCreateAssignmentDialog = true }
         )
@@ -592,6 +593,12 @@ fun ScholaErpApp(
 
       composable(Screen.TeacherProfile.route) {
         TeacherProfileScreen(repository = repository)
+      }
+      composable(Screen.TeacherClasses.route) {
+        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherClasses(repository){navController.navigate(it)} else EmptyStateView("Access unavailable","Open the workspace for your verified role.")
+      }
+      composable(Screen.TeacherClass.route,arguments=listOf(navArgument("cohort"){type=NavType.StringType})) {entry->
+        if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherClassDetail(repository,entry.arguments?.getString("cohort").orEmpty()){navController.navigate(it)} else EmptyStateView("Access unavailable","Open the workspace for your verified role.")
       }
 
       composable(Screen.Exams.route) {
@@ -617,6 +624,7 @@ fun ScholaErpApp(
       // Operations
       composable(Screen.Leaves.route) {
         if(currentUser.role==UserRole.PRINCIPAL) PrincipalApprovals(repository){navController.navigate(Screen.PrincipalApprovalDetail.createRoute(it))}
+        else if(currentUser.role==UserRole.TEACHER)com.example.ui.screens.teachers.TeacherLeave(repository){showApplyLeaveDialog=true}
         else LeaveManagementScreen(
           repository = repository,
           onShowApplyLeave = { showApplyLeaveDialog = true }
