@@ -788,10 +788,14 @@ fun RevenexBrand(modifier: Modifier = Modifier, stacked: Boolean = false,
   val mark = if(onDark) com.example.R.drawable.revenex_monogram else com.example.R.drawable.revenex_monogram_ink
   val ink = if(onDark) EntryTokens.brandWhite else MaterialTheme.colorScheme.onSurface
   if(stacked) Column(modifier,horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
-    Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(Spacing.xxxl48+Spacing.xl24).aspectRatio(184f/135f))
+    Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(EntryTokens.stackedMark).aspectRatio(184f/135f))
     Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(EntryTokens.formWidth/2).aspectRatio(490f/54f),tint=ink)
-  } else Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-    Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(EntryTokens.compactMark).aspectRatio(184f/135f))
-    Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(nameWidth).aspectRatio(490f/54f),tint=ink)
+  } else BoxWithConstraints(modifier.widthIn(max=EntryTokens.compactMark+Spacing.sm8+nameWidth)) {
+    // Keep the official aspect ratio while reserving room for app-bar actions.
+    val availableName=(maxWidth-EntryTokens.compactMark-Spacing.sm8).coerceAtLeast(0.dp).coerceAtMost(nameWidth)
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(EntryTokens.compactMark).aspectRatio(184f/135f))
+      Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(availableName).aspectRatio(490f/54f),tint=ink)
+    }
   }
 }

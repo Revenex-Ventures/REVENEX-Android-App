@@ -113,18 +113,19 @@ object EntryTokens {
   val launchBackground = Color(0xFF090C12)
   val brandWhite = Color(0xFFF2F8FC)
   val fieldLight = Color(0xFFECEBE6)
-  val markWidth = 120.dp
-  val markTravel = 25.dp
-  val wordmarkOffset = 52.dp
-  val wordmarkMaxWidth = 360.dp
-  val brandStageHeight = 192.dp
-  val compactMark = 20.dp
-  val compactName = 88.dp
+  val markWidth = 192.dp
+  val markTravel = 36.dp
+  val wordmarkOffset = 84.dp
+  val wordmarkMaxWidth = 420.dp
+  val brandStageHeight = 280.dp
+  val compactMark = 36.dp
+  val compactName = 140.dp
+  val stackedMark = 96.dp
   val formWidth = 480.dp
   val tabletBreakpoint = 720.dp
   val inputHeight = 56.dp
   const val photoFraction = .42f
-  const val wordmarkFraction = .86f
+  const val wordmarkFraction = .90f
   const val brandDuration = 1400
   const val contentFade = 140
 }
@@ -176,7 +177,7 @@ object PrincipalLayout {
   val summaryHeight = 80.dp
   val historyHeight = 320.dp
   val attentionRowHeight = 52.dp
-  val wordmarkWidth = 108.dp
+  val wordmarkWidth = EntryTokens.compactName
   val metricHeight = 108.dp
   val moduleWell = 64.dp
   val moduleIcon = 30.dp
