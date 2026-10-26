@@ -5,6 +5,7 @@ import com.example.data.local.TeacherProfileStore
 import com.example.data.model.*
 import com.example.data.repository.SampleData
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -307,6 +308,21 @@ class LocalDemoDataSource : ErpDataSource {
   // Leave Management
   override fun getLeaveRequestsFlow(): Flow<List<LeaveRequest>> = _leaveRequests.asStateFlow()
 
+  override suspend fun requestLeave(id:String,type:String,start:String,end:String,reason:String) {
+    val actor=_currentUser.value
+    val first=parseSchoolDate(start)?:error("Invalid start date.")
+    val last=parseSchoolDate(end)?:error("Invalid end date.")
+    val days=java.time.temporal.ChronoUnit.DAYS.between(first,last).toInt()+1
+    require(days in 1..366&&reason.trim().length in 1..4000){"Check the leave dates and reason."}
+    val prior=_leaveRequests.value.firstOrNull{it.id==id}
+    if(prior!=null) {
+      check(prior.applicantId==actor.id&&prior.leaveType==type&&prior.startDate==start&&prior.endDate==end&&prior.reason==reason.trim()){"Request already exists. Review it before submitting again."}
+      return
+    }
+    val saved=LeaveRequest(id,actor.id,actor.name,actor.role,actor.associatedClass,type,start,end,days,reason.trim(),schoolDate(),LeaveStatus.PENDING)
+    _leaveRequests.update{listOf(saved)+it}
+    addNotification("Leave request",actor.name,NotificationCategory.LEAVE,UserRole.PRINCIPAL)
+  }
   override suspend fun applyLeave(
     applicantName: String,
     applicantRole: UserRole,
@@ -357,11 +373,14 @@ class LocalDemoDataSource : ErpDataSource {
   }
 
   // Academics
-  override fun getAssignmentsFlow(): Flow<List<HomeworkAssignment>> = _assignments.asStateFlow()
+  override fun getAssignmentsFlow(): Flow<List<HomeworkAssignment>> = combine(_assignments,_currentUser){work,actor->
+    if(actor.role in setOf(UserRole.STUDENT,UserRole.PARENT))work.filter{it.publicationState=="PUBLISHED"}else work
+  }
 
   override suspend fun createAssignment(assignment: HomeworkAssignment) {
-    _assignments.update { listOf(assignment) + it }
-    addNotification(
+    val prior=_assignments.value.firstOrNull{it.id==assignment.id}
+    _assignments.update { listOf(assignment.copy(revision=(prior?.revision?:0)+1)) + it.filterNot{old->old.id==assignment.id} }
+    if(assignment.publicationState=="PUBLISHED" && prior?.publicationState!="PUBLISHED")addNotification(
       title = "New Assignment: ${assignment.subject}",
       message = "${assignment.title} due on ${assignment.dueDate}.",
       category = NotificationCategory.HOMEWORK,
@@ -464,18 +483,37 @@ class LocalDemoDataSource : ErpDataSource {
   override fun getEventsFlow(): Flow<List<SchoolEvent>> = _events.asStateFlow()
 
   // Communication
-  override fun getNoticesFlow(): Flow<List<SchoolNotice>> = _notices.asStateFlow()
-
-  override suspend fun publishNotice(notice: SchoolNotice) {
-    _notices.update { listOf(notice) + it }
-    addNotification(
-      title = notice.title,
-      message = notice.content.take(120) + "...",
-      category = NotificationCategory.ANNOUNCEMENTS
-    )
+  private fun localNoticeVisible(notice:SchoolNotice,actor:UserProfile,students:List<Student>,teachers:List<Teacher>):Boolean {
+    if(actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN))return true
+    return when(notice.targetAudience) {
+      "Teachers"->actor.role==UserRole.TEACHER
+      "Students"->actor.role==UserRole.STUDENT
+      "Guardians"->actor.role==UserRole.PARENT
+      "Class"->if(actor.role==UserRole.TEACHER)teachers.any{it.name==actor.name&&notice.targetClass in it.assignedClasses}
+        else students.any{it.id==actor.associatedStudentId&&it.fullClass==notice.targetClass}
+      else->true // Existing synthetic notices use legacy descriptive audience labels.
+    }
+  }
+  override fun getNoticesFlow(): Flow<List<SchoolNotice>> = combine(_notices,_currentUser,_students,_teachers){notices,actor,students,teachers->
+    notices.filter{localNoticeVisible(it,actor,students,teachers)}
   }
 
-  override fun getNotificationsFlow(): Flow<List<ErpNotification>> = _notifications.asStateFlow()
+  override suspend fun publishNotice(notice: SchoolNotice) {
+    check(_currentUser.value.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)){"Only school leadership can publish notices."}
+    val prior=_notices.value.firstOrNull{it.id==notice.id}
+    if(prior?.copy(revision=notice.revision)==notice)return
+    check((prior?.revision?:0)==notice.revision){"Notice changed. Reload before retrying."}
+    val saved=notice.copy(revision=notice.revision+1)
+    _notices.update { listOf(saved) + it.filterNot{old->old.id==notice.id} }
+    _notifications.update { listOf(ErpNotification("notice_${saved.id}_${saved.revision}",saved.title,saved.content.take(120),NotificationCategory.ANNOUNCEMENTS,"Just now",actionableId=saved.id))+it }
+  }
+
+  override fun getNotificationsFlow(): Flow<List<ErpNotification>> = combine(_notifications,_notices,_currentUser,_students,_teachers){notifications,notices,actor,students,teachers->
+    notifications.filter{item->
+      val notice=if(item.category==NotificationCategory.ANNOUNCEMENTS)notices.firstOrNull{it.id==item.actionableId}else null
+      notice==null||localNoticeVisible(notice,actor,students,teachers)
+    }
+  }
 
   override suspend fun addNotification(
     title: String,
@@ -548,7 +586,6 @@ class LocalDemoDataSource : ErpDataSource {
   }
 
   private fun getCurrentFormattedDate(): String {
-    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    return sdf.format(Date())
+    return com.example.data.model.schoolDate()
   }
 }

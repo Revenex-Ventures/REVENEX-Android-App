@@ -18,10 +18,11 @@ import com.example.ui.theme.*
 @Composable fun PrincipalAcademics(repository:ErpDataRepository,navigate:(String)->Unit) {
  val cards by repository.reportCards.collectAsState()
  val students by repository.students.collectAsState()
+ val mode by repository.dataMode.collectAsState()
  val sessions=students.map{it.sessionId}.distinct()
  val session=Regex("(20\\d{2})[_-](20\\d{2})").find(sessions.singleOrNull().orEmpty())
   ?.let{"${it.groupValues[1]}–${it.groupValues[2].takeLast(2)}"} ?: "Current session"
- val ready=cards.count{!it.published&&it.scores.isNotEmpty()}
+ val ready=cards.count{!it.published&&it.scores.any{score->mode!=com.example.data.datasource.DataMode.SUPABASE_DEMO||score.reviewState=="SUBMITTED"}}
  LazyColumn(Modifier.fillMaxSize().testTag("principal_academics"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
   item {PrincipalPageHeader("Academics"){Surface(shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.xs),color=MaterialTheme.colorScheme.surfaceVariant){Text(session,Modifier.padding(Spacing.sm8),style=MaterialTheme.typography.labelMedium)}}}
   item {PrincipalModules(listOf(
@@ -33,8 +34,8 @@ import com.example.ui.theme.*
    PrincipalModule("Calendar",Icons.Outlined.CalendarToday,Screen.PrincipalCalendar.route,0)
   ),navigate,compact=true)}
   item {PrincipalHeading("For review") {
-   if(ready>0)Surface(color=PrincipalColors.blue,shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.sm)){SchoolRow("Results ready ($ready)","Review drafts before publication",Icons.Outlined.BarChart,{navigate(Screen.ReportCard.route)})}
-   else Text("No result drafts ready for review.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   if(ready>0)Surface(color=PrincipalColors.blue,shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.sm)){SchoolRow("Results ready ($ready)","Review submitted drafts before publication",Icons.Outlined.BarChart,{navigate(Screen.ReportCard.route)})}
+   else Text("No submitted result drafts awaiting review.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
   }}
  }
 }

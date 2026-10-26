@@ -25,6 +25,7 @@ import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.*
 import com.example.ui.navigation.*
 import com.example.ui.theme.*
+import kotlinx.coroutines.launch
 
 /** Presentation filter only. Supabase RLS remains the authority for loaded records/writes. */
 @Composable fun teacherAllocation(repository:ErpDataRepository):Teacher? {
@@ -109,32 +110,46 @@ import com.example.ui.theme.*
 @Composable fun TeacherAssignments(repository:ErpDataRepository,create:()->Unit) {
  val actor by repository.currentUser.collectAsState();val all by repository.assignments.collectAsState();val teacher=teacherAllocation(repository)
  var cohort by rememberSaveable(actor.id){mutableStateOf("All my classes")};var subject by rememberSaveable(actor.id){mutableStateOf("All subjects")};var tab by rememberSaveable(actor.id){mutableIntStateOf(0)};var selected by rememberSaveable(actor.id){mutableStateOf<String?>(null)}
- val own=all.filter{it.teacherName.equals(actor.name,true)&&"${it.classGrade}-${it.division}" in teacher?.assignedClasses.orEmpty()}
- val work=own.filter{(cohort=="All my classes"||"${it.classGrade}-${it.division}"==cohort)&&(subject=="All subjects"||it.subject==subject)}
+ val own=all.filter{"${it.classGrade}-${it.division}" in teacher?.assignedClasses.orEmpty() && it.subject in teacher?.subjects.orEmpty()}
+ val filtered=own.filter{(cohort=="All my classes"||"${it.classGrade}-${it.division}"==cohort)&&(subject=="All subjects"||it.subject==subject)}
+ val work=filtered.filter{it.publicationState==if(tab==1)"DRAFT"else "PUBLISHED"}
  val focused=own.firstOrNull{it.id==selected}
- if(focused!=null){TeacherAssignmentDetail(focused){selected=null};return}
+ if(focused!=null){TeacherAssignmentDetail(repository,focused){selected=null};return}
  Column(Modifier.fillMaxSize().testTag("teacher_assignments")) {
-  Column(Modifier.padding(horizontal=TeacherLayout.margin)){WorkspacePageHeader("Assignments");ResponsiveFormFields(
+  Column(Modifier.padding(horizontal=TeacherLayout.margin)){WorkspacePageHeader("Assignments",actions={Button(onClick=create,shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Outlined.Add,null);Text("Add")}});ResponsiveFormFields(
     first={field->TeacherSelect("Class",cohort,listOf("All my classes")+teacher?.assignedClasses.orEmpty(),{cohort=it},field)},
     second={field->TeacherSelect("Subject",subject,listOf("All subjects")+teacher?.subjects.orEmpty(),{subject=it},field)}
    )}
-  Row(Modifier.padding(horizontal=TeacherLayout.margin),verticalAlignment=Alignment.CenterVertically){Box(Modifier.weight(1f)){TeacherTabs(listOf("Published (${work.size})","Resources"),tab,{tab=it})};Button(onClick=create,shape=RoundedCornerShape(Radius.sm)){Icon(Icons.Outlined.Add,null);Text("Add")}}
-  if(tab==1)com.example.ui.screens.academics.StudyMaterialScreen(repository) else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=TeacherLayout.margin,vertical=Spacing.sm8),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
-   if(work.isEmpty())item{EmptyStateView("No assignments","Published work for your selected class and subject appears here.")}
+  Box(Modifier.padding(horizontal=TeacherLayout.margin)){TeacherTabs(listOf("Published","Drafts","Resources"),tab,{tab=it})}
+  if(tab==2)com.example.ui.screens.academics.StudyMaterialScreen(repository) else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=TeacherLayout.margin,vertical=Spacing.sm8),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+   if(work.isEmpty())item{EmptyStateView("No assignments",if(tab==1)"Private drafts for your selected class and subject appear here."else "Published work for your selected class and subject appears here.")}
    items(work,key={it.id}){assignment->TeacherCard(Modifier.testTag("assignment_details_${assignment.id}")){TeacherRow(assignment.title,"Class ${assignment.classGrade}-${assignment.division} · Due ${assignment.dueDate}",Icons.Outlined.Description,2){selected=assignment.id}}}
   }
  }
 }
-@Composable private fun TeacherAssignmentDetail(assignment:HomeworkAssignment,back:()->Unit) {
+@Composable private fun TeacherAssignmentDetail(repository:ErpDataRepository,assignment:HomeworkAssignment,back:()->Unit) {
  androidx.activity.compose.BackHandler(onBack=back)
  var tab by remember{mutableIntStateOf(0)}
+ var editing by remember{mutableStateOf(false)}
+ var busy by remember{mutableStateOf(false)}
+ var feedback by remember{mutableStateOf("")}
+ val actor by repository.currentUser.collectAsState()
+ val scope=rememberCoroutineScope()
+ if(editing)CreateAssignmentDialog(actor.name,repository,{editing=false},{},onSubmitAssignment={repository.createAssignmentConfirmed(it)},initialAssignment=assignment)
  Column(Modifier.fillMaxSize().testTag("teacher_assignment_detail")) {
   Row(Modifier.padding(horizontal=TeacherLayout.margin),verticalAlignment=Alignment.CenterVertically){IconButton(onClick=back){Icon(Icons.Outlined.ArrowBack,"Back to assignments")};Text(assignment.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)}
   Text("Class ${assignment.classGrade}-${assignment.division} · ${assignment.subject}",Modifier.padding(horizontal=TeacherLayout.margin),style=MaterialTheme.typography.bodySmall)
+  Row(Modifier.padding(horizontal=TeacherLayout.margin),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){
+   OutlinedButton(enabled=!busy,onClick={editing=true}){Text("Edit")}
+   if(assignment.publicationState=="DRAFT")Button(enabled=!busy,onClick={busy=true;scope.launch{
+    try{repository.createAssignmentConfirmed(assignment.copy(publicationState="PUBLISHED"));feedback="Publication confirmed."}
+    catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){feedback="Publication not confirmed. Refresh before retrying; the draft is retained."}finally{busy=false}
+   }}){Text(if(busy)"Publishing…"else "Publish draft")}
+  }
+  if(feedback.isNotBlank())Text(feedback,Modifier.padding(horizontal=TeacherLayout.margin),style=MaterialTheme.typography.bodySmall)
   TeacherTabs(listOf("Details","Submissions"),tab,{tab=it})
-  LazyColumn(contentPadding=PaddingValues(horizontal=TeacherLayout.margin,vertical=Spacing.sm8),verticalArrangement=Arrangement.spacedBy(TeacherLayout.gap)) {
+  if(tab==1)Box(Modifier.weight(1f)){TeacherSubmissionInbox(repository,assignment)}else LazyColumn(contentPadding=PaddingValues(horizontal=TeacherLayout.margin,vertical=Spacing.sm8),verticalArrangement=Arrangement.spacedBy(TeacherLayout.gap)) {
    if(tab==0){item{TeacherCard{Column(Modifier.padding(TeacherLayout.gap),verticalArrangement=Arrangement.spacedBy(TeacherLayout.gap)){Text("Due ${assignment.dueDate}",fontWeight=FontWeight.SemiBold);Text(assignment.instructions);Text("${assignment.maxPoints} points · Assigned ${assignment.assignedDate}",style=MaterialTheme.typography.bodySmall);if(assignment.attachmentUrl.isNotBlank())SchoolDocumentButton(assignment.attachmentUrl,assignment.attachmentName.ifBlank{"Open attachment"})}}}}
-   else item{EmptyStateView("Submission inbox unavailable","The current data connection does not expose individual submission files or review actions. No received or missing counts are assumed.")}
   }
  }
 }

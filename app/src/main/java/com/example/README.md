@@ -1,6 +1,6 @@
 # app/src/main/java/com/example/
 
-Root Kotlin package for the ScholaOS Android app.
+Root Kotlin package for the REVENEX School ERP Android app.
 
 ## Structure
 

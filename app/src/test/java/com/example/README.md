@@ -1,65 +1,50 @@
 # app/src/test/java/com/example/
 
-Kotlin test classes for unit, Robolectric, and Roborazzi screenshot tests.
+Kotlin test classes for unit, Robolectric, contract, and Roborazzi screenshot tests.
 
-## Files
+## Test Suites (21 Test Files)
 
-### `ExampleUnitTest.kt`
+### 1. Core Domain & Business Logic
+- **`ErpProductionUnitTest.kt`**: Attendance calculation (`calculateStudentAttendancePercentage`), CBSE grade computation, fee status transitions, and role permissions.
+- **`ReportDataIntegrityTest.kt`**: Validates report card metrics, GPA calculations, and aggregate data integrity.
+- **`ExampleUnitTest.kt`**: Basic JUnit environment verification.
 
-Basic JUnit sanity test. Verifies the test environment is configured correctly. Run this first when setting up a new dev machine.
+### 2. Supabase Cloud Integration & Auth
+- **`SupabaseConfigurationTest.kt`**: Verifies URL parsing, public key reading, and public-only properties constraint (rejects service role keys).
+- **`SupabaseDataIntegrationTest.kt`**: Tests cloud model mapping, PostgreSQL row conversion, and session state caching.
+- **`SupabaseSignInDiagnosticsTest.kt`**: Diagnostic validation for Auth errors, connection failures, and unlinked profiles.
+- **`SupabaseStudentSummaryTest.kt`**: Regression checks ensuring student summaries derive fees solely from permitted records without payload leaks.
 
----
+### 3. UI, Theming & Interaction (Robolectric)
+- **`AppearanceTest.kt`**: Theme mode persistence (Light, Dark, System) and dynamic contrast switching.
+- **`ThemeContrastTest.kt`**: WCAG AA color contrast ratio verification across background, surface, text, and role accent tokens.
+- **`AdminExperienceTest.kt`**: Administrator portal navigation, role switching, and control actions.
+- **`ConfirmedNoticeFormTest.kt`**: Notice creation workflow, required fields, and validation before submission.
+- **`NotificationInboxInteractionTest.kt`**: Unread notification count badge updates and mark-as-read interaction verification.
+- **`ExampleRobolectricTest.kt`**: JVM-based Android Context tests for resources and component lifecycles.
 
-### `ErpProductionUnitTest.kt`
+### 4. Backend Contracts & Server AI
+- **`ServerAssistantRequestTest.kt`**: Verifies client boundary constraint (Android sends only bounded query and JWT; backend derives all permissions).
+- **`AssistantReplyEngineTest.kt`**: Deterministic local fallback assistant rules, role boundaries, and write refusal logic.
+- **`RazorpayContractTest.kt`**: Verifies payment payload structure, amount validation, and order contracts.
+- **`PdfExportStorageTest.kt`**: PDF snapshot generation and scoped storage access tests.
 
-Unit tests for core business logic in the production data layer:
+### 5. Visual Regression & Roborazzi Screenshot Tests
+- **`GreetingScreenshotTest.kt`**: Visual snapshot test of the authentication and welcome composable.
+- **`ScholaOSPreviewScreenshotTest.kt`**: Visual snapshots of 10 primary dashboard and workflow screens.
+- **`RevenexRedesignScreenshotTest.kt`**: Snapshot verification of the redesigned Warm-White/Ink/Teal design system.
+- **`SecondaryScreensScreenshotTest.kt`**: Visual tests for detail views, modals, and split-pane tablet layouts.
 
-- Attendance percentage calculation (`calculateStudentAttendancePercentage`)
-- CBSE grade computation from raw marks (`SubjectScore`, `ReportCard`)
-- Fee payment status transitions
-- Role-based permission checks
-- Leave request workflow state transitions
-
----
-
-### `ExampleRobolectricTest.kt`
-
-Robolectric tests that require an Android `Context` but run on the JVM without a device.
-
-- Tests that need `Context` for string resources, shared preferences, or Activity lifecycle.
-- Significantly faster than instrumented tests on a real device or emulator.
-
----
-
-### `GreetingScreenshotTest.kt`
-
-Roborazzi screenshot test for the greeting/login screen composable.
-
-- Renders the `AuthScreen` composable in isolation using `ComposeContentTestRule`.
-- Captures a PNG and compares it against the golden image in `../screenshots/`.
-- Fails the build if the rendered output differs from the golden image beyond the configured threshold.
-
----
-
-### `ScholaOSPreviewScreenshotTest.kt`
-
-Roborazzi screenshot tests covering all major screens. **10 test cases**, each with a committed golden PNG:
-
-| Test | Screen |
-|---|---|
-| `principalDashboard` | Principal dashboard with stat tiles |
-| `studentsDirectory` | Student list with search bar |
-| `studentDetail` | 360° student profile (tabbed) |
-| `attendanceMatrix` | Attendance roll call screen |
-| `feeLedger` | Fee management with invoice list |
-| `academicsTimetable` | Academics screen — Timetable tab |
-| `auditTrailNotices` | Notices and audit log |
-| `commandPalette` | Command palette modal overlay |
-| `tabletExecutiveDashboard` | Principal dashboard on tablet (navigation rail layout) |
-| `tabletScholarsSplitPane` | Student list + detail split-pane on tablet |
-
-To regenerate golden images after an intentional UI change:
+## Running Tests
 
 ```bash
+# Run all unit and Robolectric tests
+.\gradlew.bat test
+
+# Run a specific test suite
+.\gradlew.bat testDebugUnitTest --tests com.example.SupabaseDataIntegrationTest
+
+# Record updated Roborazzi screenshot goldens
 .\gradlew.bat recordRoborazziDebug
 ```
+

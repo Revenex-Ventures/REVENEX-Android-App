@@ -13,7 +13,7 @@ Displays all faculty members.
 - Tapping a teacher navigates to `TeacherDetailScreen`.
 - Principal can tap the FAB to open `AddTeacherDialog`.
 
-Accessible to: Principal only (students cannot view teacher records per Firestore rules).
+Accessible to: Principal and Administrator (scoped by role permissions and database RLS policies).
 
 ---
 

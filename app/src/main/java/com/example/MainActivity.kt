@@ -231,6 +231,16 @@ fun ScholaErpApp(
   val notifications by repository.notifications.collectAsState()
   val backendState by repository.backendState.collectAsState()
   val dataMode by repository.dataMode.collectAsState()
+  val lifecycleOwner=androidx.lifecycle.compose.LocalLifecycleOwner.current
+  DisposableEffect(lifecycleOwner,currentUser.id,dataMode) {
+    var stopped=false
+    val observer=androidx.lifecycle.LifecycleEventObserver { _,event ->
+      if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)stopped=true
+      if(event==androidx.lifecycle.Lifecycle.Event.ON_START && stopped){stopped=false;repository.reconcileOnResume()}
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
   val unreadNotificationsCount = if(currentUser.role==UserRole.STUDENT)studentInboxEntries(currentUser,notifications).count{!it.isRead} else notifications.count { !it.isRead }
   val initialRoute = remember {
     if (dataMode == DataMode.SUPABASE_DEMO && currentUser.id.isNotBlank() &&
@@ -792,7 +802,8 @@ fun ScholaErpApp(
     CreateNoticeDialog(
       onDismiss = { showCreateNoticeDialog = false },
       onPublish = { notice -> repository.publishNotice(notice) },
-      onSubmitNotice = { repository.publishNoticeConfirmed(it) }
+      onSubmitNotice = { repository.publishNoticeConfirmed(it) },
+      repository = repository
     )
   }
 
@@ -811,6 +822,8 @@ fun ScholaErpApp(
       applicantName = currentUser.name,
       applicantRole = currentUser.role,
       onDismiss = { showApplyLeaveDialog = false },
+      onSubmitLeave = { id,type,start,end,reason->repository.requestLeaveConfirmed(id,type,start,end,reason) },
+      repository = repository,
       onApply = { type, start, end, days, reason ->
         repository.applyLeave(
           applicantName = currentUser.name,

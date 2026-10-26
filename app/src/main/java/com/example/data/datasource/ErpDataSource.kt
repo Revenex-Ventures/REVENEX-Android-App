@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 interface ErpDataSource {
   // Configuration & Mode
   fun isProductionMode(): Boolean
+  fun getBackendCapabilitiesFlow():Flow<SchoolBackendCapabilities> = kotlinx.coroutines.flow.flowOf(SchoolBackendCapabilities(loaded=true,assignments=true))
 
   // Authentication & Current User
   fun getCurrentUserFlow(): Flow<UserProfile>
@@ -52,6 +53,7 @@ interface ErpDataSource {
   ): FeePaymentTransaction
 
   // Leave Management
+  suspend fun requestLeave(id:String,type:String,start:String,end:String,reason:String):Unit = error("Confirmed leave requests are unavailable for this data source.")
   fun getLeaveRequestsFlow(): Flow<List<LeaveRequest>>
   suspend fun applyLeave(
     applicantName: String,
@@ -70,12 +72,23 @@ interface ErpDataSource {
   fun getAssignmentsFlow(): Flow<List<HomeworkAssignment>>
   suspend fun createAssignment(assignment: HomeworkAssignment)
   suspend fun toggleAssignmentCompletion(assignmentId: String)
+  fun getAssignmentSubmissionsFlow():Flow<List<AssignmentSubmission>> = kotlinx.coroutines.flow.flowOf(emptyList())
+  suspend fun submitAssignment(assignmentId:String,attachmentRef:String,note:String,expectedVersion:Int):AssignmentSubmission =
+    error("File and note submissions require the configured school backend.")
+  suspend fun reviewSubmission(id:String,feedback:String,expectedVersion:Int):AssignmentSubmission =
+    error("Submission review requires the configured school backend.")
 
   fun getStudyMaterialsFlow(): Flow<List<StudyMaterial>>
   suspend fun uploadStudyMaterial(material: StudyMaterial)
 
   fun getReportCardsFlow(): Flow<List<ReportCard>>
   suspend fun saveStudentMarks(studentId: String, term: String, subjectName: String, obtainedMarks: Int, maxMarks: Int)
+  suspend fun saveDraftMarks(studentId:String,term:String,subject:String,obtained:Int,maximum:Int,expectedVersion:Int):Int {
+    saveStudentMarks(studentId,term,subject,obtained,maximum)
+    return 0 // Local implementations do not claim a database version.
+  }
+  suspend fun submitMarksForReview(studentId:String,term:String,subject:String,expectedVersion:Int):Int =
+    error("Mark review requires the configured school backend.")
   suspend fun saveCheckedPaper(studentId: String, term: String, subjectName: String, checkedPaperUrl: String)
   suspend fun saveAnswerKey(classGrade: String, term: String, subjectName: String, answerKeyUrl: String)
   fun getExamSchedulesFlow(): Flow<List<ExamSchedule>>

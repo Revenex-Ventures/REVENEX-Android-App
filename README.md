@@ -1,10 +1,16 @@
-> Final approved delivery: [APK, source, galleries, actual checks and remaining acceptance steps](README_REVENEX_DELIVERY.md). Tested application source `88db806`; CI `40123461452`; 134 Android tests passed.
+> Active backend implementation: [current code, hosted versus local evidence, tests and remaining work](README_BACKEND_PROGRESS.md). The earlier UI delivery reports below describe earlier APKs.
+
+> Current Student reference delivery: [APK, Light/Dark galleries, source checkpoint, checks and honest integration limits](README_STUDENT_DELIVERY.md). The new Student layouts retain the approved colored icons and pastel surfaces. Use its manifest for current local results; older reports below are historical.
+
+> Previous Teacher reference delivery: [APK, source manifest, Light/Dark screenshots, comparisons and limitations](README_TEACHER_DELIVERY.md). The actual Teacher layouts use the supplied cool-white/orange/pastel specification. Exact local results are in the linked build manifest; no new CI/upload is claimed.
+
+> Previous Principal image delivery: [APK, source, galleries, checks and remaining acceptance](README_REVENEX_DELIVERY.md). Local source `c8be45a92a6cb2dae4975fd9a57df12af14bf2f0`; **145 tests passed**, lint **0 errors / 76 warnings**. This is the preceding Principal build; older CI/APK/test claims below are historical.
 
 > Active presentation rebuild: [implementation and evidence](docs/APPROVED_BOARD_IMPLEMENTATION.md), [every routed screen](docs/APPROVED_SCREEN_CHECKLIST.md). Earlier delivery reports below are historical; use the final build record in these notes for current artifacts.
 
 > Current upgrade: [implementation, hosted evidence and remaining limits](docs/ADMIN_UPGRADE_DELIVERY.md), [latest APK/build verification](docs/CURRENT_DELIVERY.md), [screen checklist](docs/CURRENT_SCREEN_CHECKLIST.md), and [admin module matrix](docs/ADMIN_REFERENCE_MATRIX.md). Read these before historical delivery reports. The current Kotlin/Compose app uses ivory/orange light mode, coordinated dark mode and persisted Light/Dark/System appearance.
 
-> Supabase is the active cloud demo backend; Firebase is removed. Migration 10 adds confirmed draft marks/publication and administrator leave decisions. A hosted rollback-only permission test passed; actual two-device and captured Razorpay TEST acceptance remain separate. Payments must be server verified. Current hosted AI availability has not been reverified; automatic deployment remains gated. Existing school data was preserved.
+> Supabase is the active cloud demo backend; Firebase is removed. Migrations 1–18 define schema, RLS, versioned assignments/submissions, draft marks, attendance roll calls, and targeted notices. **158 automated backend tests passed** (138 PostgreSQL/RLS checks via PGlite + 20 Razorpay edge tests via Node). Public health preflight (`scripts/check_integration_health.py`) and credential security scan pass. Payments must be server verified. Current hosted AI remains undeployed (404). Existing school data was preserved.
 
 # REVENEX SCHOOL ERP — ENTERPRISE EDITION
 
@@ -18,8 +24,10 @@ Current readiness, known gaps, test evidence and the implementation roadmap are 
 
 The default local demo remains available. **Supabase Demo** adds email/password login, PostgreSQL data with RLS, private file storage and a database notification inbox with live subscriptions. The Supabase path has no Firebase startup, billing or FCM dependency. Razorpay test checkout is optional and requires the separate server setup below. Firebase SDKs, legacy Android adapters, FCM service and the old Firebase Functions backend have been removed.
 
-- [What changed, previous architecture, actual checks and remaining limitations](docs/PROJECT_CHANGES_AND_STATUS.md)
+- [Current backend progress, test suite evidence, and execution logs](README_BACKEND_PROGRESS.md)
 - [Supabase setup, SQL migrations, account provisioning and verification](supabase/README.md)
+- [Backend completion checkpoint & security boundary specifications](docs/BACKEND_COMPLETION_CHECKPOINT.md)
+- [What changed, previous architecture, actual checks and remaining limitations](docs/PROJECT_CHANGES_AND_STATUS.md)
 - [Public local configuration template](supabase.local.properties.example)
 - [Next-agent handoff prompt](docs/NEXT_AGENT_PROMPT.md)
 
@@ -68,12 +76,24 @@ Use a dedicated synthetic demo project. Configure only the URL and **publishable
 
 ## 🛠️ Local Development & CLI Instructions
 
-### Run Unit Tests
+### Run Android Unit Tests
 Verify core business logic, permissions, and attendance calculations:
 ```bash
 .\gradlew.bat test
 ```
 See [the current verification record](docs/ERP_AUDIT.md#verification-record) for executed checks and remaining blockers.
+
+### Run Backend Tests (PostgreSQL RLS & Edge Functions)
+Verify database RLS policies, multi-tenant isolation, versioning RPCs, and payment edge handlers:
+```bash
+# Run 158 automated backend tests (138 PGlite + 20 Edge handlers)
+npm test --prefix supabase/tests
+```
+Run live preflight health check & secret leak scanner:
+```bash
+python scripts/check_integration_health.py
+python scripts/check_secrets.py
+```
 
 ### Compile & Build Kotlin Source
 Verify source code syntax compile correctness:
@@ -98,9 +118,9 @@ Demo builds use checked-in public defaults from `secrets.defaults.properties` an
 
 ## Current checks and artifact
 
-Historical pre-rebuild verification: application source c29ecd226524ff608a6b944b18ad33660174eef0. [CI run 39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed **85 Android tests**, lint (0 errors / 69 warnings), Firebase removal and APK boundary gates, 105 PostgreSQL checks and 31 server handler tests. Historical 81/82 counts belong to earlier builds.
-
-Historical downloaded APK: `app/build/final-delivery/apk/app-debug.apk`. Exact hash, final light/dark galleries and remaining device/payment blockers are in [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). A standard new local Gradle build still uses `app/build/outputs/apk/debug/app-debug.apk`.
+- **Backend Tests**: **158 automated backend checks passed** (138 PostgreSQL/RLS checks against PGlite across all 18 migrations in `supabase/tests/rls.test.mjs` + 20 payment handler tests in `supabase/tests/razorpay-edge.test.mjs`), plus 1 Deno AI entrypoint test in `assistant-entrypoint.test.mjs`. Preflight check (`scripts/check_integration_health.py`) and credential scanner (`scripts/check_secrets.py`) pass cleanly.
+- Historical pre-rebuild verification: application source c29ecd226524ff608a6b944b18ad33660174eef0. [CI run 39982715340](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/39982715340) passed **85 Android tests**, lint (0 errors / 69 warnings), Firebase removal and APK boundary gates. Subsequent client test runs reached 181 passing unit tests.
+- Downloaded APK: `app/build/final-delivery/apk/app-debug.apk`. Exact hash, final light/dark galleries and remaining device/payment blockers are in [CURRENT_DELIVERY.md](docs/CURRENT_DELIVERY.md). A standard new local Gradle build still uses `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 📈 Next verification steps
 

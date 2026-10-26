@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {handlePaymentRequest} from '../functions/razorpay-payments/core.mjs';
+import {handlePaymentRequest,createServerDependencies} from '../functions/razorpay-payments/core.mjs';
 const reference='00000000-0000-0000-0000-000000000001';
 const order={id:reference,amount:500000,currency:'INR',key_id:'rzp_test_unit',provider_order_id:'order_Test123',status:'created'};
 function fixture() {
@@ -35,3 +35,47 @@ test('late captured payment takes priority over a failed attempt',async()=>{cons
 test('signed payment failed webhook fetches authoritative provider status',async()=>{const {deps,calls}=fixture();deps.provider.payment=async()=>({id:'pay_Failed',order_id:order.provider_order_id,amount:500000,currency:'INR',status:'failed',captured:false});const req=request({event:'payment.failed',payload:{payment:{entity:{id:'pay_Failed',order_id:order.provider_order_id}}}},false,'/webhook');req.headers.set('x-razorpay-signature',await signature(deps.webhookSecret,await req.clone().text()));assert.equal((await (await handlePaymentRequest(req,deps)).json()).status,'failed');assert.equal(calls.filter(c=>c[0]==='failed').length,1);});
 
 test('late failure event never downgrades a settled order',async()=>{const {deps,calls}=fixture();deps.db.order=async()=>({...order,status:'paid'});deps.provider.payments=async()=>({items:[{id:'pay_Failed',order_id:order.provider_order_id,amount:500000,currency:'INR',status:'failed',captured:false}]});assert.notEqual((await (await handlePaymentRequest(request({action:'status',reference}),deps)).json()).status,'failed');assert.equal(calls.filter(c=>c[0]==='failed').length,0);});
+
+test('retry recovers an existing provider order after interrupted binding without creating another',async()=>{
+ const {deps,calls}=fixture();
+ deps.db.reserve=async()=>({...order,provider_order_id:null,new_reservation:false});
+ deps.provider.ordersByReceipt=async receipt=>{assert.equal(receipt,reference);return {items:[{id:order.provider_order_id,receipt,amount:order.amount,currency:'INR',status:'created'}]};};
+ deps.provider.create=async()=>{throw Error('Must not create another order');};
+ deps.db.bind=async(id,provider)=>{calls.push(['bind',id,provider]);return order;};
+ const response=await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps);
+ assert.equal(response.status,200);assert.equal((await response.json()).order_id,order.provider_order_id);
+ assert.deepEqual(calls,[['bind',reference,order.provider_order_id]]);
+});
+test('ambiguous or mismatched recovered orders never bind or credit the invoice',async()=>{
+ for(const items of [
+  [{id:'order_A',receipt:reference,amount:500000,currency:'INR'},{id:'order_B',receipt:reference,amount:500000,currency:'INR'}],
+  [{id:'order_A',receipt:reference,amount:1,currency:'INR'}]
+ ]){
+  const {deps,calls}=fixture();deps.db.reserve=async()=>({...order,provider_order_id:null,new_reservation:false});
+  deps.provider.ordersByReceipt=async()=>({items});deps.db.bind=async()=>{calls.push(['bind']);return order;};
+  assert.equal((await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps)).status,409);
+  assert.equal(calls.length,0);
+ }
+});
+test('unknown interrupted order outcome stays pending without blind creation',async()=>{
+ const {deps,calls}=fixture();deps.db.reserve=async()=>({...order,provider_order_id:null,new_reservation:false});
+ deps.provider.ordersByReceipt=async()=>({items:[{receipt:'a-different-reservation',id:'order_Other'}]});
+ deps.provider.create=async()=>{calls.push(['create']);return {};};
+ const response=await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps);
+ assert.equal(response.status,409);assert.match((await response.json()).message,/reference/i);assert.equal(calls.length,0);
+});
+test('recovered paid order directs status reconciliation instead of launching checkout or issuing a receipt',async()=>{
+ const {deps,calls}=fixture();deps.db.reserve=async()=>({...order,provider_order_id:null,new_reservation:false});
+ deps.provider.ordersByReceipt=async()=>({items:[{id:order.provider_order_id,receipt:reference,amount:order.amount,currency:'INR',status:'paid'}]});
+ const response=await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps);
+ assert.equal(response.status,409);assert.match((await response.json()).message,/Check payment status/);
+ assert.ok(!calls.some(c=>c[0]==='settle'));
+});
+test('provider recovery uses a receipt-filtered bounded lookup',async()=>{
+ const deps=createServerDependencies({SUPABASE_URL:'https://example.test',SUPABASE_ANON_KEY:'unit',SUPABASE_SERVICE_ROLE_KEY:'unit',RAZORPAY_KEY_ID:'rzp_test_unit',RAZORPAY_KEY_SECRET:'unit-only'},async(url,options)=>{
+  assert.equal(url,'https://api.razorpay.com/v1/orders?receipt='+reference+'&count=100');
+  assert.equal(options.method,'GET');assert.ok(options.headers.Authorization.startsWith('Basic '));
+  return Response.json({items:[]});
+ });
+ assert.deepEqual(await deps.provider.ordersByReceipt(reference),{items:[]});
+});

@@ -41,4 +41,4 @@ Single file defining every domain type in the system. All models are plain Kotli
 
 - All models are used directly as state in `StateFlow`s — keep them immutable (`val` fields, `data class`).
 - CBSE grade computation logic lives inside `SubjectScore` and `ReportCard`.
-- Serialization/deserialization to/from Firestore maps is handled in `FirebaseDataSource.kt`, not here.
+- Mapping to/from database rows and JSON payloads is handled in `SupabaseDataSource.kt`.

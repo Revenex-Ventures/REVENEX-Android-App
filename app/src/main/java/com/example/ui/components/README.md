@@ -24,7 +24,11 @@ Library of shared composable building blocks used throughout all screens:
 
 ### `DesignSystem.kt`
 
-Low-level design system primitives. Wraps Material3 components with app-specific defaults (padding, shape, color). Keeps individual screens clean by abstracting repeated styling into named components.
+Low-level design system primitives and brand components. Wraps Material3 components with app-specific defaults and theme tokens:
+- `AnimatedAttendanceHero` — primary attendance hero card with animated circular indicators
+- `AttendanceBead` — micro status bead indicator
+- `CountUpNumber` — numeric count-up animations for dashboard metrics
+- Premium card containers, pill buttons, role-accented badges, and brand crests
 
 ---
 
@@ -45,11 +49,19 @@ These are declared at the Activity level so they can be triggered from any scree
 
 ---
 
+### `ScheduleTimeline.kt`
+
+Chronological schedule and period timeline components:
+- Visual period timeline cards with subject badges, room allocations, and time slots
+- Active period highlight and status indicator for daily timetables
+
+---
+
 ### `ResponsiveScaffold.kt`
 
 Adaptive scaffold that automatically switches layout based on screen size:
 
-- **Phone (< 600dp width)**: Renders a `BottomNavigationBar` with 5 role-specific tabs.
+- **Phone (< 600dp width)**: Renders a `BottomNavigationBar` with role-specific tabs.
 - **Tablet (≥ 600dp width)**: Renders a `NavigationRail` on the left side instead.
 
 All screens are wrapped in this scaffold. It reads the current `UserRole` to display the correct set of navigation items from `NavConfig.getBottomNavItems()`.

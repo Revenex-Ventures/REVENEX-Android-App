@@ -1,4 +1,48 @@
-# Revenex — approved presentation delivery
+# Revenex — current Principal image delivery
+
+> The latest Teacher continuation is documented in [README_TEACHER_DELIVERY.md](README_TEACHER_DELIVERY.md). The Principal artifact/source record below identifies the preceding build, not the current Teacher APK.
+
+25 October 2026. This section supersedes older artifact and test claims below. App source: **`c8be45a92a6cb2dae4975fd9a57df12af14bf2f0`**, local ref `codex/principal-local-build`. The normal user checkout remains preserved; this checkpoint was **not uploaded**. The final local source has no new CI result.
+
+- APK: `D:\VS Code\Revenex Android\app\build\principal-image-delivery\apk\app-debug.apk`, package `com.example`.
+- [Light screenshots](app/build/principal-image-delivery/light-gallery.html), [Dark screenshots](app/build/principal-image-delivery/dark-gallery.html), [reference/current comparisons](app/build/principal-image-delivery/comparisons.html), [installed APK evidence](app/build/principal-image-delivery/runtime-gallery.html), [narrow/large-text/tablet](app/build/principal-image-delivery/adaptive-gallery.html).
+- [Exact APK hash, source and checks](app/build/principal-image-delivery/manifest.json), [screen checklist](docs/PRINCIPAL_IMAGE_CHECKLIST.md).
+
+## Changes in this build
+
+The previous Principal hierarchy is replaced in the real routed application. Home now follows the supplied image: compact brand/search/inbox/account header, greeting/session, three centered metrics, six School modules, attention rows and upcoming events. The nine reference destinations are rebuilt as directories/register rows, compact academic shortcuts, invoice review, scoped reports, leave approval list/detail and school/account settings. Shared semantic palettes, spacing, line icons, tabs, selectors and normal five-item navigation keep the screens consistent. Official RV/REVENEX artwork is preserved; actual authorized values and honest empty states replace illustrative content.
+
+Student search/class filters persist across details/back. Home returns to the dashboard rather than restoring a nested directory. Principal student-profile fee actions now say **View fees** and open review without switching into Supabase or launching family checkout. Parent/student payment behavior is unchanged. Reports export actual scoped CSV through Android's document picker, with safe CSV escaping and integer-paise formatting.
+
+Light/Dark/System remains persisted. Large-text narrow navigation wraps into two rows, while tablets use a navigation rail and a two-column student directory. Forms/dialogs retain scrolling, keyboard and system insets.
+
+## Actual verification
+
+Local command: `gradlew.bat --no-daemon --no-configuration-cache --max-workers=1 assembleDebug testDebugUnitTest lintDebug verifyNoFirebaseDependencies --console=plain`.
+
+- **Passed: 145 tests, 41 suites, zero failures/errors/skips.**
+- **Debug lint: zero errors, 76 warnings.** Firebase-dependency verification passed.
+- Native screenshot recording generated 11 Principal pages in both palettes, plus 320dp/150% text and 800dp tablet layouts. These use production Composables; they are distinct from installed-APK captures.
+- Installed latest APK on API 34 emulator using `adb install -r`; no app data was deleted. Runtime evidence includes directories, attendance, academics, fees, reports, approvals/detail, keyboard, search/filter/back, stored Dark after process restart and System appearance changes. Manifest contains installed-binary checksum confirmation.
+- An earlier screenshot-recording/full-suite invocation reported five Compose idling timeouts. A focused fresh-worker rerun and full normal rerun passed without weakening assertions. Logs are retained under `app/build/principal-spec/`.
+
+## Remaining acceptance and scope
+
+No physical device is connected. Hosted Supabase authentication, two-account notifications and captured Razorpay TEST payment/receipt/webhook handling were **not reverified in this UI batch**. No backend/RLS/database changes or migration replay occurred. Existing Realtime plus reconciliation behavior and in-app/device-push distinction are unchanged.
+
+This completes the Principal reference pages, not every leaf of every portal. Existing student/staff detail/forms, assignments, timetable, examinations/results, inbox/notices, AI/search and operational workflows are preserved; not all were visually rebuilt or freshly inspected here. Unsupported staff attendance, corrections, non-teaching directory, admission/concession approvals, account permission editing and session switching are not fabricated.
+
+To install on a connected phone without deleting data: `adb install -r "app\build\principal-image-delivery\apk\app-debug.apk"`. A signature conflict must be resolved with a matching signing key; do not uninstall to bypass it when data must be preserved. After installation, use Try demo → Principal for offline visual review. Cloud payment acceptance requires a signed-in synthetic parent/student and a real Razorpay TEST flow on the device.
+
+Implementation guidance for the real export action: [Android document access](https://developer.android.com/training/data-storage/shared/documents-files), [Compose Activity Result integration](https://developer.android.com/develop/ui/compose/libraries#activity). The two user images are the layout specification.
+
+---
+
+## Historical delivery record — superseded
+
+The following describes an earlier build. Its commit, CI, APK hashes and test count do not identify the current delivery.
+
+# Revenex — approved presentation delivery (historical)
 
 25 October 2026. This is the current consolidated delivery record; earlier README/build reports are historical.
 

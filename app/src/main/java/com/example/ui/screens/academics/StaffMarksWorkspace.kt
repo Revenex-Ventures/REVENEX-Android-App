@@ -30,6 +30,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit = {}) {
   val actor by repository.currentUser.collectAsState()
+  val mode by repository.dataMode.collectAsState()
+  val capabilities by repository.backendCapabilities.collectAsState()
+  val serviceReady=mode!=com.example.data.datasource.DataMode.SUPABASE_DEMO || capabilities.loaded&&capabilities.marks
   val loadedStudents by repository.students.collectAsState()
   val allocation=com.example.ui.screens.teachers.teacherAllocation(repository)
   val students=if(actor.role==com.example.data.model.UserRole.TEACHER)loadedStudents.filter{it.fullClass in allocation?.assignedClasses.orEmpty()}else loadedStudents
@@ -45,9 +48,11 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
   var confirmPublish by remember(actor.id, student?.id) { mutableStateOf(false) }
   var term by rememberSaveable(actor.id, student?.id) { mutableStateOf("") }
   var subject by rememberSaveable(actor.id, student?.id) { mutableStateOf("") }
-  var obtained by rememberSaveable(actor.id, student?.id) { mutableStateOf("") }
-  var maximum by rememberSaveable(actor.id, student?.id) { mutableStateOf("100") }
+  var obtained by rememberSaveable(actor.id, student?.id,term,subject) { mutableStateOf("") }
+  var maximum by rememberSaveable(actor.id, student?.id,term,subject) { mutableStateOf("100") }
   val report = reports.firstOrNull { it.studentId == student?.id && it.term == term.trim() }
+  val savedScore=report?.scores?.firstOrNull{it.subjectName==subject.trim()}
+  var expectedVersion by rememberSaveable(actor.id,student?.id,term,subject){mutableIntStateOf(savedScore?.revision?:0)}
   val score = obtained.toIntOrNull()
   val total = maximum.toIntOrNull()
   fun perform(message: String, operation: suspend () -> Unit) {
@@ -106,8 +111,11 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
           first = { field -> OutlinedTextField(obtained,{obtained=it},field.testTag("marks_obtained"),label={Text("Marks obtained")},isError=obtained.isNotBlank()&&(score==null||score<0||(total!=null&&score>total)),enabled=editable,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input)) },
           second = { field -> OutlinedTextField(maximum,{maximum=it},field.testTag("marks_maximum"),label={Text("Maximum marks")},isError=maximum.isNotBlank()&&(total==null||total !in 1..10000),enabled=editable,supportingText={Text("0 ≤ obtained ≤ maximum · Maximum 10,000")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input)) }
         )
-        Button(modifier=Modifier.fillMaxWidth().testTag("save_draft_mark"),shape=RoundedCornerShape(Radius.input),enabled=editable&&term.trim().length in 1..80&&subject.trim().length in 1..120&&score!=null&&total!=null&&total in 1..10000&&score in 0..total,
-          onClick={perform("Draft save confirmed."){repository.saveMarksConfirmed(student!!.id,term,subject,score!!,total!!)}}){Text(if(busy)"Saving…" else "Save draft")}
+        Button(modifier=Modifier.fillMaxWidth().testTag("save_draft_mark"),shape=RoundedCornerShape(Radius.input),enabled=serviceReady&&editable&&term.trim().length in 1..80&&subject.trim().length in 1..120&&score!=null&&total!=null&&total in 1..10000&&score in 0..total,
+          onClick={perform("Draft save confirmed."){expectedVersion=repository.saveMarksConfirmed(student!!.id,term,subject,score!!,total!!,expectedVersion)}}){Text(if(busy)"Saving…" else "Save draft")}
+        if(savedScore!=null && expectedVersion!=savedScore.revision)TextButton(enabled=!busy,onClick={obtained=savedScore.obtainedMarks.toString();maximum=savedScore.maxMarks.toString();expectedVersion=savedScore.revision}){Text("Load saved marks · Version ${savedScore.revision}")}
+        if(!serviceReady)Text("School marks service needs setup or a connection refresh. Your input is retained.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+        if(actor.role==com.example.data.model.UserRole.TEACHER && savedScore!=null && savedScore.reviewState=="DRAFT" && report.published==false)OutlinedButton(enabled=serviceReady&&!busy,onClick={perform("Submitted for school review."){expectedVersion=repository.submitMarksForReviewConfirmed(student!!.id,term.trim(),subject.trim(),savedScore.revision)}}){Text("Submit for review")}
       }}
       if(report!=null && actor.role!=com.example.data.model.UserRole.TEACHER)item {
         OutlinedButton(enabled=!busy&&report.scores.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input),onClick={

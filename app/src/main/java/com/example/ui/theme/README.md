@@ -1,35 +1,38 @@
 # ui/theme/
 
-Material Design 3 theme definition for ScholaOS.
+Material Design 3 theme definition for REVENEX School ERP.
 
 ## Files
 
 ### `Color.kt`
 
-Brand color palette constants. Defines the primary, secondary, tertiary, surface, and error colors used throughout the app. Do not hardcode colors in screen files — reference these tokens instead.
+Brand color palette constants. Defines primary (`ScholaTerracotta`), secondary, tertiary, surface, ink, and status colors with accessible contrast across light and dark palettes. Do not hardcode colors in screen files — reference these tokens instead.
 
 ---
 
 ### `Theme.kt`
 
-`ScholaTheme` — the root `MaterialTheme` composable wrapper. Applies color scheme, typography, and shapes. All screens are wrapped in this theme via the root composable in `MainActivity.kt`.
+`ScholaTheme` — the root `MaterialTheme` composable wrapper.
+- Applies color schemes, typography, and shape tokens.
+- Supports persisted appearance preferences: `ThemeMode.LIGHT`, `ThemeMode.DARK`, and `ThemeMode.SYSTEM`.
+- Sets system bar and navigation bar styling according to active contrast rules.
 
 ---
 
 ### `Tokens.kt`
 
-Design token objects for consistent spacing, elevation, motion, corner radius, and role-based accent colors:
+Design token objects for consistent layout, rhythm, elevation, and motion:
 
 | Token object | Contents |
 |---|---|
-| `Spacing` | Standard spacing scale (4dp, 8dp, 12dp, 16dp, 24dp, 32dp, etc.) |
-| `Radius` | Corner radius values (small, medium, large, full) |
-| `Elev` | Elevation levels for cards, dialogs, and navigation surfaces |
-| `Motion` | Animation duration and easing constants |
-| `RoleAccent` | Per-role accent color map (Principal → blue, Teacher → teal, Student → purple, Parent → orange) |
+| `Spacing` | Standard spacing scale (4dp, 8dp, 12dp, 16dp, 20dp, 24dp, 32dp, 48dp) and semantic padding aliases |
+| `Radius` | Corner radius values (`hero` 16dp, `tile` 14dp, `input` 14dp, `pill` 999dp) |
+| `Elev` | Hairline border and subtle elevation definitions |
+| `Motion` | Spring and tween animation specs |
+| `RoleAccent` | Per-role accent colors (Principal, Admin, Teacher, Student, Parent) |
 
 ---
 
 ### `Type.kt`
 
-Typography scale and `TypeTokens`. Defines the full `Typography` object passed to `MaterialTheme`. Use `TypeTokens` for semantic text style references (e.g. `TypeTokens.labelSmall`) rather than hardcoded `TextStyle`s.
+Typography scale and `TypeTokens`. Defines the full `Typography` object passed to `MaterialTheme`. Use `TypeTokens` for semantic text style references rather than hardcoded `TextStyle`s.

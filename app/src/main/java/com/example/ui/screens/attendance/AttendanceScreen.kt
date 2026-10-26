@@ -48,9 +48,13 @@ fun AttendanceScreen(
   val teacher = currentUser.role==UserRole.TEACHER
   val largeText=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
   val allocation = com.example.ui.screens.teachers.teacherAllocation(repository)
-  val permittedStudents=if(teacher)students.filter{it.fullClass in allocation?.assignedClasses.orEmpty()}else students
+  val activeStudents=students.filter{it.status!="ARCHIVED"}
+  val permittedStudents=if(teacher)activeStudents.filter{it.fullClass in allocation?.assignedClasses.orEmpty()}else activeStudents
   val canEdit = currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)
   val classAttendanceMap by repository.classAttendance.collectAsState()
+  val dataMode by repository.dataMode.collectAsState()
+  val capabilities by repository.backendCapabilities.collectAsState()
+  val backendReady=dataMode!=com.example.data.datasource.DataMode.SUPABASE_DEMO || (capabilities.loaded&&capabilities.attendance)
 
   val cohorts = permittedStudents.map { "Class ${it.classGrade}-${it.division}" }.distinct().sorted()
   var selectedCohort by remember(currentUser.id, initialClassGrade, initialDivision) {
@@ -68,7 +72,7 @@ fun AttendanceScreen(
   val classStudents = remember(permittedStudents, selectedCohort) {
     permittedStudents.filter { "Class ${it.classGrade}-${it.division}" == selectedCohort }
   }
-  val today = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
+  val today = com.example.data.model.schoolDate()
   var selectedDate by remember(currentUser.id) { mutableStateOf(today) }
   var showDatePicker by remember { mutableStateOf(false) }
   val editingToday = selectedDate == today
@@ -77,7 +81,7 @@ fun AttendanceScreen(
     DatePickerDialog(onDismissRequest = { showDatePicker = false },
       confirmButton = { TextButton(onClick = {
         picker.selectedDateMillis?.let { millis ->
-          selectedDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).apply {
+          selectedDate = SimpleDateFormat("dd MMM yyyy", Locale.US).apply {
             timeZone = java.util.TimeZone.getTimeZone("UTC")
           }.format(Date(millis))
           showSuccessNotification = false; saveError = null
@@ -91,13 +95,25 @@ fun AttendanceScreen(
     attendanceDateMatches(record.date, selectedDate) && record.sessionSlot == selectedSessionSlot &&
       classStudents.firstOrNull()?.let { it.classGrade == record.classGrade && it.division == record.division } == true
   }
-  val rollCallMap = remember(classStudents, selectedSessionSlot, savedRecord, selectedDate, canEdit) {
+  var edited by remember(currentUser.id,selectedCohort,selectedSessionSlot,selectedDate) {mutableStateOf(false)}
+  var baseRecord by remember(currentUser.id,selectedCohort,selectedSessionSlot,selectedDate) {mutableStateOf(savedRecord)}
+  var baseRoster by remember(currentUser.id,selectedCohort,selectedSessionSlot,selectedDate) {mutableStateOf(classStudents.map{it.id}.toSet())}
+  val rollCallMap = remember(currentUser.id, selectedCohort, selectedSessionSlot, selectedDate, canEdit) {
     mutableStateMapOf<String, AttendanceStatus>().apply {
       classStudents.filter { (editingToday && canEdit) || savedRecord != null }.forEach { st ->
         put(st.id, savedRecord?.studentList?.firstOrNull { it.studentId == st.id }?.status ?: AttendanceStatus.PRESENT)
       }
     }
   }
+  fun loadSavedRegister() {
+    rollCallMap.clear()
+    classStudents.filter{(editingToday&&canEdit)||savedRecord!=null}.forEach { st ->
+      rollCallMap[st.id]=savedRecord?.studentList?.firstOrNull{it.studentId==st.id}?.status?:AttendanceStatus.PRESENT
+    }
+    baseRecord=savedRecord;baseRoster=classStudents.map{it.id}.toSet();edited=false
+  }
+  LaunchedEffect(savedRecord,classStudents.map{it.id},edited) {if(!edited)loadSavedRegister()}
+  val registerChanged=edited&&(savedRecord!=baseRecord||baseRoster!=classStudents.map{it.id}.toSet())
 
   var showRegisterSearch by remember {mutableStateOf(false)}
   var studentQuery by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id, selectedCohort) { mutableStateOf("") }
@@ -111,7 +127,7 @@ fun AttendanceScreen(
   val excusedCount = rollCallMap.values.count { it == AttendanceStatus.EXCUSED }
   val dirty=savedRecord==null||classStudents.any{rollCallMap[it.id]!=savedRecord.studentList.firstOrNull{entry->entry.studentId==it.id}?.status}
   var extraStudent by remember{mutableStateOf<com.example.data.model.Student?>(null)}
-  extraStudent?.let {pupil->AlertDialog(onDismissRequest={extraStudent=null},title={Text(pupil.name)},text={Text("Use Excused for an authorized absence. L means Late, not Leave.")},confirmButton={TextButton(enabled=editingToday&&!saving&&canEdit,onClick={rollCallMap[pupil.id]=AttendanceStatus.EXCUSED;showSuccessNotification=false;extraStudent=null}){Text("Mark excused")}},dismissButton={TextButton(onClick={extraStudent=null}){Text("Cancel")}})}
+  extraStudent?.let {pupil->AlertDialog(onDismissRequest={extraStudent=null},title={Text(pupil.name)},text={Text("Use Excused for an authorized absence. L means Late, not Leave.")},confirmButton={TextButton(enabled=editingToday&&!saving&&canEdit,onClick={rollCallMap[pupil.id]=AttendanceStatus.EXCUSED;edited=true;showSuccessNotification=false;extraStudent=null}){Text("Mark excused")}},dismissButton={TextButton(onClick={extraStudent=null}){Text("Cancel")}})}
 
   val livePresenceRate = if (totalScholars > 0) {
     ((presentCount + lateCount + excusedCount).toDouble() / totalScholars.toDouble()) * 100.0
@@ -153,6 +169,11 @@ fun AttendanceScreen(
             }
           }
 
+          if(!backendReady)Text("School attendance update required. Your edits remain on this screen; no save was sent.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+          if(registerChanged) {
+            Text("The saved register or class roster changed. Your edits have been retained.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+            TextButton(enabled=!saving,onClick={loadSavedRegister();saveError=null;showSuccessNotification=false}){Text("Load saved register (discard edits)")}
+          }
           Text("${if(!dirty) "Saved" else "Not saved"} · $presentCount present · $absentCount absent · Whole class",
             style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.padding(bottom=Spacing.sm8))
           if (canEdit) AppButton(
@@ -165,7 +186,9 @@ fun AttendanceScreen(
                   studentId = st.id,
                   studentName = st.name,
                   rollNumber = st.rollNumber,
-                  status = rollCallMap[st.id] ?: AttendanceStatus.PRESENT
+                  status = rollCallMap[st.id] ?: AttendanceStatus.PRESENT,
+                  remark = baseRecord?.studentList?.firstOrNull{it.studentId==st.id}?.remark.orEmpty(),
+                  revision = baseRecord?.studentList?.firstOrNull{it.studentId==st.id}?.revision?:0
                 )
               }
               val cohort = classStudents.firstOrNull() ?: return@AppButton
@@ -177,10 +200,10 @@ fun AttendanceScreen(
                 division = div,
                 sessionSlot = selectedSessionSlot,
                 studentList = list,
-                onResult = { saved -> saving = false; showSuccessNotification = saved; saveError = if (saved) null else "Attendance was not confirmed. Check your connection and retry." }
+                onResult = { saved -> saving = false; if(saved)edited=false; showSuccessNotification = saved; saveError = if (saved) null else "Attendance was not confirmed. Check your connection and refresh the saved register before retrying." }
               )
             },
-            enabled = editingToday && !saving && classStudents.isNotEmpty() && currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER),
+            enabled = backendReady && !registerChanged && editingToday && !saving && classStudents.isNotEmpty() && currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER),
             containerColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier
               .fillMaxWidth()
@@ -266,7 +289,7 @@ fun AttendanceScreen(
       }
 
       if(!teacher||showRegisterSearch)item {
-        if(teacher)TextButton(enabled=editingToday&&!saving,onClick={classStudents.forEach{rollCallMap[it.id]=AttendanceStatus.PRESENT};showSuccessNotification=false},modifier=Modifier.testTag("mark_all_present")){Text("All present")}
+        if(teacher)TextButton(enabled=editingToday&&!saving,onClick={classStudents.forEach{rollCallMap[it.id]=AttendanceStatus.PRESENT};edited=true;showSuccessNotification=false},modifier=Modifier.testTag("mark_all_present")){Text("All present")}
         OutlinedTextField(studentQuery, { studentQuery = it }, Modifier.fillMaxWidth().testTag("register_search"),
           placeholder = { Text("Search students") }, singleLine = true,
           leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(Radius.sm),
@@ -302,7 +325,7 @@ fun AttendanceScreen(
                     AttendanceStatus.ABSENT -> if(teacher)TeacherColors.red else SemanticColors.onDanger
                     else -> SemanticColors.onWarning
                   }
-                  Surface(onClick = { rollCallMap[student.id] = status; showSuccessNotification = false },
+                  Surface(onClick = { rollCallMap[student.id] = status; edited=true; showSuccessNotification = false },
                     enabled = editingToday && !saving && canEdit,
                     color = if (selected) container else MaterialTheme.colorScheme.surfaceVariant,
                     shape = if(teacher)CircleShape else RoundedCornerShape(Radius.xs),

@@ -89,7 +89,8 @@ data class StudentAttendance(
   val studentName: String,
   val rollNumber: Int,
   val status: AttendanceStatus,
-  val remark: String = ""
+  val remark: String = "",
+  val revision: Int = 0
 )
 
 data class ClassAttendanceRecord(
@@ -225,7 +226,9 @@ data class SubjectScore(
   val grade: String,
   val remarks: String,
   val checkedPaperUrl: String = "",
-  val answerKeyUrl: String = ""
+  val answerKeyUrl: String = "",
+  val revision:Int=0,
+  val reviewState:String="DRAFT"
 ) {
   companion object {
     fun calculateCbseGrade(obtainedMarks: Int, maxMarks: Int = 100): String {
@@ -293,6 +296,23 @@ data class ReportCard(
   }
 }
 
+data class AssignmentSubmission(
+  val id:String,
+  val assignmentId:String,
+  val studentId:String,
+  val studentName:String,
+  val attachmentRef:String,
+  val attachmentName:String,
+  val note:String,
+  val feedback:String,
+  val reviewStatus:String,
+  val version:Int,
+  val submittedAt:String,
+  val reviewedAt:String,
+  val schoolId:String,
+  val sessionId:String
+)
+
 data class HomeworkAssignment(
   val id: String,
   val title: String,
@@ -310,7 +330,10 @@ data class HomeworkAssignment(
   val isCompletedByStudent: Boolean = false,
   val submissionStatus: String = "Pending",
   val schoolId: String = "schola_school_001",
-  val sessionId: String = "session_2026_2027"
+  val sessionId: String = "session_2026_2027",
+  val publicationState:String="PUBLISHED",
+  val revision:Int=0,
+  val closesAt:String=""
 )
 
 data class StudyMaterial(
@@ -384,7 +407,9 @@ data class SchoolNotice(
   val targetAudience: String,
   val isImportant: Boolean = false,
   val attachmentName: String = "",
-  val schoolId: String = "schola_school_001"
+  val schoolId: String = "schola_school_001",
+  val targetClass: String = "",
+  val revision: Int = 0
 )
 
 enum class NotificationCategory(val label: String) {

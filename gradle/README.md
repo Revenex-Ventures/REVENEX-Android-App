@@ -13,7 +13,7 @@ Key dependency groups:
 | Category | Key Libraries |
 |---|---|
 | **UI** | Jetpack Compose BOM 2024.09, Material3, Material Icons Extended, Navigation Compose 2.8.9 |
-| **Firebase** | Firebase BOM 34.17.0 → Firestore, Auth, Storage, Firebase AI (Gemini), App Check |
+| **Supabase** | Supabase BOM 3.1.4 (Auth, PostgREST, Storage, Realtime, Functions), Ktor OkHttp 3.2.3 |
 | **Networking** | Retrofit 2.12, OkHttp 4.10, Moshi 1.15.2 |
 | **Lifecycle** | ViewModel Compose, Runtime Compose, Lifecycle KTX 2.8.7 |
 | **Local Storage** | Room 2.7.0, DataStore Preferences 1.1.7 |
@@ -21,6 +21,8 @@ Key dependency groups:
 | **Testing** | Robolectric 4.16.1, Roborazzi 1.59.0, Coroutines Test 1.10.2 |
 | **Auth** | Credentials 1.5.0, Google Identity |
 | **Build plugins** | AGP 9.1.1, Kotlin 2.2.10, KSP 2.3.5, Secrets Gradle Plugin 2.0.1 |
+
+*(Note: Firebase SDKs and plugins have been completely removed).*
 
 To add a new dependency, declare its version here first, then reference the alias in `app/build.gradle.kts`.
 

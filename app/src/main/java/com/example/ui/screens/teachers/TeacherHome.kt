@@ -22,6 +22,10 @@ import java.util.Locale
 
 @Composable fun TeacherHome(repository:ErpDataRepository,navigate:(String)->Unit,create:()->Unit,apply:()->Unit) {
  val actor by repository.currentUser.collectAsState();val timetable by repository.timetable.collectAsState();val notices by repository.notices.collectAsState();val teacher=teacherAllocation(repository)
+ val submissions by repository.assignmentSubmissions.collectAsState();val mode by repository.dataMode.collectAsState()
+ val capabilities by repository.backendCapabilities.collectAsState()
+ val submissionBackendReady=mode==com.example.data.datasource.DataMode.SUPABASE_DEMO&&capabilities.loaded&&capabilities.submissions
+ val pendingReview=submissions.count{it.reviewStatus=="SUBMITTED"}
  val today=LocalDate.now(ZoneId.of("Asia/Kolkata"));val now=LocalTime.now(ZoneId.of("Asia/Kolkata"))
  val lessons=timetable.filter{it.teacherName.equals(actor.name,true)&&"${it.classGrade}-${it.division}" in teacher?.assignedClasses.orEmpty()&&it.dayOfWeek.equals(today.dayOfWeek.name,true)}.sortedBy{it.periodNumber}
  fun time(value:String)=listOf("h:mm a","hh:mm a","HH:mm").firstNotNullOfOrNull{pattern->runCatching{LocalTime.parse(value.uppercase(Locale.US),DateTimeFormatter.ofPattern(pattern,Locale.US))}.getOrNull()}
@@ -33,13 +37,13 @@ import java.util.Locale
  LazyColumn(Modifier.fillMaxSize().testTag("teacher_dashboard_list"),contentPadding=PaddingValues(TeacherLayout.margin),verticalArrangement=Arrangement.spacedBy(TeacherLayout.section)) {
   item{Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){Text("${if(now.hour<12)"Good morning" else if(now.hour<17)"Good afternoon" else "Good evening"}, $firstName",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Row(verticalAlignment=Alignment.CenterVertically){Text("Teacher",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);OutlinedButton(onClick={context=true}){Text(year);Icon(Icons.Outlined.ExpandMore,null)}}}}
   item{TeacherCard(color=TeacherColors.peach){Column(Modifier.padding(TeacherLayout.gap)){Text("Next class",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);TeacherRow(next?.subject?:"No upcoming class",next?.let{"${it.classGrade}-${it.division} · ${it.startTime}"}?:"No remaining scheduled lesson today",Icons.Outlined.Schedule,3){navigate(Screen.Timetable.route)}}}}
-  item {TeacherHomeMetrics(teacher?.assignedClasses?.size?:0,notices.size)}
+  item {TeacherHomeMetrics(teacher?.assignedClasses?.size?:0,notices.size,if(submissionBackendReady)submissions.size.toString()else "N/A")}
   item {
     TeacherTitle("My workspace")
     Spacer(Modifier.height(Spacing.sm8))
     TeacherModules(teacher?.assignedClasses?.firstOrNull().orEmpty(), navigate)
   }
-  item{TeacherTitle("Needs attention");TeacherCard{TeacherRow("Submission review unavailable","Individual received/missing records are not exposed by the current connection.",Icons.Outlined.Description,3){navigate(Screen.Homework.route)}}}
+  item{TeacherTitle("Needs attention");TeacherCard{TeacherRow(if(submissionBackendReady)"$pendingReview to review"else "School submission inbox",if(submissionBackendReady)"Confirmed submissions awaiting feedback"else if(mode==com.example.data.datasource.DataMode.SUPABASE_DEMO)"Submission setup or reconciliation required."else "Sign in to review shared school submissions.",Icons.Outlined.Description,3){navigate(Screen.Homework.route)}}}
   item{TeacherTitle("Today","View all"){navigate(Screen.Timetable.route)};TeacherCard{
    if(lessons.isEmpty())Text("No lessons scheduled today.",Modifier.padding(TeacherLayout.gap),style=MaterialTheme.typography.bodyMedium)
    lessons.forEachIndexed{i,slot->TeacherRow(slot.subject,"${slot.startTime} – ${slot.endTime} · Class ${slot.classGrade}-${slot.division}",Icons.Outlined.Schedule,2){navigate(Screen.TeacherClass.createRoute("${slot.classGrade}-${slot.division}"))};if(i<lessons.lastIndex)HorizontalDivider()}
@@ -82,9 +86,9 @@ import java.util.Locale
  }
 }
 
-@Composable private fun TeacherHomeMetrics(classCount:Int,noticeCount:Int) {
+@Composable private fun TeacherHomeMetrics(classCount:Int,noticeCount:Int,submissionCount:String) {
  val large=androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp<400&&androidx.compose.ui.platform.LocalDensity.current.fontScale>1.2f
- val metrics=listOf(Triple(classCount.toString(),"Classes",Icons.Outlined.Groups),Triple("N/A","Submissions",Icons.Outlined.Description),Triple(noticeCount.toString(),"Notices",Icons.Outlined.Campaign))
+ val metrics=listOf(Triple(classCount.toString(),"Classes",Icons.Outlined.Groups),Triple(submissionCount,"Submissions",Icons.Outlined.Description),Triple(noticeCount.toString(),"Notices",Icons.Outlined.Campaign))
  val card:@Composable (Int,Modifier)->Unit={index,modifier->
   val metric=metrics[index]
   TeacherCard(modifier) {

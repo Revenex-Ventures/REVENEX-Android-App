@@ -28,6 +28,10 @@ import kotlinx.coroutines.launch
  var subject by rememberSaveable(actor.id){mutableStateOf(teacher?.subjects?.firstOrNull().orEmpty())}
  var term by rememberSaveable(actor.id){mutableStateOf("")};var maximum by rememberSaveable(actor.id){mutableStateOf("100")}
  val entries=remember(actor.id,cohort,subject,term){mutableStateMapOf<String,String>()}
+ val versions=remember(actor.id,cohort,subject,term){mutableStateMapOf<String,Int>()}
+ val mode by repository.dataMode.collectAsState()
+ val capabilities by repository.backendCapabilities.collectAsState()
+ val serviceReady=mode!=com.example.data.datasource.DataMode.SUPABASE_DEMO || capabilities.loaded&&capabilities.marks
  val pupils=students.filter{it.fullClass==cohort&&cohort in teacher?.assignedClasses.orEmpty()}.sortedBy{it.rollNumber}
  var busy by remember{mutableStateOf(false)};var feedback by remember{mutableStateOf<String?>(null)};var failed by remember{mutableStateOf(false)}
  val scope=rememberCoroutineScope();val max=maximum.toIntOrNull()
@@ -47,8 +51,11 @@ import kotlinx.coroutines.launch
     val report=reports.firstOrNull{it.studentId==pupil.id&&it.term==term.trim()};val saved=report?.scores?.firstOrNull{it.subjectName==subject};val value=entries[pupil.id]?:saved?.obtainedMarks?.toString().orEmpty()
     Row(Modifier.fillMaxWidth().heightIn(min=64.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
      Text(pupil.rollNumber.toString(),style=MaterialTheme.typography.bodySmall);Avatar(pupil.name,size=32.dp,background=TeacherColors.blue,textColor=TeacherColors.blueInk)
-     Column(Modifier.weight(1f)){Text(pupil.name,style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.Medium);if(report?.published==true)Text("Published · locked",style=MaterialTheme.typography.labelSmall)}
-     OutlinedTextField(value,{entries[pupil.id]=it;feedback=null},Modifier.width(76.dp).testTag("teacher_mark_${pupil.id}"),singleLine=true,enabled=!busy&&report?.published!=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),isError=value.isNotBlank()&&(value.toIntOrNull()==null||max==null||value.toIntOrNull() !in 0..max),textStyle=MaterialTheme.typography.bodyMedium)
+     Column(Modifier.weight(1f)){Text(pupil.name,style=MaterialTheme.typography.bodyMedium,fontWeight=FontWeight.Medium);if(report?.published==true)Text("Published · locked",style=MaterialTheme.typography.labelSmall)
+      else if(saved?.reviewState=="SUBMITTED")Text("Submitted for review",style=MaterialTheme.typography.labelSmall)
+      if(entries.containsKey(pupil.id) && versions[pupil.id]!=(saved?.revision?:0))TextButton(enabled=!busy,onClick={entries.remove(pupil.id);versions.remove(pupil.id)}){Text("Use saved: ${saved?.obtainedMarks?:"not recorded"}")}
+     }
+     OutlinedTextField(value,{if(!entries.containsKey(pupil.id))versions[pupil.id]=saved?.revision?:0;entries[pupil.id]=it;feedback=null},Modifier.width(76.dp).testTag("teacher_mark_${pupil.id}"),singleLine=true,enabled=!busy&&report?.published!=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),isError=value.isNotBlank()&&(value.toIntOrNull()==null||max==null||value.toIntOrNull() !in 0..max),textStyle=MaterialTheme.typography.bodyMedium)
     };HorizontalDivider()
    }
    item{Text("Private draft · Only changed rows are saved. Published terms stay locked.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
@@ -58,13 +65,22 @@ import kotlinx.coroutines.launch
    feedback?.let{Text(it,color=if(failed)MaterialTheme.colorScheme.error else TeacherColors.green,style=MaterialTheme.typography.bodySmall)}
    Button(onClick={
     busy=true;feedback=null;failed=false
-    val changes=entries.toMap();val studentIds=pupils.map{it.id}.toSet();val saveTerm=term;val saveSubject=subject;val saveMax=max!!
+    val changes=entries.toMap();val expected=versions.toMap();val studentIds=pupils.map{it.id}.toSet();val saveTerm=term;val saveSubject=subject;val saveMax=max!!
     scope.launch{var confirmed=0
-     try{changes.forEach{(id,value)->check(repository.currentUser.value.id==actor.id);check(id in studentIds);repository.saveMarksConfirmed(id,saveTerm,saveSubject,value.toInt(),saveMax);confirmed++};entries.clear();feedback="$confirmed draft row(s) confirmed."}
+     try{changes.forEach{(id,value)->check(repository.currentUser.value.id==actor.id);check(id in studentIds);repository.saveMarksConfirmed(id,saveTerm,saveSubject,value.toInt(),saveMax,expected[id]?:0);confirmed++;entries.remove(id);versions.remove(id)};feedback="$confirmed draft row(s) confirmed."}
      catch(e:Exception){if(e is CancellationException)throw e;failed=true;feedback="$confirmed row(s) confirmed. Remaining saves were not confirmed; reload records before retrying."}
      finally{busy=false}
     }
-   },enabled=!busy&&valid,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("save_teacher_drafts")){Text(if(busy)"Saving…"else "Save draft")}
+   },enabled=!busy&&valid&&serviceReady,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("save_teacher_drafts")){Text(if(busy)"Saving…"else "Save draft")}
+   if(!serviceReady)Text("School marks service needs setup or a connection refresh. Entered values remain here.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+   if(mode==com.example.data.datasource.DataMode.SUPABASE_DEMO){
+    val pending=pupils.mapNotNull{pupil->reports.firstOrNull{it.studentId==pupil.id&&it.term==term.trim()&&!it.published}?.scores?.firstOrNull{it.subjectName==subject&&it.reviewState=="DRAFT"}?.let{pupil.id to it.revision}}
+    OutlinedButton(enabled=serviceReady&&!busy&&entries.isEmpty()&&pending.isNotEmpty(),modifier=Modifier.fillMaxWidth(),onClick={
+     busy=true;feedback=null;val submitTerm=term.trim();val submitSubject=subject
+     scope.launch{var confirmed=0;try{pending.forEach{(id,version)->repository.submitMarksForReviewConfirmed(id,submitTerm,submitSubject,version);confirmed++};failed=false;feedback="$confirmed subject record(s) submitted for school review."}
+      catch(e:CancellationException){throw e}catch(_:Exception){failed=true;feedback="$confirmed review request(s) confirmed. Remaining requests were not confirmed; reload before retrying."}finally{busy=false}}
+    }){Text("Submit for review")}
+   }
   }}
  }
 }

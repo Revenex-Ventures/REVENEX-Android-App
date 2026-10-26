@@ -48,12 +48,15 @@ import kotlinx.coroutines.launch
    else Text(if(work.attachmentName.isBlank())"No attachment provided."else "${work.attachmentName} · Download link unavailable",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
    HorizontalDivider()
    Text("Your submission",style=MaterialTheme.typography.titleSmall)
+   val mode by repository.dataMode.collectAsState()
+   if(mode==com.example.data.datasource.DataMode.SUPABASE_DEMO)StudentCloudSubmission(repository,id) else {
    Text("This school connection supports completion status. File and note submission is not available yet; no file will be uploaded.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
    if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
    if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
    androidx.compose.animation.AnimatedVisibility(saved,enter=androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(if(rememberReducedMotion())0 else StudentLayout.selectionMillis)),exit=androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(0))){Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.CheckCircle,null,tint=StudentColors.colors(StudentTone.MINT).second);Text("Completion status confirmed.",color=StudentColors.colors(StudentTone.MINT).second)}}
    StudentAction(if(busy)"Saving…"else if(work.isCompletedByStudent)"Mark as not submitted"else "Mark submitted",!busy){
     if(!busy){busy=true;error="";saved=false;scope.launch{try{repository.submitAssignmentConfirmed(id);saved=true;studentConfirmedFeedback(context,view,preference)}catch(cancelled:CancellationException){throw cancelled}catch(_:Exception){error="Status could not be saved. Refresh to confirm the current status before retrying."}finally{busy=false}}}
+   }
    }
   }}}
  }

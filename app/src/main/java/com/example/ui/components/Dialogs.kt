@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -638,7 +639,8 @@ fun AddTeacherDialog(
 fun CreateNoticeDialog(
   onDismiss: () -> Unit,
   onPublish: (SchoolNotice) -> Unit,
-  onSubmitNotice: (suspend (SchoolNotice) -> Unit)? = null
+  onSubmitNotice: (suspend (SchoolNotice) -> Unit)? = null,
+  repository: ErpDataRepository? = null
 ) {
   val publishScope = rememberCoroutineScope()
   val noticeId = remember { "not_${java.util.UUID.randomUUID()}" }
@@ -648,6 +650,11 @@ fun CreateNoticeDialog(
   var content by remember { mutableStateOf("") }
   var category by remember { mutableStateOf(NoticeCategory.CIRCULAR) }
   var targetAudience by remember { mutableStateOf("All School") }
+  var targetClass by remember {mutableStateOf("")}
+  val classes=repository?.students?.collectAsState()?.value.orEmpty().map{it.fullClass}.distinct().sorted()
+  val mode=repository?.dataMode?.collectAsState()?.value
+  val capabilities=repository?.backendCapabilities?.collectAsState()?.value
+  val backendReady=mode!=com.example.data.datasource.DataMode.SUPABASE_DEMO||(capabilities?.loaded==true&&capabilities.targeted_notices)
   var isImportant by remember { mutableStateOf(false) }
 
   Dialog(
@@ -657,6 +664,7 @@ fun CreateNoticeDialog(
     CompactFormLayout(
       header = {FormHeading("Publish a notice", "Write a clear school announcement and choose its category.", enabled = !saving, onDismiss = onDismiss)},
       footer = {
+        if(!backendReady)Text("School notice setup or reconciliation required. Your draft stays here.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
         saveError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
           onClick = {
@@ -670,6 +678,7 @@ fun CreateNoticeDialog(
                 authorName = "Principal / Admin Office",
                 authorRole = "Administration",
                 targetAudience = targetAudience,
+                targetClass = if(targetAudience=="Class")targetClass else "",
                 isImportant = isImportant
               )
               saving = true
@@ -688,7 +697,7 @@ fun CreateNoticeDialog(
           modifier = Modifier
             .fillMaxWidth()
             .testTag("submit_publish_notice_button"),
-          enabled = title.isNotBlank() && content.isNotBlank() && !saving
+          enabled = backendReady && title.isNotBlank() && content.isNotBlank() && !saving && (targetAudience!="Class"||targetClass in classes)
         ) {
           Icon(Icons.Default.Campaign, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
@@ -703,6 +712,7 @@ fun CreateNoticeDialog(
           value = title,
           onValueChange = { title = it },
           label = { Text("Notice Title *") },
+          enabled = !saving,
           modifier = Modifier
             .fillMaxWidth()
             .testTag("input_notice_title"),
@@ -715,6 +725,7 @@ fun CreateNoticeDialog(
           value = content,
           onValueChange = { content = it },
           label = { Text("Notice message *") },
+          enabled = !saving,
           modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 120.dp)
@@ -738,12 +749,28 @@ fun CreateNoticeDialog(
               modifier = Modifier.heightIn(min = 48.dp),
               selected = category == cat,
               onClick = { category = cat },
+              enabled = !saving,
               label = { Text(cat.label, fontSize = 12.sp) }
             )
           }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
+
+        Text("Recipients",style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+          (listOf("All School","Teachers","Students","Guardians")+if(repository!=null)listOf("Class")else emptyList()).forEach {audience->
+            FilterChip(selected=targetAudience==audience,onClick={if(!saving)targetAudience=audience},label={Text(audience)},enabled=!saving)
+          }
+        }
+        if(targetAudience=="Class") {
+          Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+            classes.forEach{cohort->FilterChip(selected=targetClass==cohort,onClick={targetClass=cohort},label={Text("Class $cohort")},enabled=!saving)}
+          }
+          if(classes.isEmpty())Text("No authorized classes available.",style=MaterialTheme.typography.bodySmall)
+        }
+        Text("School leadership can review published notices. Class recipients come from school allocations and linked children.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(Spacing.sm8))
 
         Row(
           modifier = Modifier.fillMaxWidth(),
@@ -756,7 +783,8 @@ fun CreateNoticeDialog(
           )
           Switch(
             checked = isImportant,
-            onCheckedChange = { isImportant = it }
+            onCheckedChange = { isImportant = it },
+            enabled = !saving
           )
         }
 
@@ -773,20 +801,25 @@ fun CreateAssignmentDialog(
   repository: ErpDataRepository,
   onDismiss: () -> Unit,
   onCreate: (HomeworkAssignment) -> Unit,
-  onSubmitAssignment: (suspend (HomeworkAssignment) -> Unit)? = null
+  onSubmitAssignment: (suspend (HomeworkAssignment) -> Unit)? = null,
+  initialAssignment:HomeworkAssignment?=null
 ) {
-  val assignmentId = remember { "hw_${java.util.UUID.randomUUID()}" }
+  val assignmentId = remember { initialAssignment?.id?:"hw_${java.util.UUID.randomUUID()}" }
   val assignmentActor by repository.currentUser.collectAsState()
+  val assignmentMode by repository.dataMode.collectAsState()
+  val assignmentCapabilities by repository.backendCapabilities.collectAsState()
+  val serviceReady=assignmentMode!=com.example.data.datasource.DataMode.SUPABASE_DEMO || assignmentCapabilities.loaded&&assignmentCapabilities.assignments
   val assignmentTeacher = com.example.ui.screens.teachers.teacherAllocation(repository)
-  var title by remember { mutableStateOf("") }
-  var subject by remember { mutableStateOf("Mathematics") }
-  var classGrade by remember { mutableStateOf("10") }
-  var division by remember { mutableStateOf("A") }
-  var dueDate by remember { mutableStateOf(SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date())) }
-  var instructions by remember { mutableStateOf("") }
-  var maxPoints by remember { mutableStateOf("20") }
+  var title by remember { mutableStateOf(initialAssignment?.title.orEmpty()) }
+  var subject by remember { mutableStateOf(initialAssignment?.subject?:"Mathematics") }
+  var classGrade by remember { mutableStateOf(initialAssignment?.classGrade?:"10") }
+  var division by remember { mutableStateOf(initialAssignment?.division?:"A") }
+  var dueDate by remember { mutableStateOf(initialAssignment?.dueDate?:SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date())) }
+  var instructions by remember { mutableStateOf(initialAssignment?.instructions.orEmpty()) }
+  var maxPoints by remember { mutableStateOf((initialAssignment?.maxPoints?:20).toString()) }
+  var publishAssignment by remember { mutableStateOf(initialAssignment?.publicationState!="DRAFT") }
   LaunchedEffect(assignmentTeacher?.id) {
-    if(assignmentActor.role==UserRole.TEACHER) {
+    if(assignmentActor.role==UserRole.TEACHER && initialAssignment==null) {
       assignmentTeacher?.assignedClasses?.firstOrNull()?.let{classGrade=it.substringBeforeLast('-');division=it.substringAfterLast('-')}
       subject=assignmentTeacher?.subjects?.firstOrNull().orEmpty()
     }
@@ -797,11 +830,13 @@ fun CreateAssignmentDialog(
     SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date())
   }
 
-  var selectedFileName by remember { mutableStateOf("") }
-  var selectedFileMime by remember { mutableStateOf("") }
+  var selectedFileName by remember { mutableStateOf(initialAssignment?.attachmentName.orEmpty()) }
+  var selectedFileMime by remember { mutableStateOf(initialAssignment?.attachmentType.orEmpty()) }
+  var retainedReference by remember { mutableStateOf(initialAssignment?.attachmentUrl.orEmpty()) }
   var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
   var attachmentError by remember { mutableStateOf<String?>(null) }
   var isUploading by remember { mutableStateOf(false) }
+  var uploadedAttachment by remember { mutableStateOf<DocumentFiles.UploadResult?>(null) }
 
   val filePicker = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.GetContent()
@@ -810,11 +845,9 @@ fun CreateAssignmentDialog(
     if (uri != null) {
       val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
       if (!DocumentFiles.isAllowedDocumentType(mime)) {
-        attachmentError = "Only PDF, DOC or DOCX files are allowed as attachments."
-        selectedFileName = ""
-        selectedFileMime = ""
-        selectedFileUri = null
+        attachmentError = "Choose a PDF, PNG, JPEG or DOCX file."
       } else {
+        uploadedAttachment?.url?.let(repository::discardUnusedAttachment);uploadedAttachment=null;retainedReference=""
         val nameFromUri = uri.lastPathSegment?.substringAfterLast("/") ?: "attachment"
         val fallbackName = when (mime.lowercase()) {
           "application/pdf" -> "document.pdf"
@@ -825,21 +858,17 @@ fun CreateAssignmentDialog(
         selectedFileMime = mime
         selectedFileUri = uri
       }
-    } else {
-      selectedFileName = ""
-      selectedFileMime = ""
-      selectedFileUri = null
     }
   }
 
   val createScope = rememberCoroutineScope()
 
   Dialog(
-    onDismissRequest = { if (!isUploading) onDismiss() },
+    onDismissRequest = { if (!isUploading) {uploadedAttachment?.url?.let(repository::discardUnusedAttachment);onDismiss()} },
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     CompactFormLayout(
-      header = {FormHeading("New assignment", "Publish to your class with a deadline and optional document.", enabled = !isUploading, onDismiss = onDismiss)},
+      header = {FormHeading(if(initialAssignment==null)"New assignment"else "Edit assignment", "Save a private draft or publish to your class.", enabled = !isUploading, onDismiss = {uploadedAttachment?.url?.let(repository::discardUnusedAttachment);onDismiss()})},
       footer = {
         attachmentError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
@@ -847,7 +876,7 @@ fun CreateAssignmentDialog(
             attachmentError = null
             val validClass = classGrade.trim().isNotEmpty()
             val validDivision = division.trim().isNotEmpty()
-            
+
             val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
             val parsedDueDate = runCatching { sdf.parse(dueDate.trim()) }.getOrNull()
             val todayMidnight = runCatching { sdf.parse(todayDate) }.getOrNull()
@@ -861,17 +890,18 @@ fun CreateAssignmentDialog(
               createScope.launch {
                 var attachedName = selectedFileName
                 var attachedMime = selectedFileMime
-                var attachedUrl = ""
+                var attachedUrl = retainedReference
                 try {
                   val pickUri = selectedFileUri
                   if (pickUri != null && selectedFileName.isNotEmpty()) {
-                    val result = repository.uploadAttachment(
+                    val result = uploadedAttachment ?: repository.uploadAttachment(
                       context = context,
                       folder = "assignments",
                       sourceUri = pickUri,
                       displayName = selectedFileName,
                       mimeType = selectedFileMime
                     )
+                    uploadedAttachment=result
                     attachedName = result.name
                     attachedMime = result.mimeType
                     attachedUrl = result.url
@@ -891,7 +921,9 @@ fun CreateAssignmentDialog(
                     attachmentUrl = attachedUrl,
                     maxPoints = maxPoints.toIntOrNull() ?: 20,
                     isCompletedByStudent = false,
-                    submissionStatus = "Pending"
+                    submissionStatus = "Pending",
+                    publicationState=if(publishAssignment)"PUBLISHED"else "DRAFT",
+                    revision=initialAssignment?.revision?:0
                   )
                   if (onSubmitAssignment != null) onSubmitAssignment(assignment) else onCreate(assignment)
                   onDismiss()
@@ -906,15 +938,17 @@ fun CreateAssignmentDialog(
           },
           modifier = Modifier.fillMaxWidth(),
           enabled = title.isNotBlank() && instructions.isNotBlank() &&
-            classGrade.isNotBlank() && division.isNotBlank() && !isUploading &&
+            classGrade.isNotBlank() && division.isNotBlank() && !isUploading && serviceReady &&
             (assignmentActor.role!=UserRole.TEACHER || ("$classGrade-$division" in assignmentTeacher?.assignedClasses.orEmpty() && subject in assignmentTeacher?.subjects.orEmpty()))
         ) {
           Icon(Icons.Default.Assignment, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text(if (isUploading) "Publishing…" else if(assignmentActor.role==UserRole.TEACHER)"Publish"else "Assign to class $classGrade-$division")
+          Text(if (isUploading) "Saving…" else if(!publishAssignment)"Save draft"else if(assignmentActor.role==UserRole.TEACHER)"Publish"else "Assign to class $classGrade-$division")
         }
       },
       content = {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Publish now",Modifier.weight(1f));Switch(publishAssignment,{publishAssignment=it},enabled=!isUploading)}
+        if(!serviceReady)Text("The school assignment service needs setup or a connection refresh. Your draft stays in this form.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
         if(assignmentActor.role==UserRole.TEACHER) {
           OutlinedTextField(title,{title=it},Modifier.fillMaxWidth(),label={Text("Title *")},singleLine=true,enabled=!isUploading)
           Spacer(Modifier.height(Spacing.md12))
@@ -1019,9 +1053,9 @@ fun CreateAssignmentDialog(
           readOnly = true,
           isError = attachmentError != null,
           supportingText = {
-    
+
           },
-          label = { Text("Attach Reference File (PDF / DOC / DOCX)") },
+          label = { Text("Attach reference · PDF, image or DOCX") },
           trailingIcon = {
             if (isUploading) {
               CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
@@ -1034,6 +1068,7 @@ fun CreateAssignmentDialog(
           leadingIcon = {
             if (selectedFileName.isNotEmpty() && !isUploading) {
               IconButton(onClick = {
+                uploadedAttachment?.url?.let(repository::discardUnusedAttachment);uploadedAttachment=null;retainedReference=""
                 selectedFileName = ""
                 selectedFileMime = ""
                 selectedFileUri = null
@@ -1053,55 +1088,63 @@ fun CreateAssignmentDialog(
   }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ApplyLeaveDialog(
   applicantName: String,
   applicantRole: UserRole,
   onDismiss: () -> Unit,
-  onApply: (leaveType: String, start: String, end: String, days: Int, reason: String) -> Unit
+  onApply: (leaveType: String, start: String, end: String, days: Int, reason: String) -> Unit,
+  onSubmitLeave: (suspend (id:String,type:String,start:String,end:String,reason:String)->Unit)?=null,
+  repository:ErpDataRepository?=null
 ) {
-  var leaveType by remember { mutableStateOf("Medical Leave") }
-  var startDate by remember { mutableStateOf("01 Sep 2026") }
-  var endDate by remember { mutableStateOf("02 Sep 2026") }
-  var daysCount by remember { mutableStateOf("2") }
-  var reason by remember { mutableStateOf("") }
+  val requestId=rememberSaveable{"lv_${UUID.randomUUID()}"}
+  var leaveType by rememberSaveable { mutableStateOf("Medical Leave") }
+  var startDate by rememberSaveable { mutableStateOf(schoolDate()) }
+  var endDate by rememberSaveable { mutableStateOf(schoolDate()) }
+  var reason by rememberSaveable { mutableStateOf("") }
   var dateError by remember { mutableStateOf<String?>(null) }
+  var saving by remember{mutableStateOf(false)}
+  val submitScope=rememberCoroutineScope()
+  val mode=repository?.dataMode?.collectAsState()?.value
+  val capabilities=repository?.backendCapabilities?.collectAsState()?.value
+  val backendReady=mode!=com.example.data.datasource.DataMode.SUPABASE_DEMO||(capabilities?.loaded==true&&capabilities.leaves)
 
   Dialog(
-    onDismissRequest = onDismiss,
+    onDismissRequest = {if(!saving)onDismiss()},
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
     CompactFormLayout(
-      header = {FormHeading("Request leave", "Choose the dates and explain your request.", enabled = true, onDismiss = onDismiss)},
+      header = {FormHeading("Request leave", "Choose the dates and explain your request.", enabled = !saving, onDismiss = onDismiss)},
       footer = {
+        if(!backendReady)Text("School leave setup or reconciliation required. Your draft stays here.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
         dateError?.let { Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
         Button(
           onClick = {
             dateError = null
-            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.US)
-            val start = runCatching { sdf.parse(startDate.trim()) }.getOrNull()
-            val end = runCatching { sdf.parse(endDate.trim()) }.getOrNull()
-            if (start != null && end != null && end.before(start)) {
-              dateError = "End date must be on or after start date."
+            val start=parseSchoolDate(startDate.trim());val end=parseSchoolDate(endDate.trim())
+            if(start==null||end==null||end.isBefore(start)||java.time.temporal.ChronoUnit.DAYS.between(start,end)>365) {
+              dateError = "Use valid dates such as 26 Oct 2026. End date must follow start within 366 days."
               return@Button
             }
             if (reason.isNotBlank()) {
-              onApply(
-                leaveType,
-                startDate,
-                endDate,
-                daysCount.toIntOrNull() ?: 1,
-                reason.trim()
-              )
-              onDismiss()
+              saving=true
+              submitScope.launch {
+                try {
+                  if(onSubmitLeave!=null)onSubmitLeave(requestId,leaveType,startDate.trim(),endDate.trim(),reason.trim())
+                  else onApply(leaveType,startDate,endDate,java.time.temporal.ChronoUnit.DAYS.between(start,end).toInt()+1,reason.trim())
+                  onDismiss()
+                }catch(e:Exception){if(e is kotlinx.coroutines.CancellationException)throw e;dateError="Request was not confirmed. Your input is kept here; check your requests before retrying."}
+                finally{saving=false}
+              }
             }
           },
           modifier = Modifier.fillMaxWidth(),
-          enabled = reason.isNotBlank()
+          enabled = backendReady&&!saving&&reason.isNotBlank()&&reason.length<=4000
         ) {
           Icon(Icons.Default.Send, contentDescription = null)
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Submit request")
+          Text(if(saving)"Submitting…"else "Submit request")
         }
       },
       content = {
@@ -1113,15 +1156,17 @@ fun ApplyLeaveDialog(
           style = MaterialTheme.typography.labelMedium,
           fontWeight = FontWeight.Bold
         )
-        Row(
+        FlowRow(
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+          horizontalArrangement = Arrangement.spacedBy(Spacing.xs4),
+          verticalArrangement = Arrangement.spacedBy(Spacing.xs4)
         ) {
           listOf("Medical", "Casual", "Family Event", "Sports").forEach { type ->
             FilterChip(
               selected = leaveType.contains(type),
               onClick = { leaveType = "$type Leave" },
-              label = { Text(type, fontSize = 12.sp) }
+              enabled = !saving,
+              label = { Text(type, style = MaterialTheme.typography.labelMedium) }
             )
           }
         }
@@ -1134,6 +1179,7 @@ fun ApplyLeaveDialog(
               value = startDate,
               onValueChange = { startDate = it },
               label = { Text("From Date") },
+              enabled = !saving,
               modifier = fieldModifier,
               singleLine = true
             )
@@ -1143,6 +1189,7 @@ fun ApplyLeaveDialog(
               value = endDate,
               onValueChange = { endDate = it },
               label = { Text("To Date") },
+              enabled = !saving,
               modifier = fieldModifier,
               singleLine = true
             )
@@ -1157,6 +1204,7 @@ fun ApplyLeaveDialog(
           value = reason,
           onValueChange = { reason = it },
           label = { Text("Reason *") },
+          enabled = !saving,
           modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 100.dp),

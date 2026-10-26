@@ -138,7 +138,7 @@ fun HomeworkScreen(repository: ErpDataRepository, onShowCreateAssignment: () -> 
                 Text("${hw.subject} · Class ${hw.classGrade}-${hw.division}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Due ${hw.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
               }
-              Box(Modifier.widthIn(max=120.dp)){ScholaPillBadge(status=hw.submissionStatus)}
+              Box(Modifier.widthIn(max=120.dp)){ScholaPillBadge(status=if(hw.publicationState=="DRAFT")"Draft"else hw.submissionStatus)}
               Icon(if(expanded)Icons.Default.ExpandLess else Icons.Default.ChevronRight,if(expanded)"Hide details" else "Show details",Modifier.size(18.dp))
             }
             androidx.compose.animation.AnimatedVisibility(expanded) {

@@ -15,6 +15,16 @@ The Principal's command center.
 
 ---
 
+### `AdminDashboardScreen.kt`
+
+The School Administrator's operational dashboard.
+
+- Operational control metrics: enrollment counters, active sessions, staff availability, and sync status.
+- Quick action links for new student enrollment, timetable scheduling, fee management, and inventory/facilities.
+- System integrity alerts and recent administrative action logs.
+
+---
+
 ### `TeacherDashboardScreen.kt`
 
 The Teacher's home screen.

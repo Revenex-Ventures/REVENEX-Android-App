@@ -1,8 +1,10 @@
-> Staff workflow update (24 October): migration `202610240010_staff_workflows.sql` is applied in the hosted demo, following existing migrations 1–9. **Do not blindly replay deployed SQL**: manual SQL Editor application does not populate CLI history. The added RPCs enforce existing marks RLS and verified administrator leave decisions. `verify_staff_workflows_rollback.sql` passed locally and against the hosted synthetic links; temporary rows were rolled back. See `../docs/ADMIN_UPGRADE_DELIVERY.md` for evidence and limits.
+> **26 October 2026 deployment checkpoint:** The existing Revenex demo project has migrations 11–19 applied and rollback acceptance passed. Do not rerun its migrations or seed data. See [current backend evidence](../README_BACKEND_PROGRESS.md). New-project steps below apply only to a new empty project. The updated payment recovery handler is deployed; an actual captured Razorpay TEST transaction remains unverified.
 
-> Current hosted status (23 October 2026): missing migrations 6–9 were applied successfully through SQL Editor, including result-publication notifications. Do not reapply them or reseed the existing database. Checks confirmed four demo profiles, the confirmed teacher Auth account and RLS on every public table. `razorpay-payments` is deployed; the three exact payment-secret names are saved by the operator. Unsigned user/webhook probes reject with 401/400. Credential pairing, captured checkout and webhook delivery remain unverified; AI remains undeployed. See [current changes](../docs/changes/README.md) and [delivery evidence](../docs/IVORY_DELIVERY_VERIFICATION.md). Android reconciles inbox/task rows every 30 seconds; device push remains unconfigured.
+> Backend & staff workflow update (26 October 2026): migrations `202610200001` through `202610260018_targeted_notices.sql` define the complete schema, RLS, and RPC boundaries. Migration 11 (`202610260011_result_publication_boundary.sql`) is applied in the hosted demo following migrations 1–10. **Do not blindly replay deployed SQL**: manual SQL Editor application does not populate CLI history. Rollback acceptance scripts (`verify_staff_workflows_rollback.sql`, `verify_assignment_workflows_rollback.sql`, `verify_versioned_marks_rollback.sql`) validate schema and permission boundaries with rollback of all synthetic test rows. See `../docs/BACKEND_COMPLETION_CHECKPOINT.md` and `../docs/ADMIN_UPGRADE_DELIVERY.md`.
 
-> Current action-workflow update: enrollment is now supported for principal/admin through migration 7, with optional initial invoice and server-generated school notifications. Optional Razorpay TEST capture/failure notifications require migrations 6–7 and the deployed Edge Function; see [RAZORPAY_SETUP.md](RAZORPAY_SETUP.md). Older read-only fee/enrollment limitations below describe the earlier migration stage. For the reported sign-in failure, run `diagnose_setup.sql` in SQL Editor and use the exact Auth account/password, not a local demo persona. No private values should be shared.
+> Current hosted status (26 October 2026): migrations 1–11 are active on the hosted Supabase project. Zero public tables lack RLS. The 4 demo profiles exist, teacher Auth is active, and `razorpay-payments` edge function is deployed. Unsigned user/webhook probes reject with 401/400. Preflight checks can be run anytime with `python scripts/check_integration_health.py`. Credential pairing and captured checkout remain in TEST mode; AI remains undeployed. Android reconciles inbox/task rows every 30 seconds; device push remains unconfigured.
+
+> Current action-workflow update: enrollment is supported for principal/admin through migration 7, with optional initial invoice and server-generated school notifications. Migrations 11–18 add result publication boundaries, versioned student submissions, private assignment drafts, subject-scoped marks, optimistic version locking, canonical attendance roll-call sessions, and audience-targeted notices. For sign-in diagnostics, run `diagnose_setup.sql` in SQL Editor and use the exact Auth account/password.
 
 # Revenex Supabase Backend Setup Guide
 
@@ -18,14 +20,14 @@ Android requires only public-facing credentials (`SUPABASE_URL` and `SUPABASE_PU
 1. **Row Level Security (RLS)** is the sole authorization authority:
    - Tenant isolation is strictly enforced via composite foreign keys (`school_id`, `session_id`).
    - Android client role switching cannot elevate privileges; database profiles and JWT `sub` determine access.
-   - Teachers only access their assigned sections and classes.
+   - Teachers only access their assigned sections, classes, and subjects.
    - Students and parents can access only their own records and linked children.
-   - Marks are hidden from students and parents until published by assigned faculty.
+   - Marks are hidden from students and parents until published by authorized school leadership.
    - Fee records are read-only; no client-side balance modifications are allowed.
 2. **Private Storage**:
    - Bucket `erp-documents` is strictly private (public = false).
    - Storage upload checks `file_metadata` manifest ownership before persisting.
-   - Assignments store durable `supabase://erp-documents/...` references. The app requests a fresh 1-hour signed link only when a permitted user opens the file. Class recipients gain access through database-managed grants; removing an attachment revokes the grant. A signed link already issued remains usable until its expiry.
+   - Assignments store durable `supabase://erp-documents/...` references. The app requests a fresh 5-minute signed link only when a permitted user opens the file. Class recipients gain access through database-managed grants; removing an attachment revokes the grant. A signed link already issued remains usable until its expiry.
 3. **Database-Driven Inbox**:
    - Notifications and audit logs are generated server-side via PostgreSQL triggers.
    - Clients cannot forge inbox rows or modify notification recipients.
@@ -48,8 +50,22 @@ Android requires only public-facing credentials (`SUPABASE_URL` and `SUPABASE_PU
    - This configures audit/notification triggers, Realtime publication, and private storage bucket policies.
 4. Run `supabase/migrations/202610200003_document_access.sql` next, then `supabase/migrations/202610200004_integrity.sql`. These add scoped document grants, integrity constraints, independent roll-call sessions, and leave-request identity protection.
 5. Run `supabase/migrations/202610200005_student_privacy.sql`. This removes duplicated fee fields from student payloads, enforces their removal on future writes, and upgrades no-op notification handling. Financial summaries come only from permitted fee records.
-6. For a new project, continue in order with migrations `202610200006_razorpay_test_payments.sql`, `202610200007_action_workflows.sql`, `202610210008_assistant_security.sql`, `202610210009_result_notifications.sql`, and `202610240010_staff_workflows.sql`. These add secure TEST payment storage/settlement, enrolment/events, assistant quota schema, published-result notifications and confirmed staff operations. Schema installation alone does not deploy/activate payment or AI services.
-7. Apply each numbered migration once, in order, to a dedicated demo database. Keep `erp_private` out of Data API exposed schemas. Expose `public` in Data API; no anonymous ERP grants are needed. The migration enables the intended Realtime tables in `supabase_realtime`.
+6. For a new project, continue in order with:
+   - `202610200006_razorpay_test_payments.sql`: Secure TEST payment storage and settlement schema.
+   - `202610200007_action_workflows.sql`: Enrolment, school event triggers, and invoice initialization.
+   - `202610210008_assistant_security.sql`: Assistant quota schema and server rate limits.
+   - `202610210009_result_notifications.sql`: Published-result notifications.
+   - `202610240010_staff_workflows.sql`: Confirmed staff operations, draft marks, and administrator leave decisions.
+   - `202610260011_result_publication_boundary.sql`: Staff-only publication boundary and immutable mark locking.
+   - `202610260012_assignment_submissions.sql`: Student submissions, recoverable notes, private submission files, and teacher review locks.
+   - `202610260013_assignment_publication.sql`: Private assignment drafts, versioned authoring, and class-scoped publication.
+   - `202610260014_mark_subject_scope.sql`: Mark drafts restricted to teacher's assigned subjects.
+   - `202610260015_versioned_marks.sql`: Optimistic concurrency locking for marks and submission-for-review lifecycle.
+   - `202610260016_capability_probe.sql`: Server-validated profile capability discovery.
+   - `202610260017_attendance_versions.sql`: Canonical date aliases, atomic whole-class roll calls, and concurrency rollback.
+   - `202610260018_targeted_notices.sql`: Audience-scoped notices (school-wide, class-targeted, teacher-only).
+   - `202610260019_leave_requests.sql`: Validated, idempotent self-service leave requests and leadership inbox events.
+7. Apply each numbered migration once, in order, to a dedicated demo database. Keep `erp_private` out of Data API exposed schemas. Expose `public` in Data API; no anonymous ERP grants are needed.
 
 ### Step 3: Provision Demo Auth Accounts
 Go to **Authentication > Users** in the Supabase Dashboard and click **Add User > Create User** for each of the following:
@@ -87,7 +103,18 @@ Choose **Auto Confirm User** when creating these synthetic demo users so no emai
 
 ## Verification & Troubleshooting
 
-- **Test Suite**: Run `npm ci --ignore-scripts --prefix supabase/tests`, then `npm test --prefix supabase/tests` to run the PostgreSQL/RLS checks against PGlite (111 passed in the staff-workflow regression suite). This engine supplies test doubles for Supabase Auth/Storage schemas; it does not verify those hosted services or websocket delivery.
+- **Test Suite**: Run `npm ci --ignore-scripts --prefix supabase/tests`, then `npm test --prefix supabase/tests`.
+  - **138 PostgreSQL schema/RLS checks passed** (`rls.test.mjs` against PGlite) across all 18 migrations, verifying multi-tenant isolation, role boundaries, private storage, attendance roll calls, versioned marks, and assignment lifecycles.
+  - **20 Razorpay Edge Function checks passed** (`razorpay-edge.test.mjs` via Node test runner), verifying order binding, signature checks, atomic payment credit, and failure handling.
+  - **Total 158 automated backend checks passed** in `npm test`.
+  - **Deno Assistant Entrypoint check**: `deno test --no-check --allow-net --allow-read --allow-env assistant-entrypoint.test.mjs` (1 passed).
+- **Integration Health Check**: Run `python scripts/check_integration_health.py` to probe live Supabase endpoints (verifies 200 on health, 401 anonymous rejections across protected endpoints).
+- **Credential Security Check**: Run `python scripts/check_secrets.py` (passes with 0 secrets leaked).
+- **Rollback Acceptance Scripts**:
+  - `verify_staff_workflows_rollback.sql`
+  - `verify_assignment_workflows_rollback.sql`
+  - `verify_versioned_marks_rollback.sql`
+  All rollback scripts execute with clean transactions: zero temporary test rows retained in the database.
 - **Historical Android verification (earlier build, not current ivory)**: Earlier `assembleDebug`, all 82 unit tests, and `lintDebug` passed (zero lint errors, 70 warnings). An isolated API 34 emulator verified installation, local administrator access and inbox read interaction (badge 2 to 1). See `docs/PROJECT_CHANGES_AND_STATUS.md` for exact evidence and hosted limitations.
 - **Unconfigured State**: If `supabase.local.properties` is missing or contains dummy keys, the app clearly alerts you that configuration is required, while preserving full functionality in **Local Demo** mode.
 - **Session Caches**: Cloud source data is cleared on sign-in/logout and repository collectors clear their cloud caches. This is covered by focused Android tests when they pass; see the status notes for the current result.
