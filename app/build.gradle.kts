@@ -38,7 +38,7 @@ android {
     versionName = "1.0"
     buildConfigField("String", "SUPABASE_URL", javaLiteral(publicConfig("SUPABASE_URL")))
     buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", javaLiteral(publicConfig("SUPABASE_PUBLISHABLE_KEY")))
-    // Retained API compatibility only; demo builds never invoke checkout.
+    // Public checkout IDs come from the authenticated payment server; this empty field preserves API compatibility.
     buildConfigField("String", "RAZORPAY_KEY_ID", "\"\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -99,8 +99,6 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
   }
 }
 
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
   coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
   implementation(platform("io.github.jan-tennert.supabase:bom:3.2.3"))
@@ -111,12 +109,7 @@ dependencies {
   implementation("io.github.jan-tennert.supabase:functions-kt")
   implementation("io.ktor:ktor-client-okhttp:3.2.3")
   implementation(platform(libs.androidx.compose.bom))
-  // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
-  // implementation(libs.androidx.camera.camera2)
-  // implementation(libs.androidx.camera.core)
-  // implementation(libs.androidx.camera.lifecycle)
-  // implementation(libs.androidx.camera.view)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)
@@ -125,14 +118,12 @@ dependencies {
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
   implementation("androidx.core:core-splashscreen:1.2.0")
-  // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
-  // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services)
@@ -142,7 +133,6 @@ dependencies {
   implementation(libs.logging.interceptor)
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
-  // implementation(libs.play.services.location)
   implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
