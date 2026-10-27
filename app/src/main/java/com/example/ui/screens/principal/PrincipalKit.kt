@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -38,6 +39,7 @@ import com.example.data.model.UserRole
 }
 internal data class PrincipalModule(val title:String,val icon:ImageVector,val route:String,val tone:Int)
 @Composable internal fun PrincipalModules(items:List<PrincipalModule>,navigate:(String)->Unit,compact:Boolean=false) {
+ if(LocalPrincipalDark.current){PrincipalDarkModules(items,navigate);return}
  Column(verticalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
   items.chunked(3).forEach {row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
    row.forEach {item->
@@ -55,12 +57,14 @@ internal data class PrincipalModule(val title:String,val icon:ImageVector,val ro
  }
 }
 @Composable internal fun PrincipalRecordRow(name:String,detail:String,onClick:()->Unit,modifier:Modifier=Modifier,trailing:@Composable ()->Unit={}) {
- Row(modifier.fillMaxWidth().clickable(onClick=onClick).heightIn(min=PrincipalLayout.rowHeight).padding(vertical=Spacing.sm8),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+ val dark=LocalPrincipalDark.current
+ Row(modifier.fillMaxWidth().then(if(dark)Modifier.background(PrincipalDarkPalette.surface,RoundedCornerShape(Radius.md)).padding(horizontal=Spacing.md12)else Modifier).clickable(onClick=onClick).heightIn(min=PrincipalLayout.rowHeight).padding(vertical=Spacing.sm8),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
   Avatar(name.replace(Regex("^(Dr\\.?|Prof\\.?|Mr\\.?|Mrs\\.?|Ms\\.?)\\s+"),""),size=PrincipalLayout.listAvatar,background=PrincipalColors.blue,textColor=PrincipalColors.blueInk)
   Column(Modifier.weight(1f)){Text(name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold);Text(detail,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   trailing();Icon(Icons.Default.ChevronRight,null,Modifier.size(Spacing.lg16),tint=MaterialTheme.colorScheme.onSurfaceVariant)
  }
- HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.5f))
+ if(!dark)HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.5f))
+ else Spacer(Modifier.height(Spacing.sm8))
 }
 @Composable internal fun PrincipalSelect(value:String,options:List<String>,onSelect:(String)->Unit,modifier:Modifier=Modifier) {
  var open by remember {mutableStateOf(false)}
@@ -69,9 +73,14 @@ internal data class PrincipalModule(val title:String,val icon:ImageVector,val ro
  };DropdownMenu(open,{open=false}){options.forEach {v->DropdownMenuItem(text={Text(v)},onClick={onSelect(v);open=false})}}}
 }
 @Composable internal fun PrincipalTabs(labels:List<String>,selected:Int,onSelect:(Int)->Unit) {
+ if(LocalPrincipalDark.current){
+  Row(Modifier.fillMaxWidth().padding(vertical=Spacing.sm8),horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){labels.forEachIndexed{i,label->Surface(onClick={onSelect(i)},modifier=Modifier.weight(1f),color=if(i==selected)PrincipalDarkPalette.orange else PrincipalDarkPalette.navigation,contentColor=if(i==selected)PrincipalDarkPalette.ink else PrincipalDarkPalette.muted,shape=RoundedCornerShape(Radius.pill)){Box(Modifier.heightIn(min=Spacing.xxxl48).padding(Spacing.sm8),contentAlignment=Alignment.Center){Text(label,style=MaterialTheme.typography.labelMedium,textAlign=TextAlign.Center)}}}
+  };return
+ }
  TabRow(selectedTabIndex=selected,containerColor=MaterialTheme.colorScheme.background){labels.forEachIndexed {i,label->Tab(selected==i,onClick={onSelect(i)},selectedContentColor=MaterialTheme.colorScheme.primary,unselectedContentColor=MaterialTheme.colorScheme.onSurfaceVariant,text={Text(label,style=MaterialTheme.typography.labelLarge)})}}
 }
 @Composable fun PrincipalBottomNavigation(route:String?,navigate:(String)->Unit) {
+ if(LocalPrincipalDark.current){PrincipalDarkNavigation(route,navigate);return}
  val items=NavConfig.getBottomNavItems(UserRole.PRINCIPAL)
  Surface(color=MaterialTheme.colorScheme.surface) {
   BoxWithConstraints {
@@ -113,13 +122,13 @@ internal data class PrincipalModule(val title:String,val icon:ImageVector,val ro
 }
 
 @Composable internal fun PrincipalSummary(label:String,value:String,caption:String,icon:ImageVector,bg:Color,ink:Color,modifier:Modifier=Modifier) {
- Surface(modifier=modifier,shape=RoundedCornerShape(Radius.sm),color=bg) {
+ Surface(modifier=modifier,shape=RoundedCornerShape(Radius.sm),color=bg,contentColor=if(LocalPrincipalDark.current)PrincipalDarkPalette.ink else MaterialTheme.colorScheme.onSurface) {
   Row(Modifier.heightIn(min=PrincipalLayout.summaryHeight).padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
    Icon(icon,null,Modifier.size(PrincipalLayout.moduleIcon),tint=ink)
    Column(Modifier.weight(1f)) {
     Text(label,style=MaterialTheme.typography.bodySmall)
     Text(value,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=ink)
-    if(caption.isNotBlank())Text(caption,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    if(caption.isNotBlank())Text(caption,style=MaterialTheme.typography.bodySmall,color=if(LocalPrincipalDark.current)ink else MaterialTheme.colorScheme.onSurfaceVariant)
    }
   }
  }

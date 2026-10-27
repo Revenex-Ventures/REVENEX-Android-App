@@ -35,7 +35,7 @@ import com.example.ui.theme.*
  val session=if(mode==DataMode.SUPABASE_DEMO)runCatching{repository.supabaseDataSource.sessionId()}.getOrDefault("Not loaded")else students.map{it.sessionId}.distinct().singleOrNull() ?: "Loaded session"
  val year=Regex("(20\\d{2})[_-](20\\d{2})").find(session)?.let{"${it.groupValues[1]}–${it.groupValues[2].takeLast(2)}"} ?: "Loaded session"
  var dialog by rememberSaveable(actor.id){mutableStateOf<String?>(null)}
- LazyColumn(Modifier.fillMaxSize().testTag("principal_account"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+ LazyColumn(Modifier.fillMaxSize().testTag("principal_account"),contentPadding=PaddingValues(if(LocalPrincipalDark.current)Spacing.xl20 else Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
   item {PrincipalPageHeader("School & account")}
   item {Row(Modifier.fillMaxWidth().padding(vertical=Spacing.sm8),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
    Avatar(actor.name.replace(Regex("^(Dr\\.?|Prof\\.?|Mr\\.?|Mrs\\.?|Ms\\.?)\\s+"),""),size=PrincipalLayout.listAvatar,background=PrincipalColors.blue,textColor=PrincipalColors.blueInk)
@@ -90,7 +90,7 @@ import com.example.ui.theme.*
 @Composable fun PrincipalMore(repository:ErpDataRepository,navigate:(String)->Unit,addStudent:()->Unit,addStaff:()->Unit,notice:()->Unit) {
  val actor by repository.currentUser.collectAsState();var query by rememberSaveable(actor.id){mutableStateOf("")}
  val destinations=WorkspaceDirectory.visible(actor.role,query).filterNot{it.route in setOf(Screen.Students.route,Screen.Teachers.route,Screen.Fees.route,Screen.Attendance.route,Screen.PrincipalAttendance.route)}
- LazyColumn(Modifier.fillMaxSize().testTag("principal_more"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+ LazyColumn(Modifier.fillMaxSize().testTag("principal_more"),contentPadding=PaddingValues(if(LocalPrincipalDark.current)Spacing.xl20 else Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
   item {PrincipalPageHeader("More");OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),singleLine=true,placeholder={Text("Search modules")},leadingIcon={Icon(Icons.Outlined.Search,null)})}
   if(query.isBlank())item {PrincipalHeading("Create") {SchoolRow("Add student","Admission",Icons.Outlined.PersonAdd,addStudent);SchoolRow("Add staff","Faculty record",Icons.Outlined.PersonAdd,addStaff);SchoolRow("Publish notice","School announcement",Icons.Outlined.Campaign,notice)}}
   if(destinations.isEmpty())item {EmptyStateView("No modules","Try a different search.")}

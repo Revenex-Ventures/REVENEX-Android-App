@@ -123,6 +123,18 @@ fun ScholaTheme(
     surfaceContainer=StudentDarkPalette.surface,surfaceContainerHigh=StudentDarkPalette.surface,
     surfaceContainerHighest=StudentDarkPalette.surface,surfaceDim=StudentDarkPalette.canvas,
     surfaceBright=StudentDarkPalette.surface, surfaceTint=Color.Transparent
+  ) else if(principal && dark) portalColorScheme.copy(
+    background=PrincipalDarkPalette.canvas,onBackground=PrincipalDarkPalette.text,
+    surface=PrincipalDarkPalette.surface,onSurface=PrincipalDarkPalette.text,
+    surfaceVariant=PrincipalDarkPalette.navigation,onSurfaceVariant=PrincipalDarkPalette.muted,
+    primary=PrincipalDarkPalette.orange,onPrimary=PrincipalDarkPalette.ink,
+    primaryContainer=PrincipalDarkPalette.orange,onPrimaryContainer=PrincipalDarkPalette.ink,
+    secondaryContainer=PrincipalDarkPalette.mint,onSecondaryContainer=PrincipalDarkPalette.ink,
+    tertiaryContainer=PrincipalDarkPalette.blue,onTertiaryContainer=PrincipalDarkPalette.ink,
+    outline=PrincipalDarkPalette.muted,outlineVariant=PrincipalDarkPalette.border,
+    surfaceContainerLowest=PrincipalDarkPalette.canvas,surfaceContainerLow=PrincipalDarkPalette.navigation,
+    surfaceContainer=PrincipalDarkPalette.surface,surfaceContainerHigh=PrincipalDarkPalette.surface,
+    surfaceContainerHighest=PrincipalDarkPalette.surface,surfaceTint=Color.Transparent
   ) else portalColorScheme
   val view = LocalView.current
   SideEffect {
@@ -135,7 +147,7 @@ fun ScholaTheme(
       }
     }
   }
-  CompositionLocalProvider(LocalStudentDark provides (student && dark), LocalAppearance provides preference, LocalTeacherPresentation provides teacher, LocalStudentExperience provides studentExperience,
+  CompositionLocalProvider(LocalPrincipalDark provides (principal && dark), LocalStudentDark provides (student && dark), LocalAppearance provides preference, LocalTeacherPresentation provides teacher, LocalStudentExperience provides studentExperience,
     androidx.compose.material3.LocalContentColor provides colorScheme.onBackground) {
 
   MaterialTheme(

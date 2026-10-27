@@ -232,12 +232,27 @@ object PrincipalColors {
   val mutedLight = Color(0xFF515665)
   val actionLight = Color(0xFFD44200)
   private val dark: Boolean @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < .5f
-  val blue: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.blueContainer else Color(0xFFEDF6FF)
-  val blueInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onBlue else Color(0xFF1460D9)
-  val mint: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.successContainer else Color(0xFFECFAF2)
-  val mintInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onSuccess else Color(0xFF087741)
-  val peach: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.peachContainer else Color(0xFFFFF4E7)
-  val peachInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onPeach else Color(0xFFD54500)
+  val blue: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.blue else if(dark) SemanticColors.blueContainer else Color(0xFFEDF6FF)
+  val blueInk: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.ink else if(dark) SemanticColors.onBlue else Color(0xFF1460D9)
+  val mint: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.mint else if(dark) SemanticColors.successContainer else Color(0xFFECFAF2)
+  val mintInk: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.ink else if(dark) SemanticColors.onSuccess else Color(0xFF087741)
+  val peach: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.orange else if(dark) SemanticColors.peachContainer else Color(0xFFFFF4E7)
+  val peachInk: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.ink else if(dark) SemanticColors.onPeach else Color(0xFFD54500)
   val lavender: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.lavenderContainer else Color(0xFFF2EDFF)
   val lavenderInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onLavender else Color(0xFF4816AA)
+}
+
+/** Role isolation keeps the approved light and other portal palettes unchanged. */
+val LocalPrincipalDark = androidx.compose.runtime.staticCompositionLocalOf { false }
+object PrincipalDarkPalette {
+  val canvas=Color(0xFF0B1220)
+  val surface=Color(0xFF1C2B43)
+  val navigation=Color(0xFF162237)
+  val orange=Color(0xFFFF743D)
+  val blue=Color(0xFF92BAF2)
+  val mint=Color(0xFFA6D9BF)
+  val text=Color(0xFFF4F6FC)
+  val muted=Color(0xFFB6C7E0)
+  val ink=Color(0xFF0B1220)
+  val border=Color(0xFF34455E)
 }

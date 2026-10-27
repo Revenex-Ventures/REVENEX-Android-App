@@ -138,12 +138,13 @@ internal fun studentLessonProgress(date:LocalDate,now:ZonedDateTime,start:String
 }
 
 @Composable private fun StudentRailRow(start:String,end:String,progress:StudentLessonProgress?,gap:Boolean,tag:String,content:@Composable ColumnScope.()->Unit) {
+ val dark=LocalStudentDark.current
  val timeWidth=if(LocalDensity.current.fontScale>1.2f)StudentTimelineLayout.largeTimeColumn else StudentTimelineLayout.timeColumn
  val railColor=MaterialTheme.colorScheme.outlineVariant
- val endedColor=StudentColors.colors(StudentTone.MINT).second
+ val endedColor=if(dark)StudentDarkPalette.mint else StudentColors.colors(StudentTone.MINT).second
  val liveColor=StudentColors.selection
  val live=progress?.phase==StudentLessonPhase.LIVE
- val background=if(live)StudentColors.colors(StudentTone.ORANGE).first else MaterialTheme.colorScheme.surface
+ val background=if(dark)StudentDarkPalette.canvas else if(live)StudentColors.colors(StudentTone.ORANGE).first else MaterialTheme.colorScheme.surface
  val clockFormat=DateTimeFormatter.ofPattern("HH:mm",Locale.US)
  Row(Modifier.fillMaxWidth().heightIn(min=if(gap)StudentTimelineLayout.gapHeight else StudentTimelineLayout.rowHeight).testTag(tag)
   .semantics(mergeDescendants=true){stateDescription=progress?.phase?.label?:"Time unavailable"}
@@ -161,10 +162,10 @@ internal fun studentLessonProgress(date:LocalDate,now:ZonedDateTime,start:String
     drawLine(background,Offset(x-radius*.6f,y),Offset(x-radius*.1f,y+radius*.4f),stroke/1.5f)
     drawLine(background,Offset(x-radius*.1f,y+radius*.4f),Offset(x+radius*.65f,y-radius*.5f),stroke/1.5f)
    }else drawCircle(background,radius-stroke,Offset(x,y))
-   drawLine(railColor,Offset((timeWidth+StudentTimelineLayout.rail+Spacing.sm8).toPx(),size.height),Offset(size.width,size.height),1.dp.toPx())
+   if(!dark)drawLine(railColor,Offset((timeWidth+StudentTimelineLayout.rail+Spacing.sm8).toPx(),size.height),Offset(size.width,size.height),1.dp.toPx())
   },verticalAlignment=Alignment.CenterVertically){
   Column(Modifier.width(timeWidth).padding(horizontal=Spacing.sm8),horizontalAlignment=Alignment.End){
-   Text(studentLessonTime(start)?.format(clockFormat)?:start,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=if(live)StudentColors.onOrange else MaterialTheme.colorScheme.onSurface)
+   Text(studentLessonTime(start)?.format(clockFormat)?:start,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold,color=if(dark&&live)StudentDarkPalette.orange else if(live)StudentColors.onOrange else MaterialTheme.colorScheme.onSurface)
    Text(studentLessonTime(end)?.format(clockFormat)?:end,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
   }
   Spacer(Modifier.width(StudentTimelineLayout.rail))
@@ -173,20 +174,27 @@ internal fun studentLessonProgress(date:LocalDate,now:ZonedDateTime,start:String
 }
 
 @Composable private fun StudentDarkSchedule(slots:List<TimetableSlot>,date:LocalDate,now:ZonedDateTime) {
- Column(verticalArrangement=Arrangement.spacedBy(Spacing.lg16)){
-  slots.forEach{slot->
+ Column(Modifier.testTag("student_schedule_rail")){
+  slots.forEachIndexed{index,slot->
    val progress=studentLessonProgress(date,now,slot.startTime,slot.endTime)
    var expanded by rememberSaveable(slot.id){mutableStateOf(false)}
-   Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12),verticalAlignment=Alignment.Top){
-    Text(slot.startTime,Modifier.widthIn(min=48.dp).padding(top=Spacing.md12),style=MaterialTheme.typography.labelSmall,color=StudentDarkPalette.muted)
-    StudentCard(Modifier.weight(1f),studentSubjectTone(slot.subject),{expanded=!expanded}){
-     Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){
+   StudentRailRow(slot.startTime,slot.endTime,progress,false,"student_period_${slot.id}"){
+    StudentCard(Modifier.fillMaxWidth(),studentSubjectTone(slot.subject),{expanded=!expanded}){
+     Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){
       Text(slot.subject,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-      Text("${slot.startTime} – ${slot.endTime} · ${slot.roomNumber}",style=MaterialTheme.typography.bodySmall)
+      Text(slot.roomNumber.ifBlank{"Room not provided"},style=MaterialTheme.typography.bodySmall)
       if(expanded&&slot.teacherName.isNotBlank())Text(slot.teacherName,style=MaterialTheme.typography.bodySmall)
-      Text(progress?.phase?.label?:"Time unavailable",style=MaterialTheme.typography.labelSmall)
+      Text(if(progress?.phase==StudentLessonPhase.LIVE)"Now · India time"else progress?.phase?.label?:"Time unavailable",style=MaterialTheme.typography.labelSmall)
       if(progress?.phase==StudentLessonPhase.LIVE)LinearProgressIndicator(progress={progress.fraction},modifier=Modifier.fillMaxWidth().testTag("student_live_time_stroke"),color=StudentDarkPalette.ink,trackColor=StudentDarkPalette.ink.copy(alpha=.15f))
      }
+    }
+   }
+   val next=slots.getOrNull(index+1)
+   val end=studentLessonTime(slot.endTime)
+   val nextStart=next?.let{studentLessonTime(it.startTime)}
+   if(end!=null&&nextStart!=null&&nextStart.isAfter(end)){
+    StudentRailRow(slot.endTime,next!!.startTime,studentLessonProgress(date,now,slot.endTime,next.startTime),true,"student_gap_${slot.id}"){
+     Text("Break · ${Duration.between(end,nextStart).toMinutes()} min",style=MaterialTheme.typography.bodySmall,color=StudentDarkPalette.muted)
     }
    }
   }

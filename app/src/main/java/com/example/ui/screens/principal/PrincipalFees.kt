@@ -22,6 +22,7 @@ import java.util.Locale
 
 internal fun principalMoney(paise:Long):String=NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-IN")).apply{minimumFractionDigits=0;maximumFractionDigits=2}.format(BigDecimal.valueOf(paise,2))
 @Composable fun PrincipalFees(repository:ErpDataRepository,receipt:(String)->Unit) {
+ val principalDark=LocalPrincipalDark.current
  val invoices by repository.invoices.collectAsState();val fees by repository.feeRecords.collectAsState()
  val actor by repository.currentUser.collectAsState();val mode by repository.dataMode.collectAsState()
  var cohort by rememberSaveable(actor.id){mutableStateOf("All classes")};var tab by rememberSaveable(actor.id){mutableIntStateOf(0)}
@@ -29,9 +30,13 @@ internal fun principalMoney(paise:Long):String=NumberFormat.getCurrencyInstance(
  val visible=invoices.filter{cohort=="All classes"||it.cohort==cohort}
  val dues=visible.filter{it.pendingAmount>0}
  val history=fees.filter{f->visible.any{it.id==f.id}}.flatMap{f->f.transactions.map{f to it}}.distinctBy{it.second.transactionId}
- LazyColumn(Modifier.fillMaxSize().testTag("principal_fees"),contentPadding=PaddingValues(horizontal=Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+ LazyColumn(Modifier.fillMaxSize().testTag("principal_fees"),contentPadding=PaddingValues(horizontal=if(principalDark)Spacing.xl20 else Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
   item {PrincipalPageHeader("Fees");PrincipalSelect(cohort,listOf("All classes")+invoices.map{it.cohort}.distinct().sorted(),{cohort=it})}
-  item {Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+  if(principalDark)item {Column(verticalArrangement=Arrangement.spacedBy(Spacing.md12)){
+   PrincipalSummary("Collected",principalMoney(visible.sumOf{it.paidAmount}),"Loaded school session ledger",PrincipalIcons.Fees,PrincipalColors.peach,PrincipalColors.peachInk)
+   PrincipalSummary("Outstanding",principalMoney(dues.sumOf{it.pendingAmount}),"${dues.size} invoices",Icons.Outlined.Description,PrincipalColors.blue,PrincipalColors.blueInk)
+  }}
+  if(!principalDark)item {Row(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
    PrincipalSummary("Due",principalMoney(dues.sumOf{it.pendingAmount}),"${dues.size} invoices",Icons.Outlined.CurrencyRupee,PrincipalColors.peach,PrincipalColors.peachInk,Modifier.weight(1f))
    PrincipalSummary("Collected",principalMoney(visible.sumOf{it.paidAmount}),"${visible.size} invoices",Icons.Outlined.VerifiedUser,PrincipalColors.mint,PrincipalColors.mintInk,Modifier.weight(1f))
   }}

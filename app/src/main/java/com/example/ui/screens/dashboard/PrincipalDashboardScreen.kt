@@ -26,6 +26,7 @@ import java.util.Locale
 @Composable
 fun PrincipalDashboardScreen(repository:ErpDataRepository,onNavigateTo:(String)->Unit,
  onShowAddStudent:()->Unit,onShowAddTeacher:()->Unit,onShowCreateNotice:()->Unit) {
+ if(LocalPrincipalDark.current){PrincipalDarkHome(repository,onNavigateTo);return}
  val actor by repository.currentUser.collectAsState()
  val students by repository.students.collectAsState()
  val invoices by repository.invoices.collectAsState()

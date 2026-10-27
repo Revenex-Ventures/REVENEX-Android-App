@@ -51,10 +51,12 @@ class StudentTimelineRenderTest {
   compose.onNodeWithText("India time · 09:37:30 IST").assertExists()
   compose.onNodeWithTag("student_period_${fixture[1].id}").assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription,"Now"))
   for(palette in listOf(false,true)){compose.runOnIdle{dark=palette};compose.waitForIdle();compose.onNodeWithTag("timeline_viewport").captureRoboImage("build/reports/student-timeline/active_${if(palette)"dark"else "light"}.png")}
-  compose.runOnIdle{dark=false;clock=Clock.fixed(Instant.parse("2026-10-26T04:37:30Z"),ZoneOffset.UTC)}
+  compose.runOnIdle{dark=true;clock=Clock.fixed(Instant.parse("2026-10-26T04:37:30Z"),ZoneOffset.UTC)}
   dispatcher.scheduler.runCurrent()
   compose.waitForIdle();compose.onNodeWithText("India time · 10:07:30 IST").assertExists()
   compose.onNodeWithTag("student_gap_${fixture[1].id}").assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription,"Now"))
+  compose.onNodeWithTag("timeline_viewport").captureRoboImage("build/reports/student-timeline/active_gap_dark.png")
+  compose.runOnIdle{dark=false};compose.waitForIdle()
   compose.onNodeWithTag("timeline_viewport").captureRoboImage("build/reports/student-timeline/active_gap_light.png")
   assertEquals(attendance,repo.classAttendance.value)
  }

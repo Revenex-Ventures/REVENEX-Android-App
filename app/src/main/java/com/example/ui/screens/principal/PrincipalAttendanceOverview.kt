@@ -33,7 +33,7 @@ import java.util.Locale
  val format=DateTimeFormatter.ofPattern("dd MMM uuuu",Locale.getDefault())
  val choices=(listOf(LocalDate.now())+dates).distinct().sortedDescending()
  Scaffold(containerColor=MaterialTheme.colorScheme.background,bottomBar={Surface(color=MaterialTheme.colorScheme.background){Button(onClick=report,shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.xs),modifier=Modifier.fillMaxWidth().padding(horizontal=Spacing.screenPadding,vertical=Spacing.sm8)){Icon(Icons.Outlined.BarChart,null);Spacer(Modifier.width(Spacing.sm8));Text("View report")}}}) {padding->
- LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("principal_attendance_overview"),contentPadding=PaddingValues(horizontal=Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+ LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("principal_attendance_overview"),contentPadding=PaddingValues(horizontal=if(LocalPrincipalDark.current)Spacing.xl20 else Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
   item {Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
    PrincipalPageHeader("Attendance"){IconButton(onClick={info=true}){Icon(Icons.Outlined.Info,"Attendance scope")}}
    PrincipalSelect(date.format(format),choices.map {it.format(format)},{value->selected=choices.first {it.format(format)==value}})
@@ -68,7 +68,7 @@ import java.util.Locale
  var selected by remember {mutableStateOf<String?>(null)};var query by remember {mutableStateOf("")}
  val day=registers.values.filter {"${it.classGrade}-${it.division}"==cohort&&parseSchoolRecordDate(it.date)?.toString()==date}
  val pupils=students.filter {it.fullClass==cohort&&(it.name.contains(query,true)||it.rollNumber.toString().contains(query))}.sortedBy {it.rollNumber}
- LazyColumn(Modifier.fillMaxSize().testTag("principal_class_history"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+ LazyColumn(Modifier.fillMaxSize().testTag("principal_class_history"),contentPadding=PaddingValues(if(LocalPrincipalDark.current)Spacing.xl20 else Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
   item {PrincipalPageHeader("Class $cohort");Text(date,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   item {OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),singleLine=true,placeholder={Text("Search students")},leadingIcon={Icon(Icons.Outlined.Search,null)})}
   if(pupils.isEmpty())item {EmptyStateView("No students","No accessible students match this class or search.")}
