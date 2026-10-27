@@ -87,9 +87,12 @@ internal fun studentLessonProgress(date:LocalDate,now:ZonedDateTime,start:String
  val visible=slots.filter{student!=null&&it.schoolId==student.schoolId&&it.sessionId==student.sessionId&&it.classGrade==student.classGrade&&it.division==student.division&&it.dayOfWeek.equals(days[day].name,true)}
   .sortedWith(compareBy<TimetableSlot>{studentLessonTime(it.startTime)?:LocalTime.MAX}.thenBy{it.periodNumber})
  LazyColumn(Modifier.fillMaxSize().testTag("student_timetable"),contentPadding=PaddingValues(StudentLayout.margin),verticalArrangement=Arrangement.spacedBy(StudentLayout.gap)){
-  item{WorkspacePageHeader("Timetable")}
+  item{StudentPageHeader("Timetable")}
   item{LazyRow(state=dayScroll,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){
-   items(days.indices.toList()){index->FilterChip(day==index,{chosenDay=if(index==today.dayOfWeek.value-1)-1 else index},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=StudentColors.action,selectedLabelColor=StudentColors.onAction),label={Text(days[index].getDisplayName(java.time.format.TextStyle.FULL,Locale.US))})}
+   items(days.indices.toList()){index->
+    if(LocalStudentDark.current)FilterChip(day==index,{chosenDay=if(index==today.dayOfWeek.value-1)-1 else index},modifier=Modifier.heightIn(min=48.dp),border=null,shape=androidx.compose.foundation.shape.RoundedCornerShape(Radius.sm),colors=FilterChipDefaults.filterChipColors(containerColor=StudentDarkPalette.navigation,labelColor=StudentDarkPalette.muted,selectedContainerColor=StudentDarkPalette.orange,selectedLabelColor=StudentDarkPalette.ink),label={Column(horizontalAlignment=Alignment.CenterHorizontally){Text(days[index].getDisplayName(java.time.format.TextStyle.SHORT,Locale.US),style=MaterialTheme.typography.labelSmall);Text(today.minusDays((today.dayOfWeek.value-1).toLong()).plusDays(index.toLong()).dayOfMonth.toString(),style=MaterialTheme.typography.titleSmall)}})
+    else FilterChip(day==index,{chosenDay=if(index==today.dayOfWeek.value-1)-1 else index},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=StudentColors.action,selectedLabelColor=StudentColors.onAction),label={Text(days[index].getDisplayName(java.time.format.TextStyle.FULL,Locale.US))})
+   }
   }}
   item{Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
@@ -101,7 +104,7 @@ internal fun studentLessonProgress(date:LocalDate,now:ZonedDateTime,start:String
   }}
   if(student==null)item{EmptyStateView("Student link unavailable","Your timetable requires your verified student record.")}
   else if(visible.isEmpty())item{EmptyStateView("No lessons scheduled","No timetable has been provided for ${days[day].getDisplayName(java.time.format.TextStyle.FULL,Locale.US)}.")}
-  else item{StudentScheduleTimeline(visible,selectedDate,now)}
+  else item{if(LocalStudentDark.current)StudentDarkSchedule(visible,selectedDate,now)else StudentScheduleTimeline(visible,selectedDate,now)}
   item{Text("Time-based lesson status. Attendance is recorded separately.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
  }
 }
@@ -166,5 +169,26 @@ internal fun studentLessonProgress(date:LocalDate,now:ZonedDateTime,start:String
   }
   Spacer(Modifier.width(StudentTimelineLayout.rail))
   Column(Modifier.weight(1f).padding(start=Spacing.sm8,end=StudentLayout.gap,top=StudentLayout.gap,bottom=StudentLayout.gap),verticalArrangement=Arrangement.spacedBy(Spacing.xs4),content=content)
+ }
+}
+
+@Composable private fun StudentDarkSchedule(slots:List<TimetableSlot>,date:LocalDate,now:ZonedDateTime) {
+ Column(verticalArrangement=Arrangement.spacedBy(Spacing.lg16)){
+  slots.forEach{slot->
+   val progress=studentLessonProgress(date,now,slot.startTime,slot.endTime)
+   var expanded by rememberSaveable(slot.id){mutableStateOf(false)}
+   Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12),verticalAlignment=Alignment.Top){
+    Text(slot.startTime,Modifier.widthIn(min=48.dp).padding(top=Spacing.md12),style=MaterialTheme.typography.labelSmall,color=StudentDarkPalette.muted)
+    StudentCard(Modifier.weight(1f),studentSubjectTone(slot.subject),{expanded=!expanded}){
+     Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){
+      Text(slot.subject,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+      Text("${slot.startTime} – ${slot.endTime} · ${slot.roomNumber}",style=MaterialTheme.typography.bodySmall)
+      if(expanded&&slot.teacherName.isNotBlank())Text(slot.teacherName,style=MaterialTheme.typography.bodySmall)
+      Text(progress?.phase?.label?:"Time unavailable",style=MaterialTheme.typography.labelSmall)
+      if(progress?.phase==StudentLessonPhase.LIVE)LinearProgressIndicator(progress={progress.fraction},modifier=Modifier.fillMaxWidth().testTag("student_live_time_stroke"),color=StudentDarkPalette.ink,trackColor=StudentDarkPalette.ink.copy(alpha=.15f))
+     }
+    }
+   }
+  }
  }
 }

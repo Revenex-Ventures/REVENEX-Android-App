@@ -73,15 +73,19 @@ fun ScholaResponsiveScaffold(
     CompositionLocalProvider(LocalWorkspaceBack provides onBack) { content(PaddingValues(0.dp)) }
   }
   val windowSizeClass = rememberWindowSizeClass()
-  val navItems = remember(currentUser.role) {
+  val studentDark = LocalStudentDark.current
+  val selectDestination: (String) -> Unit = { route ->
+    onNavigateToRoute(if(studentDark && route==Screen.OperationsHub.route) Screen.Profile.route else route)
+  }
+  val navItems = remember(currentUser.role,studentDark) {
     NavConfig.getBottomNavItems(currentUser.role).filterNot {
       currentUser.role == UserRole.TEACHER && it.route == Screen.TeacherProfile.route
     }.map {
       ScholaDockItem(
         route = it.route,
-        label = it.label,
-        selectedIcon = it.selectedIcon,
-        unselectedIcon = it.unselectedIcon
+        label = if(studentDark && it.route==Screen.OperationsHub.route) "You" else it.label,
+        selectedIcon = if(studentDark && it.route==Screen.OperationsHub.route) Icons.Outlined.Person else it.selectedIcon,
+        unselectedIcon = if(studentDark && it.route==Screen.OperationsHub.route) Icons.Outlined.Person else it.unselectedIcon
       )
     }
   }
@@ -129,7 +133,7 @@ fun ScholaResponsiveScaffold(
             ScholaFloatingDock(
               items = navItems,
               currentRoute = selectedPrimaryRoute,
-              onItemSelected = onNavigateToRoute,
+              onItemSelected = selectDestination,
               modifier = Modifier.padding(
                 start = Spacing.s2,
                 end = Spacing.s2,
@@ -160,7 +164,7 @@ fun ScholaResponsiveScaffold(
             TabletNavigationRail(
               items = navItems,
               currentRoute = selectedPrimaryRoute,
-              onItemSelected = onNavigateToRoute,
+              onItemSelected = selectDestination,
               onOpenCommandPalette = onOpenCommandPalette,
               currentUser = currentUser
             )
@@ -209,7 +213,7 @@ fun ScholaResponsiveScaffold(
               currentRoute = selectedPrimaryRoute,
               currentUser = currentUser,
               unreadCount = unreadNotificationsCount,
-              onItemSelected = onNavigateToRoute,
+              onItemSelected = selectDestination,
               onOpenCommandPalette = onOpenCommandPalette,
               onOpenNotifications = onOpenNotifications,
               onOpenProfile = onOpenProfile,

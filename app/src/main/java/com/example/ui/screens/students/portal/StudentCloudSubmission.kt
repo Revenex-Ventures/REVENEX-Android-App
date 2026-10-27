@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.testTag
 import com.example.data.datasource.SupabaseFileStore
 import com.example.data.repository.ErpDataRepository
 import com.example.ui.components.SchoolDocumentButton
-import com.example.ui.theme.StudentLayout
+import com.example.ui.theme.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -52,7 +52,11 @@ import kotlinx.coroutines.launch
   if(!ready)Text("The school submission service could not be confirmed. Your input stays here. Refresh after reconnect or ask the school to finish setup.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
   Text(if(existing==null)"Add a file or write your solution. Files stay private to your school permissions." else "${existing.reviewStatus.lowercase().replaceFirstChar{it.uppercase()}} · Version ${existing.version}",style=MaterialTheme.typography.bodySmall)
   if(existing?.attachmentRef?.isNotBlank()==true)SchoolDocumentButton(existing.attachmentRef,existing.attachmentName.ifBlank{"Submitted file"})
-  if(existing?.feedback?.isNotBlank()==true){Text("Teacher feedback",style=MaterialTheme.typography.labelLarge);Text(existing.feedback)}
+  if(LocalStudentDark.current && existing!=null){
+   StudentDarkFeature(if(existing.reviewStatus=="REVIEWED")"Reviewed"else "Your work, handed in.","Submitted · ${existing.submittedAt}",StudentTone.BLUE,StudentIcons.Clipboard)
+   if(existing.feedback.isNotBlank())StudentCard(tone=StudentTone.MINT){Column(Modifier.padding(StudentLayout.gap),verticalArrangement=Arrangement.spacedBy(StudentLayout.gap)){Text("Teacher feedback",style=MaterialTheme.typography.titleMedium);Text(existing.feedback);if(existing.reviewedAt.isNotBlank())Text(existing.reviewedAt,style=MaterialTheme.typography.bodySmall)}}
+   else StudentDarkFeature("Awaiting review","Your teacher will add feedback when available.",StudentTone.MINT,StudentIcons.Clock)
+  }else if(existing?.feedback?.isNotBlank()==true){Text("Teacher feedback",style=MaterialTheme.typography.labelLarge);Text(existing.feedback)}
   if(locked)Text("Reviewed work is locked. Contact your teacher if a correction is needed.",style=MaterialTheme.typography.bodySmall)
   OutlinedTextField(note,{note=it;dirty=true;message=""},Modifier.fillMaxWidth().testTag("submission_note"),label={Text("Your solution / note")},enabled=!busy&&!locked,minLines=3,isError=note.length>8000,supportingText={Text("${note.length}/8000")})
   OutlinedButton(onClick={picker.launch(arrayOf("application/pdf","image/jpeg","image/png","application/vnd.openxmlformats-officedocument.wordprocessingml.document"))},enabled=!busy&&!locked,modifier=Modifier.fillMaxWidth()){

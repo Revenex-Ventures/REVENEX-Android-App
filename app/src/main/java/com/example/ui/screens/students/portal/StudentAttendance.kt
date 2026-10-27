@@ -31,6 +31,7 @@ internal fun studentAttendanceEntries(student:Student,records:List<ClassAttendan
 }.distinctBy{it.date to it.session}.sortedByDescending{it.date}
 
 @Composable fun StudentAttendance(repository:ErpDataRepository) {
+ val dark=LocalStudentDark.current
  val student=ownStudent(repository);val registers by repository.classAttendance.collectAsState()
  if(student==null){EmptyStateView("Student link unavailable","Attendance requires your verified student record.");return}
  var monthValue by rememberSaveable(student.id){mutableStateOf(YearMonth.from(studentToday()).toString())}
@@ -39,7 +40,8 @@ internal fun studentAttendanceEntries(student:Student,records:List<ClassAttendan
  selected?.let{day->AlertDialog(onDismissRequest={selected=null},title={Text(day.toString())},text={Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){val details=entries.filter{it.date==day};if(details.isEmpty())Text("No recorded attendance.");details.forEach{Text("${it.session}: ${it.status.label}")}}},confirmButton={TextButton(onClick={selected=null}){Text("Close")}})}
  val present=entries.count{it.status in setOf(AttendanceStatus.PRESENT,AttendanceStatus.LATE,AttendanceStatus.EXCUSED)}
  LazyColumn(Modifier.fillMaxSize().testTag("student_attendance"),contentPadding=PaddingValues(StudentLayout.margin),verticalArrangement=Arrangement.spacedBy(StudentLayout.section)){
-  item{WorkspacePageHeader("Attendance")}
+  item{StudentPageHeader("Attendance")}
+  if(dark)item{StudentDarkFeature(if(entries.isEmpty())"N/A"else "${present*100/entries.size}%","Recorded attendance this month",StudentTone.MINT,StudentIcons.Calendar,compact=true)}
   item{StudentCard{
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={monthValue=month.minusMonths(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous month")};Text(month.format(DateTimeFormatter.ofPattern("MMMM uuuu")),Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold);IconButton(onClick={monthValue=month.plusMonths(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next month")}}
    Box(Modifier.horizontalScroll(rememberScrollState())){Column(Modifier.widthIn(min=336.dp).padding(Spacing.xs4)){
@@ -55,9 +57,9 @@ internal fun studentAttendanceEntries(student:Student,records:List<ClassAttendan
     }}}
    }}
   }}
-  item{StudentCard(tone=StudentTone.MINT){Column(Modifier.padding(StudentLayout.gap),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){Text(if(entries.isEmpty())"N/A"else "${present*100/entries.size}%",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold,color=StudentColors.colors(StudentTone.MINT).second);Text("Recorded sessions this month",style=MaterialTheme.typography.bodySmall);Text("$present attended · ${entries.count{it.status==AttendanceStatus.ABSENT}} absent · ${entries.count{it.status==AttendanceStatus.LEAVE}} on leave",style=MaterialTheme.typography.bodySmall)}}}
+  if(!dark)item{StudentCard(tone=StudentTone.MINT){Column(Modifier.padding(StudentLayout.gap),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)){Text(if(entries.isEmpty())"N/A"else "${present*100/entries.size}%",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold,color=StudentColors.colors(StudentTone.MINT).second);Text("Recorded sessions this month",style=MaterialTheme.typography.bodySmall);Text("$present attended · ${entries.count{it.status==AttendanceStatus.ABSENT}} absent · ${entries.count{it.status==AttendanceStatus.LEAVE}} on leave",style=MaterialTheme.typography.bodySmall)}}}
   item{StudentHeading("Recent attendance");Text("Read only. Calendar colors summarize saved sessions; tap a date for details.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   if(entries.isEmpty())item{Text("No recorded attendance for this month.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
-  items(entries,key={"${it.date}_${it.session}"}){entry->Column{Row(Modifier.fillMaxWidth().padding(vertical=Spacing.sm8),horizontalArrangement=Arrangement.SpaceBetween){Column(Modifier.weight(1f)){Text(entry.date.toString(),style=MaterialTheme.typography.bodyMedium);Text(entry.session,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};Text(entry.status.label,style=MaterialTheme.typography.labelMedium,color=if(entry.status==AttendanceStatus.ABSENT)MaterialTheme.colorScheme.error else StudentColors.colors(StudentTone.MINT).second)};HorizontalDivider()}}
+  items(entries,key={"${it.date}_${it.session}"}){entry->Column{Row(Modifier.fillMaxWidth().padding(vertical=Spacing.sm8),horizontalArrangement=Arrangement.SpaceBetween){Column(Modifier.weight(1f)){Text(entry.date.toString(),style=MaterialTheme.typography.bodyMedium);Text(entry.session,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};Text(entry.status.label,style=MaterialTheme.typography.labelMedium,color=if(entry.status==AttendanceStatus.ABSENT)MaterialTheme.colorScheme.error else if(LocalStudentDark.current)StudentDarkPalette.mint else StudentColors.colors(StudentTone.MINT).second)};HorizontalDivider()}}
  }
 }

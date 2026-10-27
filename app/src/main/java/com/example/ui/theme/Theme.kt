@@ -11,6 +11,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 
 val LocalTeacherPresentation = staticCompositionLocalOf { false }
 
@@ -101,12 +102,28 @@ fun ScholaTheme(
   val preference = LocalAppearance.current ?: rememberAppearancePreference()
   val dark = darkTheme ?: preference.selection.usesDark(isSystemInDarkTheme())
   val studentExperience=if(student)rememberStudentExperience()else null
-  val colorScheme = (if (dark) ScholaDarkColorScheme else ScholaLightColorScheme).let { original ->
+  val portalColorScheme = (if (dark) ScholaDarkColorScheme else ScholaLightColorScheme).let { original ->
     val base=if(!(teacher||student))original else if(dark)original.copy(background=Color(0xFF151B24),surface=Color(0xFF1D2530),onSurface=Color(0xFFEAF0F8),onBackground=Color(0xFFEAF0F8),onSurfaceVariant=Color(0xFFB5C0D0),surfaceVariant=Color(0xFF283241),outlineVariant=Color(0xFF364253),primary=Color(0xFFFFB581),onPrimary=Color(0xFF3E1900),primaryContainer=Color(0xFF53301F),onPrimaryContainer=Color(0xFFFFDCC5),surfaceTint=Color.Transparent) else original.copy(background=TeacherColors.canvas,surface=TeacherColors.surface,onBackground=TeacherColors.ink,onSurface=TeacherColors.ink,onSurfaceVariant=TeacherColors.muted,primary=TeacherColors.orange,onPrimary=Color(0xFF241000),primaryContainer=Color(0xFFFFF0E5),onPrimaryContainer=TeacherColors.pressed,outlineVariant=TeacherColors.border,outline=TeacherColors.muted,surfaceVariant=TeacherColors.canvas,surfaceTint=Color.Transparent,error=Color(0xFFB42318))
     if(principal)base.copy(background=if(dark)base.background else PrincipalColors.canvasLight,onSurface=if(dark)base.onSurface else PrincipalColors.inkLight,onBackground=if(dark)base.onBackground else PrincipalColors.inkLight,onSurfaceVariant=if(dark)base.onSurfaceVariant else PrincipalColors.mutedLight,primary=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight, surfaceTint=if(dark)ScholaTerracottaLight else PrincipalColors.actionLight)
     else if(student)base.copy(primary=if(dark)Color(0xFFFFB581)else Color(0xFFC24807),onPrimary=if(dark)Color(0xFF3E1900)else Color.White,onPrimaryContainer=if(dark)Color(0xFFFFDCC5)else Color(0xFFA33B07),surfaceContainerLowest=base.surface,surfaceContainerLow=base.surface,surfaceContainer=base.surface,surfaceContainerHigh=base.surface,surfaceContainerHighest=base.surfaceVariant,surfaceDim=base.background,surfaceBright=base.surface,secondaryContainer=if(dark)Color(0xFF1D3A2E)else Color(0xFFEAF6EF),onSecondaryContainer=if(dark)Color(0xFF8EDACB)else Color(0xFF006C65))
     else base
   }
+  val colorScheme = if(student && dark) portalColorScheme.copy(
+    background=StudentDarkPalette.canvas, onBackground=StudentDarkPalette.text,
+    surface=StudentDarkPalette.surface, onSurface=StudentDarkPalette.text,
+    surfaceVariant=StudentDarkPalette.navigation, onSurfaceVariant=StudentDarkPalette.muted,
+    primary=StudentDarkPalette.orange, onPrimary=StudentDarkPalette.ink,
+    primaryContainer=StudentDarkPalette.orange, onPrimaryContainer=StudentDarkPalette.ink,
+    secondary=StudentDarkPalette.mint, onSecondary=StudentDarkPalette.ink,
+    secondaryContainer=StudentDarkPalette.mint, onSecondaryContainer=StudentDarkPalette.ink,
+    tertiary=StudentDarkPalette.blue, onTertiary=StudentDarkPalette.ink,
+    tertiaryContainer=StudentDarkPalette.blue, onTertiaryContainer=StudentDarkPalette.ink,
+    outlineVariant=StudentDarkPalette.border, outline=StudentDarkPalette.muted,
+    surfaceContainerLowest=StudentDarkPalette.canvas,surfaceContainerLow=StudentDarkPalette.navigation,
+    surfaceContainer=StudentDarkPalette.surface,surfaceContainerHigh=StudentDarkPalette.surface,
+    surfaceContainerHighest=StudentDarkPalette.surface,surfaceDim=StudentDarkPalette.canvas,
+    surfaceBright=StudentDarkPalette.surface, surfaceTint=Color.Transparent
+  ) else portalColorScheme
   val view = LocalView.current
   SideEffect {
     if (android.os.Build.VERSION.SDK_INT >= 29) view.isForceDarkAllowed = false
@@ -118,12 +135,12 @@ fun ScholaTheme(
       }
     }
   }
-  CompositionLocalProvider(LocalAppearance provides preference, LocalTeacherPresentation provides teacher, LocalStudentExperience provides studentExperience,
+  CompositionLocalProvider(LocalStudentDark provides (student && dark), LocalAppearance provides preference, LocalTeacherPresentation provides teacher, LocalStudentExperience provides studentExperience,
     androidx.compose.material3.LocalContentColor provides colorScheme.onBackground) {
 
   MaterialTheme(
     colorScheme = colorScheme,
-    typography = Typography,
+    typography = if(student && dark) StudentDarkTypography else Typography,
     shapes = androidx.compose.material3.Shapes(
       extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(Radius.xs),
       small = androidx.compose.foundation.shape.RoundedCornerShape(Radius.sm),
@@ -151,3 +168,10 @@ fun RevenexTheme(
 ) {
   ScholaTheme(darkTheme = darkTheme, principal = principal, content = content)
 }
+
+/** Platform sans-serif is already licensed by Android; no new font dependency. */
+private val StudentDarkTypography = Typography.copy(
+ headlineLarge=Typography.headlineLarge.copy(fontSize=32.sp,lineHeight=35.sp,letterSpacing=-1.3.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold),
+ headlineMedium=Typography.headlineMedium.copy(fontSize=28.sp,lineHeight=32.sp,letterSpacing=-1.sp),
+ headlineSmall=Typography.headlineSmall.copy(fontSize=24.sp,lineHeight=28.sp)
+)

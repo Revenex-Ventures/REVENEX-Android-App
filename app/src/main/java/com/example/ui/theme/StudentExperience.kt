@@ -30,20 +30,44 @@ object StudentLayout {
 }
 enum class StudentTone { ORANGE, MINT, BLUE, LAVENDER, NEUTRAL, ERROR }
 object StudentColors {
- private val dark:Boolean @Composable get()=MaterialTheme.colorScheme.background.luminance()<.5f
- val action:Color @Composable get()=if(dark)Color(0xFFFFB581)else TeacherColors.pressed
+ private val dark:Boolean @Composable get()=LocalStudentDark.current
+ val action:Color @Composable get()=if(dark)StudentDarkPalette.orange else TeacherColors.pressed
  /** Orange text shades meet AA on the cool canvas and peach respectively; icon/fill hues stay unchanged. */
- val actionText:Color @Composable get()=if(dark)Color(0xFFFFB581)else Color(0xFFC24807)
- val onOrange:Color @Composable get()=if(dark)Color(0xFFFFB581)else Color(0xFFA33B07)
- val selection:Color @Composable get()=if(dark)Color(0xFFFFB581)else TeacherColors.orange
- val onSelection:Color @Composable get()=if(dark)Color(0xFF3E1900)else Color(0xFF241000)
- val onAction:Color @Composable get()=if(dark)Color(0xFF3E1900)else Color.White
+ val actionText:Color @Composable get()=if(dark)StudentDarkPalette.orange else Color(0xFFC24807)
+ val onOrange:Color @Composable get()=if(dark)StudentDarkPalette.ink else Color(0xFFA33B07)
+ val selection:Color @Composable get()=if(dark)StudentDarkPalette.orange else TeacherColors.orange
+ val onSelection:Color @Composable get()=if(dark)StudentDarkPalette.ink else Color(0xFF241000)
+ val onAction:Color @Composable get()=if(dark)StudentDarkPalette.ink else Color.White
  @Composable fun colors(tone:StudentTone):Pair<Color,Color> = when(tone) {
-  StudentTone.ORANGE->TeacherColors.peach to if(dark)Color(0xFFFFB581)else TeacherColors.orange
-  StudentTone.MINT->TeacherColors.mint to if(dark)Color(0xFF8EDACB)else Color(0xFF006C65)
-  StudentTone.BLUE->TeacherColors.blue to if(dark)Color(0xFFA9C9FF)else Color(0xFF146AC6)
-  StudentTone.LAVENDER->TeacherColors.lavender to if(dark)Color(0xFFCDBBFF)else Color(0xFF7653BD)
-  StudentTone.ERROR->MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+  StudentTone.ORANGE->if(dark)StudentDarkPalette.orange to StudentDarkPalette.ink else TeacherColors.peach to TeacherColors.orange
+  StudentTone.MINT->if(dark)StudentDarkPalette.mint to StudentDarkPalette.ink else TeacherColors.mint to Color(0xFF006C65)
+  StudentTone.BLUE->if(dark)StudentDarkPalette.blue to StudentDarkPalette.ink else TeacherColors.blue to Color(0xFF146AC6)
+  StudentTone.LAVENDER->if(dark)StudentDarkPalette.blue to StudentDarkPalette.ink else TeacherColors.lavender to Color(0xFF7653BD)
+  StudentTone.ERROR->if(dark)StudentDarkPalette.orange to StudentDarkPalette.ink else MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
   else->MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
  }
+}
+
+/** Resolved Student-only appearance; never inferred from a nested colored card. */
+val LocalStudentDark = staticCompositionLocalOf { false }
+object StudentDarkPalette {
+ val canvas=Color(0xFF0B1220)
+ val surface=Color(0xFF1C2B43)
+ val navigation=Color(0xFF162237)
+ val blue=Color(0xFF92BAF2)
+ val mint=Color(0xFFA6D9BF)
+ val orange=Color(0xFFFF743D)
+ val ink=Color(0xFF102034)
+ val text=Color(0xFFF4F6FB)
+ val muted=Color(0xFFB5C5DB)
+ val border=Color(0xFF2D405A)
+ val radius=22.dp
+}
+
+object StudentDarkLayout {
+ val bookCover=132.dp
+ val dockTarget=56.dp
+ val viewportMax=720.dp
+ val dockIcon=21.dp
+ val featureIcon=28.dp
 }

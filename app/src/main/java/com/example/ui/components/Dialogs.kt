@@ -1222,6 +1222,10 @@ fun ApplyLeaveDialog(
 @Composable
 fun FeePaymentDialog(studentName: String,amountDue: Long,isProcessing: Boolean,paymentCompleted: Boolean,razorpayPaymentId: String,
  onDismiss: ()->Unit,onStartRazorpay: (String)->Unit,receiptNo: String="",statusMessage: String="",onCheckStatus: (()->Unit)?=null) {
+ if(LocalStudentDark.current){
+  com.example.ui.screens.students.portal.StudentDarkPaymentDialog(studentName,amountDue,isProcessing,paymentCompleted,razorpayPaymentId,onDismiss,onStartRazorpay,receiptNo,statusMessage,onCheckStatus)
+  return
+ }
  val amount="₹${String.format(java.util.Locale.US,"%,.2f",amountDue/100.0)}"
  Dialog(onDismissRequest={if(!isProcessing)onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)) {
   CompactFormLayout(header={FormHeading(if(paymentCompleted)"Verified receipt" else if(amountDue<=0L)"Receipt & payment status" else "Review test payment",studentName,!isProcessing,onDismiss)},footer={
