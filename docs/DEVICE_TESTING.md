@@ -12,13 +12,13 @@ If Android reports a package/signature conflict, stop and keep the existing app/
 
 ## Two distinct ways to test
 
-- Try demo: offline synthetic Principal, Administrator, Teacher, Student and Guardian navigation. It does not prove shared cloud persistence or Razorpay settlement.
+- Try demo: offline synthetic Principal, Teacher, Student and Guardian navigation. It does not prove shared cloud persistence or Razorpay settlement.
 - School sign-in: use your existing synthetic Supabase accounts. Backend records determine role and permitted data. Use this mode for cross-account workflows. Do not send passwords, OTPs, keys or payment credentials in reports.
 
 ## Checklist
 
 - [ ] Cold launch: official logo is clear; account entry opens; resume does not replay the intro unnecessarily.
-- [ ] Check Principal, Administrator, Teacher, Student and Guardian navigation, back actions, search, profile and settings.
+- [ ] Check Principal, Teacher, Student and Guardian navigation, back actions, search, profile and settings.
 - [ ] Light/Dark/System: change selection, close/reopen app, check dialogs, keyboard and system navigation margins. Check enlarged text and orientation.
 - [ ] Teacher publishes an assignment to an authorized class; the correct Student sees it and another class cannot.
 - [ ] Student submits a note/file; Teacher opens that same submission and records feedback; retry does not duplicate it.
@@ -50,3 +50,5 @@ Historical attendance correction approval is unavailable; historical direct regi
 ## Reporting a failure
 
 Record build/source, portal, screen, action, expected/actual result, time, network state and sanitized error text. Use synthetic records. Redact private account/payment details from screenshots. Do not reset/reseed the database or rerun deployed migrations to work around an error.
+
+- [ ] Administrator entry/demo cards are absent. An admin-only identity shows unsupported-on-Android and can return to sign-in without changing roles.

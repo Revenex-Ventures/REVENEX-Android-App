@@ -28,7 +28,7 @@
 
 ## Reachable screen inventory
 
-The public screen entry points below were enumerated from the existing UI source. State indicators identify code present in the file, not completed runtime certification. The five existing UI roles are Principal, School Administrator, Teacher, Student, Parent; extra backend roles are not added by this redesign.
+The public screen entry points below were enumerated from the existing UI source. State indicators identify code present in the file, not completed runtime certification. Mobile entry supports Principal, Teacher, Student and Parent. Administrator remains a backend role; its Android entry/dashboard is removed and admin-only identities are blocked with a clear unsupported message.
 
 | Source | Entry points | Existing important states |
 |---|---|---|
@@ -39,7 +39,6 @@ The public screen entry points below were enumerated from the existing UI source
 | attendance/PrincipalAttendanceScreen.kt | PrincipalAttendanceScreen | empty, errors/validation, dialogs/forms |
 | auth/AuthScreen.kt | AuthScreen | errors/validation, dialogs/forms |
 | communication/CommunicationScreens.kt | NoticesScreen, NotificationsScreen | empty |
-| dashboard/AdminDashboardScreen.kt | AdminDashboardScreen | empty |
 | dashboard/ParentDashboardScreen.kt | ParentDashboardScreen | errors/validation, dialogs/forms |
 | dashboard/PrincipalDashboardScreen.kt | PrincipalDashboardScreen | content/detail |
 | dashboard/StudentDashboardScreen.kt | StudentDashboardScreen | empty |

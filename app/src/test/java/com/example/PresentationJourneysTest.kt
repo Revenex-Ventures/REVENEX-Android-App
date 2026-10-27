@@ -20,18 +20,19 @@ import org.robolectric.annotation.Config
 @Config(sdk=[34],qualifiers="w393dp-h852dp-xhdpi")
 class PresentationJourneysTest {
   @get:Rule val compose=createComposeRule()
-  @Test fun demoIsSecondaryAndStillOpensTheSelectedAdminPortal() {
+  @Test fun demoRemovesAdminAndStillOpensTheSelectedPrincipalPortal() {
     val repo=ErpDataRepository.getInstance()
     repo.setDataMode(DataMode.DEMO)
     var entered=false
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
     compose.onNodeWithTag("role_select_admin").assertDoesNotExist()
     compose.onNodeWithTag("try_demo").performScrollTo().performClick()
-    compose.onNodeWithTag("role_select_admin").performScrollTo().performClick()
+    compose.onNodeWithTag("role_select_admin").assertDoesNotExist()
+    compose.onNodeWithTag("role_select_principal").performScrollTo().performClick()
     compose.onNodeWithTag("submit_login_button").performScrollTo().assertIsDisplayed().performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil {entered}
-    assertEquals(UserRole.ADMIN,repo.currentUser.value.role)
+    assertEquals(UserRole.PRINCIPAL,repo.currentUser.value.role)
   }
   @Test fun familyFeeShortcutRetainsItsActualDestination() {
     val repo=ErpDataRepository.getInstance()

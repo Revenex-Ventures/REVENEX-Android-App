@@ -69,6 +69,10 @@ fun ScholaResponsiveScaffold(
   onBack: (() -> Unit)? = null,
   content: @Composable (PaddingValues) -> Unit
 ) {
+  if (!com.example.data.model.MobileRoleAccess.supports(currentUser.role)) {
+    com.example.ui.screens.auth.UnsupportedMobileAccountScreen(onLogout)
+    return
+  }
   val pageContent: @Composable () -> Unit = {
     CompositionLocalProvider(LocalWorkspaceBack provides onBack) { content(PaddingValues(0.dp)) }
   }

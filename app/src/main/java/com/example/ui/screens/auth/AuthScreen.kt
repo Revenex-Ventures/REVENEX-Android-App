@@ -45,7 +45,6 @@ import com.example.ui.theme.*
 /** A portal is an entry hint, never an authorization decision. */
 private enum class Portal(val label: String, val detail: String) {
   PRINCIPAL("Principal", "School leadership"),
-  ADMIN("Administrator", "School operations"),
   TEACHER("Teacher", "Teaching and classwork"),
   FAMILY("Student / Guardian", "Learning and school updates")
 }
@@ -173,7 +172,7 @@ private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
             OutlinedCard(onClick={onPortal(portal)},modifier=Modifier.fillMaxWidth().testTag("portal_${portal.name.lowercase()}"),shape=RoundedCornerShape(Radius.input),colors=CardDefaults.outlinedCardColors(containerColor=MaterialTheme.colorScheme.surface)) {
               Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
                 Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(Radius.sm)) {
-                  Icon(when(portal){Portal.PRINCIPAL->Icons.Default.School;Portal.ADMIN->Icons.Default.ManageAccounts;Portal.TEACHER->Icons.Default.MenuBook;Portal.FAMILY->Icons.Default.FamilyRestroom},null,Modifier.padding(Spacing.sm8).size(24.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
+                  Icon(when(portal){Portal.PRINCIPAL->Icons.Default.School;Portal.TEACHER->Icons.Default.MenuBook;Portal.FAMILY->Icons.Default.FamilyRestroom},null,Modifier.padding(Spacing.sm8).size(24.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Column(Modifier.weight(1f)) {
                   Text(portal.label,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
@@ -200,10 +199,10 @@ private fun PhotoPortalEntry(onPortal: (Portal)->Unit,onDemo: ()->Unit) {
 
 @Composable
 private fun DemoRolePicker(selectedRole: UserRole,onSelected: (UserRole)->Unit,busy: Boolean) {
-  val roles=listOf(UserRole.ADMIN,UserRole.PRINCIPAL,UserRole.TEACHER,UserRole.STUDENT,UserRole.PARENT)
+  val roles=listOf(UserRole.PRINCIPAL,UserRole.TEACHER,UserRole.STUDENT,UserRole.PARENT)
   val large=LocalDensity.current.fontScale>1.25f
-  fun title(role: UserRole)=when(role){UserRole.ADMIN->"Administrator";UserRole.PRINCIPAL->"Principal";UserRole.TEACHER->"Teacher";UserRole.STUDENT->"Student";else->"Parent / Guardian"}
-  fun detail(role: UserRole)=when(role){UserRole.ADMIN->"Admissions, people & operations";UserRole.PRINCIPAL->"School overview & decisions";UserRole.TEACHER->"Classes, tasks & results";UserRole.STUDENT->"Lessons, assignments & fees";else->"Child updates & school accounts"}
+  fun title(role: UserRole)=when(role){UserRole.PRINCIPAL->"Principal";UserRole.TEACHER->"Teacher";UserRole.STUDENT->"Student";else->"Parent / Guardian"}
+  fun detail(role: UserRole)=when(role){UserRole.PRINCIPAL->"School overview & decisions";UserRole.TEACHER->"Classes, tasks & results";UserRole.STUDENT->"Lessons, assignments & fees";else->"Child updates & school accounts"}
   @Composable fun Persona(role: UserRole,modifier: Modifier=Modifier) {
     val chosen=selectedRole==role
     Surface(modifier.fillMaxWidth().selectable(chosen,onClick={onSelected(role)},enabled=!busy,role=Role.RadioButton).testTag("role_select_${role.name.lowercase()}"),
@@ -211,7 +210,7 @@ private fun DemoRolePicker(selectedRole: UserRole,onSelected: (UserRole)->Unit,b
       border=androidx.compose.foundation.BorderStroke(if(chosen)2.dp else 1.dp,if(chosen)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
       Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-          Icon(when(role){UserRole.ADMIN->Icons.Default.ManageAccounts;UserRole.PRINCIPAL->Icons.Default.School;UserRole.TEACHER->Icons.Default.MenuBook;UserRole.STUDENT->Icons.Default.Person;else->Icons.Default.FamilyRestroom},null,tint=MaterialTheme.colorScheme.primary)
+          Icon(when(role){UserRole.PRINCIPAL->Icons.Default.School;UserRole.TEACHER->Icons.Default.MenuBook;UserRole.STUDENT->Icons.Default.Person;else->Icons.Default.FamilyRestroom},null,tint=MaterialTheme.colorScheme.primary)
           if(chosen)Icon(Icons.Default.CheckCircle,"Selected",tint=MaterialTheme.colorScheme.primary)
         }
         Text(title(role),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)

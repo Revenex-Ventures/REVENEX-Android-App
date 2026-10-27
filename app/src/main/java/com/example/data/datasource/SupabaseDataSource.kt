@@ -191,6 +191,8 @@ class SupabaseDataSource : ErpDataSource {
       // Additional enum roles exist in SQL, but no dashboard is fabricated for them.
       val role = UserRole.entries.firstOrNull { it.name==profile.role }
         ?: error("This account role does not have a supported demo dashboard.")
+      // Preserve the backend ADMIN identity, but never load or route its mobile portal.
+      MobileRoleAccess.requireSupported(role)
       user.value=UserProfile(uid,profile.name,profile.email,role,role.displayName,"",profile.name.split(" ").mapNotNull { it.firstOrNull() }.joinToString("").take(2),schoolId=profile.school_id)
       activeSession=profile.session_id
       signInStage="school data"

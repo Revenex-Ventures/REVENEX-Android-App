@@ -50,6 +50,10 @@ fun GlobalCommandPaletteModal(
 ) {
   val students by repository.students.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
+  if (!com.example.data.model.MobileRoleAccess.supports(currentUser.role)) {
+    com.example.ui.screens.auth.UnsupportedMobileAccountScreen(onDismiss)
+    return
+  }
   var query by remember { mutableStateOf("") }
 
   val palette = MaterialTheme.colorScheme
@@ -59,11 +63,11 @@ fun GlobalCommandPaletteModal(
       add(PaletteAction(destination.title, destination.area.label, Icons.Default.Apps, palette.primary, destination.route))
     }
     add(PaletteAction("Modules", "WORKSPACE", Icons.Default.Apps, palette.primary, Screen.OperationsHub.route))
-    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
+    if (currentUser.role in setOf(UserRole.PRINCIPAL)) {
       add(PaletteAction("Add student", "ACTION", Icons.Default.PersonAdd, palette.primary, onAction = { onTriggerAction("admit_student") }))
       add(PaletteAction("Publish notice", "ACTION", Icons.Default.Campaign, palette.primary, onAction = { onTriggerAction("create_notice") }))
     }
-    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)) {
+    if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.TEACHER)) {
       add(PaletteAction("New assignment", "ACTION", Icons.Default.Assignment, palette.primary, onAction = { onTriggerAction("create_assignment") }))
     }
   }

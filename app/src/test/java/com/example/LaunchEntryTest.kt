@@ -39,7 +39,8 @@ class LaunchEntryTest {
     val repo=repo();val original=repo.currentUser.value
     var entered=false
     compose.setContent {ScholaTheme(false){AuthScreen(repo,{entered=true})}}
-    for (portal in listOf("principal","admin","teacher","family")) {
+    compose.onNodeWithTag("portal_admin").assertDoesNotExist()
+    for (portal in listOf("principal","teacher","family")) {
       compose.onNodeWithTag("portal_$portal").performScrollTo().performClick()
       compose.onNodeWithTag("login_email").assertExists()
       compose.onNodeWithTag("submit_supabase_login").assertIsNotEnabled()

@@ -74,7 +74,7 @@ class AdminWorkflowUiTest {
 
   @Test @Config(qualifiers = "w320dp-h640dp-xhdpi")
   fun narrowLargeTextDirectorySearchRetainsWorkingDestination() {
-    val repository = repository(UserRole.ADMIN)
+    val repository = repository(UserRole.PRINCIPAL)
     var destination = ""
     compose.setContent {
       val density = LocalDensity.current
@@ -91,7 +91,7 @@ class AdminWorkflowUiTest {
 
   @Test @Config(qualifiers = "w800dp-h1100dp-xhdpi")
   fun tabletDirectoryRendersInBothThemes() {
-    val repository = repository(UserRole.ADMIN)
+    val repository = repository(UserRole.PRINCIPAL)
     var dark by mutableStateOf(false)
     compose.setContent { ScholaTheme(dark) { Surface(Modifier.fillMaxSize()) { OperationsHubScreen(repository, {}, {}, {}, {}, {}) } } }
     capture("directory_tablet_light")

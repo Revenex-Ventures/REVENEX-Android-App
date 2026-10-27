@@ -48,7 +48,7 @@ class RevenexRedesignScreenshotTest {
         ScholaResponsiveScaffold(Screen.Dashboard.route,user,2,{},{},{},{},{}) {
           when(role) {
             UserRole.PRINCIPAL -> PrincipalDashboardScreen(repository,{},{},{},{})
-            UserRole.ADMIN -> AdminDashboardScreen(repository,{},{},{},{})
+            UserRole.ADMIN -> com.example.ui.screens.auth.UnsupportedMobileAccountScreen {}
             UserRole.TEACHER -> TeacherDashboardScreen(repository,{},{},{})
             UserRole.STUDENT -> StudentDashboardScreen(repository,{})
             // Production NavHost routes parents to this shared family dashboard.

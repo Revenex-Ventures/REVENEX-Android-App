@@ -12,14 +12,10 @@ import kotlinx.coroutines.runBlocking
 
 class AdminExperienceTest {
   @Test
-  fun administrator_has_a_distinct_operational_workspace() {
+  fun administrator_has_no_mobile_workspace() {
     val items = NavConfig.getBottomNavItems(UserRole.ADMIN)
 
-    assertEquals("Home", items.first().label)
-    assertTrue(items.any { it.label == "People" })
-    assertEquals(Screen.Academics.route,items.single {it.label=="Academics"}.route)
-    assertTrue(items.any { it.label == "Finance" })
-    assertTrue(items.any { it.label == "More" })
+    assertTrue(items.isEmpty())
   }
 
   @Test fun familyScheduleKeepsItsTimetableDestination() {
@@ -30,18 +26,19 @@ class AdminExperienceTest {
 
   @Test fun nestedDestinationsRetainTheirPrimarySelection() {
     assertEquals(Screen.StudentLearn.route,NavConfig.selectedPrimaryRoute(UserRole.STUDENT,Screen.Exams.route))
-    assertEquals(Screen.Students.route, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.TeacherDetail.route))
-    assertEquals(Screen.Academics.route, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.Homework.route))
+    assertEquals(null, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.TeacherDetail.route))
+    assertEquals(null, NavConfig.selectedPrimaryRoute(UserRole.ADMIN, Screen.Homework.route))
     assertEquals(Screen.OperationsHub.route, NavConfig.selectedPrimaryRoute(UserRole.PRINCIPAL, Screen.PrincipalAttendance.route))
     assertEquals(Screen.OperationsHub.route, NavConfig.selectedPrimaryRoute(UserRole.PARENT, Screen.Notifications.route))
   }
 
   @Test
-  fun demo_administrator_persona_resolves_before_dashboard_navigation() = runBlocking {
+  fun backend_administrator_identity_is_retained_without_mobile_navigation() = runBlocking {
     val source = LocalDemoDataSource()
 
     source.switchRole(UserRole.ADMIN)
 
     assertEquals(UserRole.ADMIN, source.getCurrentUserFlow().first().role)
+    assertTrue(NavConfig.getBottomNavItems(source.getCurrentUserFlow().first().role).isEmpty())
   }
 }

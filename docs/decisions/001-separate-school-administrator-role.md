@@ -1,5 +1,6 @@
 # ADR-001: Separate the school administrator from the principal
 
+> Android portal scope superseded on 27 October 2026: see [mobile access removal](../ADMIN_MOBILE_REMOVAL.md). The backend ADMIN role and policies remain.
 ## Status
 
 Accepted — 19 October 2026.

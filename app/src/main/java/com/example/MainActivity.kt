@@ -51,12 +51,12 @@ import com.example.ui.screens.academics.StudyMaterialScreen
 import com.example.ui.screens.academics.TimetableScreen
 import com.example.ui.screens.ai.AiAssistantScreen
 import com.example.ui.screens.attendance.AttendanceScreen
-import com.example.ui.screens.attendance.PrincipalAttendanceScreen
+import com.example.data.model.MobileRoleAccess
+import com.example.ui.screens.auth.UnsupportedMobileAccountScreen
 import com.example.ui.screens.auth.AuthScreen
 import com.example.ui.screens.communication.NoticesScreen
 import com.example.ui.screens.communication.NotificationsScreen
 import com.example.ui.screens.dashboard.ParentDashboardScreen
-import com.example.ui.screens.dashboard.AdminDashboardScreen
 import com.example.ui.screens.dashboard.PrincipalDashboardScreen
 import com.example.ui.screens.dashboard.StudentDashboardScreen
 import com.example.ui.screens.dashboard.TeacherDashboardScreen
@@ -296,6 +296,21 @@ fun ScholaErpApp(
     paymentModalStudentName = ""; paymentModalAmount = 0L; paymentModalFeeId = ""
   }
 
+  // Covers stale/restored/injected mobile identities before any route, dialog or workspace renders.
+  if (!MobileRoleAccess.supports(currentUser.role)) {
+    UnsupportedMobileAccountScreen {
+      if (navController.currentDestination != null) {
+        clearAccountNavigation()
+        navController.navigate(Screen.Auth.route) {
+          popUpTo(navController.graph.id) { inclusive = true }; launchSingleTop = true
+        }
+      }
+      repository.logout()
+      onResetPayment()
+    }
+    return
+  }
+
   ScholaResponsiveScaffold(
     currentRoute = currentRoute,
     currentUser = currentUser,
@@ -409,13 +424,7 @@ fun ScholaErpApp(
             onShowAddTeacher = { showAddTeacherDialog = true },
             onShowCreateNotice = { showCreateNoticeDialog = true }
           )
-          UserRole.ADMIN -> AdminDashboardScreen(
-            repository = repository,
-            onNavigateTo = { navController.navigate(it) },
-            onShowAddStudent = { showAddStudentDialog = true },
-            onShowAddTeacher = { showAddTeacherDialog = true },
-            onShowCreateNotice = { showCreateNoticeDialog = true }
-          )
+          UserRole.ADMIN -> UnsupportedMobileAccountScreen { repository.logout() }
           UserRole.TEACHER -> TeacherDashboardScreen(
             repository = repository,
             onNavigateTo = { navController.navigate(it) },
@@ -509,11 +518,6 @@ fun ScholaErpApp(
         if(currentUser.role==UserRole.STUDENT) StudentAttendance(repository)
         else if(currentUser.role==UserRole.PRINCIPAL) {
           PrincipalAttendanceOverview(repository,{cohort,date->navController.navigate(Screen.PrincipalClass.createRoute(cohort,date))},{navController.navigate(Screen.Reports.route)})
-        } else if (currentUser.role == UserRole.ADMIN) {
-          PrincipalAttendanceScreen(
-            repository = repository,
-            onBack = { navController.popBackStack() }
-          )
         } else {
           AttendanceScreen(
             repository = repository,
@@ -526,9 +530,8 @@ fun ScholaErpApp(
 
       // Bursar & Financial Ledger
       composable(Screen.PrincipalAttendance.route) {
-        if (currentUser.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) {
-          if(currentUser.role==UserRole.PRINCIPAL) PrincipalAttendanceOverview(repository,{cohort,date->navController.navigate(Screen.PrincipalClass.createRoute(cohort,date))},{navController.navigate(Screen.Reports.route)})
-          else PrincipalAttendanceScreen(repository, onBack = { navController.popBackStack() })
+        if (currentUser.role == UserRole.PRINCIPAL) {
+          PrincipalAttendanceOverview(repository,{cohort,date->navController.navigate(Screen.PrincipalClass.createRoute(cohort,date))},{navController.navigate(Screen.Reports.route)})
         } else {
           EmptyStateView("Attendance overview unavailable", "Open your own attendance from the class portal.")
         }
@@ -541,7 +544,6 @@ fun ScholaErpApp(
 
       composable(Screen.PrincipalClass.route,arguments=listOf(navArgument("cohort"){type=NavType.StringType},navArgument("date"){type=NavType.StringType;nullable=true})) {entry->
         if(currentUser.role==UserRole.PRINCIPAL) PrincipalClassHistory(repository,entry.arguments?.getString("cohort").orEmpty(),entry.arguments?.getString("date").orEmpty()){navController.popBackStack()}
-        else if(currentUser.role==UserRole.ADMIN) PrincipalAttendanceScreen(repository,{navController.popBackStack()},entry.arguments?.getString("cohort"),entry.arguments?.getString("date"))
         else EmptyStateView("Access unavailable","This school workspace requires school staff access.")
       }
 

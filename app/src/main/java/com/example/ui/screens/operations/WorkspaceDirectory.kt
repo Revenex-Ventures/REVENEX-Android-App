@@ -14,11 +14,11 @@ data class WorkspaceDestination(
   val description: String,
   val area: WorkspaceArea,
   val route: String,
-  val roles: Set<UserRole> = UserRole.entries.toSet()
+  val roles: Set<UserRole> = com.example.data.model.MobileRoleAccess.supportedRoles
 )
 
 object WorkspaceDirectory {
-  private val administrators = setOf(UserRole.PRINCIPAL, UserRole.ADMIN)
+  private val administrators = setOf(UserRole.PRINCIPAL)
   private val familyAndAdministrators = administrators + setOf(UserRole.PARENT, UserRole.STUDENT)
   val destinations = listOf(
     WorkspaceDestination("Students", "Enrolment, profiles and class allocation", WorkspaceArea.PEOPLE, Screen.Students.route, administrators),
@@ -31,7 +31,7 @@ object WorkspaceDirectory {
     WorkspaceDestination("Results", "Student reports and published marks", WorkspaceArea.ACADEMICS, Screen.ReportCard.route),
     WorkspaceDestination("Attendance register", "Class, date and session roll call", WorkspaceArea.ATTENDANCE, Screen.Attendance.route),
     WorkspaceDestination("Attendance overview", "Recorded class registers and exceptions", WorkspaceArea.ATTENDANCE, Screen.PrincipalAttendance.route, administrators),
-    WorkspaceDestination("Leave requests", "Applications, decisions and history", WorkspaceArea.ATTENDANCE, Screen.Leaves.route, UserRole.entries.toSet() - UserRole.STUDENT),
+    WorkspaceDestination("Leave requests", "Applications, decisions and history", WorkspaceArea.ATTENDANCE, Screen.Leaves.route, com.example.data.model.MobileRoleAccess.supportedRoles - UserRole.STUDENT),
     WorkspaceDestination("Fees", "Invoices, dues, payments and receipts", WorkspaceArea.FINANCE, Screen.Fees.route, familyAndAdministrators),
     WorkspaceDestination("Activity", "Confirmed school changes", WorkspaceArea.REPORTS, Screen.Audit.route, administrators),
     WorkspaceDestination("Reports", "School summaries and operational review", WorkspaceArea.REPORTS, Screen.Reports.route, administrators),
@@ -47,7 +47,7 @@ object WorkspaceDirectory {
 
   fun visible(role: UserRole, query: String = "", area: WorkspaceArea? = null) =
     destinations.filter { destination ->
-      role in destination.roles && (area == null || area == destination.area) &&
+      com.example.data.model.MobileRoleAccess.supports(role) && role in destination.roles && (area == null || area == destination.area) &&
         listOf(destination.title, destination.description, destination.area.label)
           .any { it.contains(query.trim(), ignoreCase = true) }
     }

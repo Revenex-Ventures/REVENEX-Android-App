@@ -3,6 +3,8 @@ package com.example.data.datasource
 /** Fixed, safe messages only: never display SDK response bodies, tokens or passwords. */
 internal fun supabaseSignInFailure(stage: String, error: Throwable): String {
   val causes=generateSequence(error) { it.cause }.take(8).toList()
+  if(causes.any { it is com.example.data.model.UnsupportedMobileRoleException })
+    return com.example.data.model.MobileRoleAccess.unsupportedMessage
   if(causes.any { it is java.io.IOException || it::class.simpleName?.contains("Timeout")==true })
     return "Cannot reach Supabase. Check internet access and try again."
   val diagnostic=causes.joinToString(" ") { it.message.orEmpty() }.lowercase()

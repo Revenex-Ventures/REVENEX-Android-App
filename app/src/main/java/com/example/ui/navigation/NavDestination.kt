@@ -82,6 +82,7 @@ data class BottomNavItem(
 object NavConfig {
   /** Presentation selection only; authorization remains with the backend. */
   fun selectedPrimaryRoute(role: UserRole, route: String?): String? {
+    if(role==UserRole.ADMIN)return null
     val primary = getBottomNavItems(role).map { it.route }
     if (route in primary) return route
     return when {
@@ -92,9 +93,9 @@ object NavConfig {
       role==UserRole.TEACHER && route in setOf(Screen.TeacherClass.route,Screen.Students.route,Screen.StudentDetail.route,Screen.Attendance.route) -> Screen.TeacherClasses.route
       role==UserRole.TEACHER && route==Screen.ReportCard.route -> Screen.Homework.route
       route in setOf(Screen.StudentDetail.route, Screen.Teachers.route, Screen.TeacherDetail.route,Screen.PrincipalAllocations.route) &&
-        role in setOf(UserRole.ADMIN, UserRole.PRINCIPAL) -> Screen.Students.route
+        role == UserRole.PRINCIPAL -> Screen.Students.route
       route in setOf(Screen.PrincipalAttendance.route,Screen.PrincipalClass.route) && role == UserRole.PRINCIPAL -> Screen.OperationsHub.route
-      role in setOf(UserRole.ADMIN,UserRole.PRINCIPAL) && route in setOf(Screen.Homework.route, Screen.Timetable.route,
+      role == UserRole.PRINCIPAL && route in setOf(Screen.Homework.route, Screen.Timetable.route,
         Screen.Exams.route, Screen.ReportCard.route, Screen.StudyMaterial.route,Screen.PrincipalSubjects.route,Screen.PrincipalCalendar.route) -> Screen.Academics.route
       else -> Screen.OperationsHub.route
     }
@@ -108,13 +109,7 @@ object NavConfig {
         BottomNavItem(Screen.Fees.route,"Finance",Icons.Filled.CreditCard,Icons.Outlined.CreditCard),
         BottomNavItem(Screen.OperationsHub.route,"More",Icons.Filled.MoreHoriz,Icons.Outlined.MoreHoriz)
       )
-      UserRole.ADMIN -> listOf(
-        BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem(Screen.Students.route, "People", Icons.Filled.Groups, Icons.Outlined.Groups),
-        BottomNavItem(Screen.Academics.route, "Academics", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
-        BottomNavItem(Screen.Fees.route, "Finance", Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
-        BottomNavItem(Screen.OperationsHub.route, "More", Icons.Filled.Apps, Icons.Outlined.Apps)
-      )
+      UserRole.ADMIN -> emptyList()
       UserRole.TEACHER -> listOf(
         BottomNavItem(Screen.Dashboard.route, "Home", Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem(Screen.TeacherClasses.route, "Classes", Icons.Filled.Groups, Icons.Outlined.Groups),
