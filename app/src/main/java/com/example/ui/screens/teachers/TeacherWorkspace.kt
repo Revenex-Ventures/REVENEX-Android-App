@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -59,6 +60,11 @@ import kotlinx.coroutines.launch
 }
 @Composable fun TeacherNavigation(route:String?,navigate:(String)->Unit) {
  val items=NavConfig.getBottomNavItems(UserRole.TEACHER)
+ if(MaterialTheme.colorScheme.background.luminance()<.5f){
+  PortalDarkDock(items.map{PortalDockDestination(it.route,it.label,it.unselectedIcon)},route,navigate,"teacher_dark_nav_")
+  return
+ }
+
  Surface(color=MaterialTheme.colorScheme.surface){Column{HorizontalDivider();BoxWithConstraints {
   val rows=if(maxWidth<360.dp&&androidx.compose.ui.platform.LocalDensity.current.fontScale>1.2f)items.chunked(3)else listOf(items)
   Column{rows.forEach{row->Row(Modifier.fillMaxWidth()){row.forEach{item->val active=item.route==route

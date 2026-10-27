@@ -48,25 +48,10 @@ import com.example.ui.theme.*
 }
 
 @Composable internal fun StudentDarkDock(items:List<BottomNavItem>,route:String?,navigate:(String)->Unit) {
- Surface(color=StudentDarkPalette.canvas){
-  Surface(Modifier.padding(horizontal=StudentLayout.margin,vertical=Spacing.sm8).fillMaxWidth(),color=StudentDarkPalette.navigation,shape=RoundedCornerShape(StudentDarkPalette.radius)){
-   val large=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
-   val rows=if(large && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp<400)items.chunked(3)else listOf(items)
-   Column{rows.forEach{row->Row(Modifier.padding(Spacing.xs4)) {row.forEach{item->
-    val selected=item.route==route
-    val capsule by androidx.compose.animation.animateColorAsState(
-     if(selected)StudentDarkPalette.orange else Color.Transparent,
-     androidx.compose.animation.core.tween(if(com.example.ui.components.rememberReducedMotion())0 else StudentLayout.selectionMillis),label="Student dark dock")
-    val you=item.route==Screen.OperationsHub.route
-    Surface(onClick={navigate(if(you)Screen.Profile.route else item.route)},modifier=Modifier.weight(1f).heightIn(min=StudentDarkLayout.dockTarget).semantics{this.selected=selected;role=Role.Tab},shape=RoundedCornerShape(StudentDarkPalette.radius),color=capsule,contentColor=if(selected)StudentDarkPalette.ink else StudentDarkPalette.muted){
-     Column(Modifier.padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){
-      Icon(if(you)Icons.Outlined.Person else item.unselectedIcon,null,Modifier.size(StudentDarkLayout.dockIcon))
-      Text(if(you)"You"else item.label,style=MaterialTheme.typography.labelSmall)
-     }
-    }
-   }}}}
-  }
- }
+ com.example.ui.components.PortalDarkDock(items.map{item->
+  val you=item.route==Screen.OperationsHub.route
+  com.example.ui.components.PortalDockDestination(item.route,if(you)"You"else item.label,if(you)Icons.Outlined.Person else item.unselectedIcon)
+ },route,{target->navigate(if(target==Screen.OperationsHub.route)Screen.Profile.route else target)},"student_dark_nav_")
 }
 
 @Composable internal fun StudentDarkFeature(title:String,subtitle:String,tone:StudentTone,icon:androidx.compose.ui.graphics.vector.ImageVector,onClick:(()->Unit)?=null,eyebrow:String?=null,compact:Boolean=false) {

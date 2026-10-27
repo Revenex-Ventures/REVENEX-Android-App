@@ -26,6 +26,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -623,4 +627,41 @@ fun SchoolDetailRow(label: String,value: String) {
 fun schoolRoleLabel(role:UserRole):String=when(role) {
   UserRole.PRINCIPAL->"Principal";UserRole.ADMIN->"Administrator";UserRole.TEACHER->"Teacher"
   UserRole.STUDENT->"Student";UserRole.PARENT->"Parent / Guardian"
+}
+
+data class PortalDockDestination(val route:String,val label:String,val icon:ImageVector)
+
+/** Content-sized tabs keep long labels inside their selected shape at every font scale. */
+@Composable
+fun PortalDarkDock(items:List<PortalDockDestination>,selectedRoute:String?,navigate:(String)->Unit,tagPrefix:String) {
+ val density=androidx.compose.ui.platform.LocalDensity.current
+ val measure=rememberTextMeasurer()
+ val labelStyle=MaterialTheme.typography.labelSmall
+ val widths=items.map{item->
+  (with(density){measure.measure(AnnotatedString(item.label),labelStyle).size.width.toDp()}+Spacing.lg16).coerceAtLeast(Spacing.xxxl48)
+ }
+ val reduced=rememberReducedMotion()
+ Surface(color=MaterialTheme.colorScheme.background){
+  Surface(Modifier.padding(horizontal=Spacing.md12,vertical=Spacing.sm8).fillMaxWidth(),color=PrincipalDarkPalette.navigation,shape=RoundedCornerShape(Radius.hero)){
+   BoxWithConstraints(Modifier.fillMaxWidth().padding(Spacing.xs4)) {
+    val columns=(items.size downTo 1).firstOrNull{count->items.indices.chunked(count).all{row->row.fold(0.dp){sum,i->sum+widths[i]}+Spacing.xs4*(row.size-1)<=maxWidth}}?:1
+    Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){
+     items.indices.chunked(columns).forEach{row->
+      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Spacing.xs4)){
+       row.forEach{i->val item=items[i];val active=item.route==selectedRoute
+        val color by androidx.compose.animation.animateColorAsState(if(active)PrincipalDarkPalette.orange else PrincipalDarkPalette.navigation,tween(if(reduced)0 else Motion.normal),label="Portal selection")
+        Surface(onClick={navigate(item.route)},modifier=Modifier.weight(widths[i].value).heightIn(min=PortalDockLayout.target).testTag(tagPrefix+item.label)
+          .semantics{selected=active;role=Role.Tab;contentDescription=item.label},shape=RoundedCornerShape(Radius.hero),color=color,contentColor=if(active)PrincipalDarkPalette.ink else PrincipalDarkPalette.muted){
+         Column(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8,vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){
+          Icon(item.icon,null,Modifier.size(Spacing.xl24))
+          Text(item.label,Modifier.fillMaxWidth().testTag(tagPrefix+item.label+"_label"),style=labelStyle,maxLines=1,softWrap=false,textAlign=TextAlign.Center)
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
 }

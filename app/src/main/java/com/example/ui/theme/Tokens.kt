@@ -187,6 +187,9 @@ object PrincipalLayout {
   val sectionSize = 20.sp
   val metricSize = 26.sp
 }
+object PortalDockLayout {
+  val target=64.dp
+}
 /** Teacher workspace reference palette; accents have stable semantic purposes. */
 object TeacherColors {
   val canvas=Color(0xFFF8F9FC)

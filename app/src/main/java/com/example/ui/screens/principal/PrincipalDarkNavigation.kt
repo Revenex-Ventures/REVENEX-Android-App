@@ -28,11 +28,5 @@ import com.example.ui.theme.*
 @Composable internal fun PrincipalDarkNavigation(route:String?,navigate:(String)->Unit) {
  val destinations=listOf(Triple("Home",Screen.Dashboard.route,Icons.Outlined.Home),Triple("People",Screen.Students.route,Icons.Outlined.People),Triple("Academics",Screen.Academics.route,Icons.Outlined.MenuBook),Triple("Reports",Screen.Reports.route,Icons.Outlined.BarChart),Triple("You",Screen.Profile.route,Icons.Outlined.Person))
  val selected=when(route){Screen.Students.route,Screen.Teachers.route,Screen.PrincipalAllocations.route->1;Screen.Academics.route,Screen.ReportCard.route,Screen.StudyMaterial.route,Screen.Homework.route,Screen.Timetable.route,Screen.Exams.route,Screen.PrincipalSubjects.route,Screen.PrincipalCalendar.route->2;Screen.Reports.route,Screen.Fees.route->3;Screen.Profile.route,Screen.Leaves.route,Screen.OperationsHub.route,Screen.Audit.route->4;else->0}
- Surface(color=PrincipalDarkPalette.navigation,shape=RoundedCornerShape(Radius.hero)){
-  Row(Modifier.fillMaxWidth().padding(Spacing.sm8),horizontalArrangement=Arrangement.spacedBy(Spacing.xs4)){
-   destinations.forEachIndexed{i,(label,target,icon)->Surface(onClick={navigate(target)},modifier=Modifier.weight(1f).testTag("principal_dark_nav_$label"),shape=RoundedCornerShape(Radius.pill),color=if(selected==i)PrincipalDarkPalette.orange else PrincipalDarkPalette.navigation,contentColor=if(selected==i)PrincipalDarkPalette.ink else PrincipalDarkPalette.muted){
-    Column(Modifier.heightIn(min=Spacing.xxxl48).padding(vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){Icon(icon,label);Text(label,style=MaterialTheme.typography.labelSmall,textAlign=TextAlign.Center)}
-   }}
-  }
- }
+ com.example.ui.components.PortalDarkDock(destinations.map{(label,target,icon)->com.example.ui.components.PortalDockDestination(target,label,icon)},destinations[selected].second,navigate,"principal_dark_nav_")
 }
