@@ -1,6 +1,6 @@
 # Connected portal/action inventory
 
-This inventory describes routed app code, not a claim that every hosted workflow was exercised. `LOCAL` means isolated automated verification; `HOSTED SQL` means operator-run database/RLS verification with simulated authenticated roles, not Android password login. See `BACKEND_COMPLETION_CHECKPOINT.md` for commands and current evidence.
+This inventory describes routed app code, not a claim that every hosted workflow was exercised. `LOCAL` means isolated automated verification; `HOSTED SQL` means operator-run database/RLS verification with simulated authenticated roles, not Android password login. See [verification record](VERIFICATION.md) for commands and current evidence.
 
 All cloud records are bounded by the protected profile's school/session. Principal/Admin are school roles, not platform owners. Teacher class labels now come from `section_teachers`; protected teacher subject allocations constrain assignments, reviews and draft marks. Student identity and guardian links come from backend records, never portal selection.
 

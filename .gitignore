@@ -1,45 +1,43 @@
+# Android/Gradle generated state
 *.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
+.gradle/
+.kotlin/
+**/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+/.idea/caches/
+/.idea/libraries/
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+
+# Local configuration and private credentials
 local.properties
+/supabase.local.properties
 .env
 .env.*
 app/google-services.json
-debug.keystore
-*.zip
-*.txt
-app-debug.apk
-node_modules/
-.opencode/
-/supabase.local.properties
-/supabase/.temp/
-
-
-/supabase/__pycache__/
-
-# Local build caches, credentials and packaged artifacts
-/.audit-gradle/
-/.gradle-presentation-cache/
-**/build/
-*.apk
-*.aab
 *.jks
 *.keystore
 *.pem
 *.key
-/supabase/.env*
 
-# Archived local Firebase emulator output (backend source has been removed)
-/functions/*-debug.log
+# Dependencies, logs, exports and delivery artifacts
+node_modules/
+__pycache__/
+*.pyc
+*.log
+*.apk
+*.aab
+*.zip
+/supabase/.temp/
+.opencode/
+
+# Retired local-only caches; not application source
+/.audit-gradle/
+/.gradle-presentation-cache/
+/.firebase-cli/
+/functions/

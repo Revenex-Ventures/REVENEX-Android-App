@@ -57,3 +57,6 @@ Older Light/Dark nested fixture screenshots predate this final chip-wrap fix. Us
 Delivery: `app/build/backend-completion-delivery/apk/app-debug.apk`. Exact source checkpoint and APK SHA-256 are in that folder's `source.json` and `checks.json`. Normal checkout HEAD stays `ce80da2d73283bb62846449cb9b434ff8e800cff`; delivery uses a separate Git checkpoint, preserving existing work/index.
 
 Install preserving data: `adb install -r app/build/backend-completion-delivery/apk/app-debug.apk`. Stop on a signing/package conflict; do not uninstall. Sign in as the synthetic student/guardian → Fees → Pending → Pay → confirm TEST mode → complete Razorpay's official mock Success flow yourself → return in the same account → Check payment status. Report only receipt/pending/error text, never credentials or OTPs.
+
+
+The project-structure cleanup preserves this verification history. Its new checks and source commit are recorded separately; old counts are not silently presented as new runs.

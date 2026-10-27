@@ -34,6 +34,8 @@ jobs:
           deno-version: v2.9.7
       - name: Credential scan including Git history
         run: python3 scripts/check_secrets.py --history
+      - name: Check maintained documentation links
+        run: python3 scripts/check_docs.py
       - name: Install active demo test dependencies
         run: npm ci --ignore-scripts --prefix supabase/tests
       - name: Audit active demo Node dependencies
