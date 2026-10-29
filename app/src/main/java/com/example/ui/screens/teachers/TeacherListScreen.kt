@@ -28,150 +28,37 @@ import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TeacherListScreen(
-  repository: ErpDataRepository,
-  onNavigateToTeacherDetail: (String) -> Unit,
-  onShowAddTeacher: () -> Unit
-) {
+fun TeacherListScreen(repository: ErpDataRepository, onNavigateToTeacherDetail: (String) -> Unit, onShowAddTeacher: () -> Unit, onOpenStudents: (() -> Unit)? = null) {
   val teachers by repository.teachers.collectAsState()
-  val currentUser by repository.currentUser.collectAsState()
-  var searchQuery by remember { mutableStateOf("") }
-  var selectedDept by remember { mutableStateOf("All") }
-
-  val departments = remember(teachers) {
-    listOf("All") + teachers.filter { it.status == "ACTIVE" }.map { it.department }.distinct()
-  }
-
-  val filteredTeachers = remember(teachers, searchQuery, selectedDept) {
-    teachers.filter { tch ->
-      val matchesStatus = tch.status == "ACTIVE"
-      val matchesDept = if (selectedDept == "All") true else tch.department == selectedDept
-      val matchesSearch = if (searchQuery.isBlank()) true else {
-        tch.name.contains(searchQuery, ignoreCase = true) ||
-        tch.department.contains(searchQuery, ignoreCase = true) ||
-        tch.subjects.any { it.contains(searchQuery, ignoreCase = true) }
-      }
-      matchesStatus && matchesDept && matchesSearch
+  val actor by repository.currentUser.collectAsState()
+  var query by remember(actor.id) {mutableStateOf("")}
+  var department by remember(actor.id) {mutableStateOf("")}
+  val departments=teachers.filter {it.status=="ACTIVE"}.map {it.department}.distinct().sorted()
+  val visible=teachers.filter {it.status=="ACTIVE"&&(department.isBlank()||it.department==department)&&(query.isBlank()||it.name.contains(query,true)||it.department.contains(query,true)||it.subjects.any {subject->subject.contains(query,true)})}
+  Column(Modifier.fillMaxSize().padding(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    WorkspacePageHeader("Faculty") {
+      if(actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) Button(onClick=onShowAddTeacher,shape=RoundedCornerShape(Radius.sm),modifier=Modifier.testTag("fab_add_faculty")){Icon(Icons.Default.Add,null);Text("Add")}
     }
-  }
-
-  Scaffold(
-    containerColor = MaterialTheme.colorScheme.background,
-    floatingActionButton = {
-      if (currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
-        ExtendedFloatingActionButton(
-          onClick = onShowAddTeacher,
-          icon = { Icon(Icons.Default.School, contentDescription = null) },
-          text = { Text("Add Faculty", fontWeight = FontWeight.Bold) },
-          containerColor = ScholaSlateNavy,
-          contentColor = Color.White,
-          modifier = Modifier.testTag("fab_add_faculty")
-        )
+    if(onOpenStudents!=null && actor.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+      listOf("Students","Faculty").forEachIndexed {index,label ->
+        SegmentedButton(selected=index==1,onClick={if(index!=1)onOpenStudents.invoke()},shape=SegmentedButtonDefaults.itemShape(index,2)){Text(label)}
       }
     }
-  ) { paddingValues ->
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .padding(horizontal = Spacing.s4, vertical = Spacing.s2)
-    ) {
-      // Search Bar
-      ScholaInputField(
-        value = searchQuery,
-        onValueChange = { searchQuery = it },
-        placeholder = "Search faculty by name, department, or subject...",
-        leadingIcon = Icons.Default.Search,
-        onClear = { searchQuery = "" }
-      )
-
-      Spacer(modifier = Modifier.height(Spacing.s2))
-
-      // Department Filter Chips
-      LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-      ) {
-        items(departments) { dept ->
-          val isSelected = selectedDept == dept
-          Surface(
-            shape = RoundedCornerShape(Radius.pill),
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-              .clip(RoundedCornerShape(Radius.pill))
-              .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-              .clickable { selectedDept = dept }
-          ) {
-            Text(
-              text = dept,
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold,
-              color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-              modifier = Modifier.padding(horizontal = Spacing.s3, vertical = 6.dp)
-            )
-          }
-        }
+    OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search faculty")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,shape=RoundedCornerShape(Radius.sm),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=MaterialTheme.colorScheme.outlineVariant))
+    LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      item {SchoolFilterChip(department.isBlank(),{department=""},{Text("All")})}
+      items(departments){value->SchoolFilterChip(department==value,{department=value},{Text(value)})}
+    }
+    Text("${visible.size} active faculty",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(columns=androidx.compose.foundation.lazy.grid.GridCells.Adaptive(300.dp),verticalArrangement=Arrangement.spacedBy(Spacing.sm8),horizontalArrangement=Arrangement.spacedBy(Spacing.md12),contentPadding=PaddingValues(bottom=Spacing.xl24)) {
+      items(visible.size,key={visible[it].id}) {index -> val teacher=visible[index]
+        SchoolGroup {Row(Modifier.fillMaxWidth().clickable {onNavigateToTeacherDetail(teacher.id)}.padding(Spacing.md12),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+          Avatar(teacher.name,size=Spacing.xxl32,background=SemanticColors.blueContainer,textColor=SemanticColors.onBlue)
+          Column(Modifier.weight(1f)) {Text(teacher.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);Text(teacher.department,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(teacher.subjects.joinToString(", "),style=MaterialTheme.typography.bodySmall)}
+          Icon(Icons.Default.ChevronRight,null,Modifier.size(Spacing.lg16))
+        }}
       }
-
-      Spacer(modifier = Modifier.height(Spacing.s3))
-
-      LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.s2),
-        contentPadding = PaddingValues(bottom = Spacing.xl24)
-      ) {
-        items(filteredTeachers, key = { it.id }) { teacher ->
-          AppCard(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { onNavigateToTeacherDetail(teacher.id) }
-          ) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-              ) {
-                Avatar(name = teacher.name, size = 42.dp, background = ScholaSlateNavy)
-                Spacer(modifier = Modifier.width(Spacing.s3))
-                Column {
-                  Text(
-                    text = teacher.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                  )
-                  Text(
-                    text = "${teacher.department} • ${teacher.designation}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                  )
-                  Text(
-                    text = "Subjects: ${teacher.subjects.joinToString(", ")}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontSize = 12.sp
-                  )
-                }
-              }
-
-              Column(horizontalAlignment = Alignment.End) {
-                ScholaPillBadge(status = "${teacher.weeklyPeriods} Periods/Wk")
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                  text = "${teacher.experienceYears}y Exp.",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  fontSize = 12.sp
-                )
-              }
-            }
-          }
-        }
-      }
+      if(visible.isEmpty()) item {EmptyStateView(title="No matching faculty",message="Try a different department or search.")}
     }
   }
 }

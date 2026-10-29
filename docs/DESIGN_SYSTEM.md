@@ -1,24 +1,11 @@
-# REVENEX SCHOOL ERP — DESIGN SYSTEM & TOKENS
+# Compose design system
 
-## 1. Palette & Theming (Material Design 3)
-The Revenex visual identity uses an authoritative, high-trust navy, royal blue, and warm gold palette tailored for educational leadership:
+Revenex uses ivory/white light surfaces, charcoal text, orange actions and restrained semantic lavender, sage, blue and yellow accents. Dark mode uses a coordinated charcoal palette. Role portals share one identity while prioritizing different tasks. Preserve approved workflow layouts when maintaining shared components.
 
-| Token | Hex Value | Semantic Usage |
-| :--- | :--- | :--- |
-| **RevenexNavy** | `#1E3A8A` | Primary headers, executive brand cards, navigation active state |
-| **RevenexBlue** | `#2563EB` | Interactive buttons, active tab indicators, links |
-| **RevenexGold** | `#D97706` | Badges, student ranking indicators, highlights |
-| **StatusSuccess** | `#16A34A` | Present attendance, paid fees, approved leaves |
-| **StatusError** | `#DC2626` | Absent attendance, overdue fees, rejected leaves |
-| **StatusWarning** | `#D97706` | Pending fees, pending approvals |
+Use the existing color, typography, spacing, shape and motion tokens under `ui/theme/`. Reusable presentation lives under `ui/components/`; role pages live under `ui/screens/`. Do not scatter arbitrary colors, oversized hero cards or nested decorative containers through screens.
 
-## 2. Typography Hierarchy
-- **Display / Headers**: Bold sans-serif with comfortable tracking and high legibility.
-- **Body & Captions**: Clean neutral tones with strict contrast ratios (WCAG AAA compliant).
+Branding uses the official RV mark and company-card wordmark. Header sizing adapts to available width while retaining action controls. The opening reveal is brief, silent by default and does not replay on resume. Reduced motion avoids waiting for the reveal. Asset attribution and source references are recorded in [ASSETS.md](ASSETS.md).
 
-## 3. Component Library
-- **`StatCard`**: Metric visualizer with trend percentage, icon avatar, and container tint.
-- **`QuickActionButton`**: Square touch-target component (>= 48dp) with surface background and colored glyph.
-- **`StatusBadge`**: Pill badge with dynamic color schemes based on entity state.
-- **`SimpleBarChart`**: High-performance pure Compose bar chart for attendance and academic trends.
-- **`SimpleProgressRing`**: Radial progress indicator for CBSE board compliance and attendance health.
+Light is the default on a new installation. Settings exposes one persisted Light/Dark/System selector. System follows Android appearance. Check every surface, dialog, field, navigation item and system bar in both palettes.
+
+Keep readable hierarchy, accessible touch targets, meaningful selected/disabled/error states, scrolling at large font sizes and keyboard/system insets. Inspect actual renders on narrow phones and larger screens; compilation and a contrast unit test do not certify all accessibility or visual behavior.

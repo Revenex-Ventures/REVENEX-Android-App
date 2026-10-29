@@ -23,6 +23,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +39,89 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.UserRole
 import com.example.ui.theme.*
 import java.util.Locale
+
+val LocalWorkspaceBack = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+@Composable
+fun WorkspacePageHeader(title: String, modifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit = {}) {
+  val back = LocalWorkspaceBack.current
+  Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+    if (back != null) IconButton(onClick = back) { Icon(Icons.Default.ArrowBack, "Back") }
+    Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    actions()
+  }
+}
+
+/** Compact presentation primitives shared by the routed school workspaces. */
+@Composable
+fun SchoolSection(title: String, action: String? = null, onAction: () -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
+  Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+      Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      if (action != null) Text(action,
+        modifier = Modifier.testTag("section_action_${title.lowercase().replace(' ','_')}").clickable(role = Role.Button, onClick = onAction)
+          .heightIn(min = Presentation.sectionHeading).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.sm8),
+        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    }
+    content()
+  }
+}
+
+@Composable
+fun SchoolGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+  Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.md),
+    color = MaterialTheme.colorScheme.surface,
+    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+    Column(content = content)
+  }
+}
+
+@Composable
+fun SchoolRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit,
+  trailing: String? = null, modifier: Modifier = Modifier) {
+  Row(modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = Presentation.rowHeight).padding(horizontal = Spacing.md12, vertical = Spacing.sm8),
+    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md12)) {
+    val (well,ink)=when(icon.name.substringAfterLast('.')) {
+      "Assignment","Assessment","Grade","Description","MenuBook","EditNote" -> SemanticColors.lavenderContainer to SemanticColors.onLavender
+      "Payments","Payment","CurrencyRupee","ReceiptLong","AccountBalanceWallet" -> SemanticColors.butterContainer to SemanticColors.onButter
+      "CalendarMonth","CheckCircle","HowToReg","EventAvailable" -> SemanticColors.successContainer to SemanticColors.onSuccess
+      "Campaign","Notifications","Event" -> SemanticColors.peachContainer to SemanticColors.onPeach
+      else -> SemanticColors.blueContainer to SemanticColors.onBlue
+    }
+    Surface(shape=RoundedCornerShape(Radius.sm),color=well) {
+      Icon(icon,null,Modifier.padding(Spacing.sm8).size(20.dp),tint=ink)
+    }
+    Column(Modifier.weight(1f)) {
+      Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+      if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (trailing != null) Text(trailing, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Icon(Icons.Default.ChevronRight, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+}
+
+@Composable
+fun SchoolMetric(value: String, label: String, icon: ImageVector, modifier: Modifier = Modifier,
+  tone: SchoolMetricTone = SchoolMetricTone.NEUTRAL, onClick: (() -> Unit)? = null) {
+  val (well, ink) = when (tone) {
+    SchoolMetricTone.POSITIVE -> SemanticColors.successContainer to SemanticColors.onSuccess
+    SchoolMetricTone.DANGER -> SemanticColors.dangerContainer to SemanticColors.onDanger
+    SchoolMetricTone.FINANCE -> SemanticColors.butterContainer to SemanticColors.onButter
+    SchoolMetricTone.NEUTRAL -> SemanticColors.blueContainer to SemanticColors.onBlue
+  }
+  Surface(if (onClick == null) modifier else modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Radius.md),
+    color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+    Column(Modifier.padding(Spacing.md12), verticalArrangement = Arrangement.spacedBy(Spacing.xs4)) {
+      Surface(color = well, shape = RoundedCornerShape(Radius.xs)) {
+        Icon(icon, null, Modifier.padding(Spacing.xs4).size(20.dp), tint = ink)
+      }
+      Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+      Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}
+
+enum class SchoolMetricTone { NEUTRAL, POSITIVE, DANGER, FINANCE }
 
 // ============================================================================
 // 1. SCHOLA TOP APP BAR (Institutional crest, ⌘K search trigger, unread badge)
@@ -51,11 +141,11 @@ fun ScholaTopAppBar(
   modifier: Modifier = Modifier
 ) {
   Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm8, vertical = if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER))0.dp else Spacing.xs4), verticalAlignment = Alignment.CenterVertically) {
       navigationIcon?.invoke()
-      Column(Modifier.weight(1f).padding(start = Spacing.sm8)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(currentRole.displayName + if (currentUserName.isNotBlank()) " · " + currentUserName.substringBefore(" ") else "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Row(Modifier.weight(1f).padding(start = Spacing.sm8), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
+        RevenexBrand(nameWidth=if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER))PrincipalLayout.wordmarkWidth else EntryTokens.compactName)
       }
       IconButton(onClick = onSearchClick, modifier = Modifier.testTag("command_palette_trigger_pill")) {
         Icon(Icons.Default.Search, "Search school records")
@@ -67,9 +157,12 @@ fun ScholaTopAppBar(
       }
       var menu by remember { mutableStateOf(false) }
       Box {
-        IconButton(onClick = { menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) { Icon(Icons.Outlined.AccountCircle, "Account and settings") }
+        IconButton(onClick = { if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER)) onProfileClick() else menu = true }, modifier = Modifier.testTag("topbar_profile_avatar")) {
+          if(currentRole in setOf(UserRole.PRINCIPAL,UserRole.TEACHER)) Box(Modifier.semantics {contentDescription="Account and settings"}) {Avatar(currentUserName.replace(Regex("^(Dr\\.?|Prof\\.?)\\s+"),""),size=Spacing.xxl32,background=if(currentRole==UserRole.TEACHER)TeacherColors.peach else MaterialTheme.colorScheme.surfaceVariant,textColor=MaterialTheme.colorScheme.onSurface)}
+          else Icon(Icons.Outlined.AccountCircle, "Account and settings")
+        }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-          DropdownMenuItem(text = { Text("Settings & profile") }, onClick = { menu = false; onProfileClick() })
+          DropdownMenuItem(text = { Text("Settings") }, onClick = { menu = false; onProfileClick() })
           DropdownMenuItem(text = { Text("Sign out") }, onClick = { menu = false; onLogoutClick() })
         }
       }
@@ -345,55 +438,18 @@ fun FeeCollectionDonutChart(
 // 7. EMPTY STATE & SUCCESS CHECKMARK
 // ============================================================================
 @Composable
-fun EmptyStateView(
-  title: String,
-  message: String = "",
-  description: String = message,
-  icon: ImageVector = Icons.Outlined.Inbox,
-  actionLabel: String? = null,
-  onActionClick: (() -> Unit)? = null,
-  modifier: Modifier = Modifier
-) {
-  Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(Spacing.xxl32),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
-  ) {
-    Box(
-      modifier = Modifier
-        .size(56.dp)
-        .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
-      contentAlignment = Alignment.Center
-    ) {
-      Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(28.dp)
-      )
-    }
-    Spacer(modifier = Modifier.height(Spacing.s3))
-    Text(
-      text = title,
-      style = MaterialTheme.typography.titleMedium,
-      fontWeight = FontWeight.Bold,
-      color = MaterialTheme.colorScheme.onSurface,
-      textAlign = TextAlign.Center
-    )
-    if (description.isNotBlank()) {
-      Spacer(modifier = Modifier.height(Spacing.s1))
-      Text(
-        text = description,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
-      )
-    }
-    if (actionLabel != null && onActionClick != null) {
-      Spacer(modifier = Modifier.height(Spacing.s4))
-      AppButton(text = actionLabel, onClick = onActionClick)
+fun EmptyStateView(title: String,message: String="",description: String=message,icon: ImageVector=Icons.Outlined.Inbox,
+  actionLabel: String?=null,onActionClick:(()->Unit)?=null,modifier:Modifier=Modifier) {
+  Surface(modifier.fillMaxWidth(),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(Radius.md)) {
+    Column(Modifier.padding(Spacing.lg16),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Row(verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+        Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+          Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurface)
+          if(description.isNotBlank()) Text(description,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      }
+      if(actionLabel!=null&&onActionClick!=null) TextButton(onClick=onActionClick){Text(actionLabel)}
     }
   }
 }
@@ -481,4 +537,131 @@ fun SchoolFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composable 
   FilterChip(selected = selected, onClick = onClick, label = label, modifier = modifier, enabled = enabled,
     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
       selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer))
+}
+
+
+@Composable
+fun SchoolCompactMetric(value: String,label: String,icon: ImageVector,modifier: Modifier=Modifier,
+ tone: SchoolMetricTone=SchoolMetricTone.NEUTRAL,onClick: ()->Unit) {
+ val (well,ink)=when(tone){SchoolMetricTone.POSITIVE->SemanticColors.successContainer to SemanticColors.onSuccess;SchoolMetricTone.DANGER->SemanticColors.dangerContainer to SemanticColors.onDanger;SchoolMetricTone.FINANCE->SemanticColors.butterContainer to SemanticColors.onButter;else->SemanticColors.blueContainer to SemanticColors.onBlue}
+ Surface(modifier.clickable(onClick=onClick),shape=RoundedCornerShape(Radius.md),color=MaterialTheme.colorScheme.surface,border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+  Row(Modifier.padding(Spacing.sm8).heightIn(min=Spacing.xxxl48),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+   Surface(color=well,shape=RoundedCornerShape(Radius.sm)){Icon(icon,null,Modifier.padding(Spacing.xs4).size(Spacing.xl20),tint=ink)}
+   Column(Modifier.weight(1f)){Text(value,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  }
+ }
+}
+
+/** Compact dashboard total; full invoice amounts remain available in Finance. */
+fun compactSchoolMoney(paise: Long): String {
+  val rupees=java.math.BigDecimal.valueOf(paise,2)
+  val magnitude=rupees.abs()
+  val unit=when {
+    magnitude >= java.math.BigDecimal("10000000") -> java.math.BigDecimal("10000000") to "Cr"
+    magnitude >= java.math.BigDecimal("100000") -> java.math.BigDecimal("100000") to "L"
+    magnitude >= java.math.BigDecimal("1000") -> java.math.BigDecimal("1000") to "k"
+    else -> return "₹"+rupees.stripTrailingZeros().toPlainString()
+  }
+  return "₹"+rupees.divide(unit.first,1,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+unit.second
+}
+
+@Composable
+fun SchoolShortcut(label: String, icon: ImageVector, modifier: Modifier = Modifier,
+  onClick: () -> Unit) {
+  Surface(modifier.clickable(role=Role.Button,onClick=onClick),shape=RoundedCornerShape(Radius.md),
+    color=MaterialTheme.colorScheme.surface,border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+    Column(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      Surface(shape=RoundedCornerShape(Radius.sm),color=MaterialTheme.colorScheme.primaryContainer) {
+        Icon(icon,null,Modifier.padding(Spacing.sm8).size(Spacing.xl24),tint=MaterialTheme.colorScheme.onPrimaryContainer)
+      }
+      Text(label,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurface)
+    }
+  }
+}
+
+@Composable
+fun SchoolTaskRow(title: String, detail: String, subject: String, status: String,
+  modifier: Modifier = Modifier, onClick: () -> Unit) {
+  val container=when {
+    subject.contains("math",true)->SemanticColors.lavenderContainer
+    subject.contains("physics",true)||subject.contains("science",true)->SemanticColors.successContainer
+    subject.contains("english",true)->SemanticColors.blueContainer
+    else->SemanticColors.peachContainer
+  }
+  val large=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
+  Surface(modifier.fillMaxWidth().clickable(role=Role.Button,onClick=onClick),color=container,shape=RoundedCornerShape(Radius.md)) {
+    Row(Modifier.padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      Icon(Icons.Default.Description,null,Modifier.size(Spacing.xl24),tint=MaterialTheme.colorScheme.onSurface)
+      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+        Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurface)
+        Text(detail,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(large) StatusBadge(status)
+      }
+      if(!large) Box(Modifier.widthIn(max=120.dp)){StatusBadge(status)}
+      Icon(Icons.Default.ChevronRight,null,Modifier.size(Spacing.lg16),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+  }
+}
+
+fun shortSchoolTimestamp(value: String): String {
+  val instant=runCatching {java.time.Instant.parse(value)}.getOrNull() ?: return value
+  val local=instant.atZone(java.time.ZoneId.of("Asia/Kolkata"))
+  val today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+  return local.format(java.time.format.DateTimeFormatter.ofPattern(if(local.toLocalDate()==today)"HH:mm" else "dd MMM"))
+}
+
+@Composable
+fun SchoolDetailRow(label: String,value: String) {
+  BoxWithConstraints(Modifier.fillMaxWidth().padding(vertical=Spacing.sm8)) {
+    val large=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f || maxWidth<280.dp
+    if(large) Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)) {
+      Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(value.ifBlank {"Not provided"},style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
+    } else Row(horizontalArrangement=Arrangement.spacedBy(Spacing.md12),verticalAlignment=Alignment.Top) {
+      Text(label,Modifier.weight(.42f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(value.ifBlank {"Not provided"},Modifier.weight(.58f),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
+    }
+  }
+}
+
+fun schoolRoleLabel(role:UserRole):String=when(role) {
+  UserRole.PRINCIPAL->"Principal";UserRole.ADMIN->"Administrator";UserRole.TEACHER->"Teacher"
+  UserRole.STUDENT->"Student";UserRole.PARENT->"Parent / Guardian"
+}
+
+data class PortalDockDestination(val route:String,val label:String,val icon:ImageVector)
+
+/** Content-sized tabs keep long labels inside their selected shape at every font scale. */
+@Composable
+fun PortalDarkDock(items:List<PortalDockDestination>,selectedRoute:String?,navigate:(String)->Unit,tagPrefix:String) {
+ val density=androidx.compose.ui.platform.LocalDensity.current
+ val measure=rememberTextMeasurer()
+ val labelStyle=MaterialTheme.typography.labelSmall
+ val widths=items.map{item->
+  (with(density){measure.measure(AnnotatedString(item.label),labelStyle).size.width.toDp()}+Spacing.lg16).coerceAtLeast(Spacing.xxxl48)
+ }
+ val reduced=rememberReducedMotion()
+ Surface(color=MaterialTheme.colorScheme.background){
+  Surface(Modifier.padding(horizontal=Spacing.md12,vertical=Spacing.sm8).fillMaxWidth(),color=PrincipalDarkPalette.navigation,shape=RoundedCornerShape(Radius.hero)){
+   BoxWithConstraints(Modifier.fillMaxWidth().padding(Spacing.xs4)) {
+    val columns=(items.size downTo 1).firstOrNull{count->items.indices.chunked(count).all{row->row.fold(0.dp){sum,i->sum+widths[i]}+Spacing.xs4*(row.size-1)<=maxWidth}}?:1
+    Column(verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){
+     items.indices.chunked(columns).forEach{row->
+      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(Spacing.xs4)){
+       row.forEach{i->val item=items[i];val active=item.route==selectedRoute
+        val color by androidx.compose.animation.animateColorAsState(if(active)PrincipalDarkPalette.orange else PrincipalDarkPalette.navigation,tween(if(reduced)0 else Motion.normal),label="Portal selection")
+        Surface(onClick={navigate(item.route)},modifier=Modifier.weight(widths[i].value).heightIn(min=PortalDockLayout.target).testTag(tagPrefix+item.label)
+          .semantics{selected=active;role=Role.Tab;contentDescription=item.label},shape=RoundedCornerShape(Radius.hero),color=color,contentColor=if(active)PrincipalDarkPalette.ink else PrincipalDarkPalette.muted){
+         Column(Modifier.fillMaxWidth().padding(horizontal=Spacing.sm8,vertical=Spacing.sm8),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.xs4)){
+          Icon(item.icon,null,Modifier.size(Spacing.xl24))
+          Text(item.label,Modifier.fillMaxWidth().testTag(tagPrefix+item.label+"_label"),style=labelStyle,maxLines=1,softWrap=false,textAlign=TextAlign.Center)
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
 }

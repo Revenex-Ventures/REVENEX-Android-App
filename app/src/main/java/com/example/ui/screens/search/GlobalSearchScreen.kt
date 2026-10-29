@@ -63,7 +63,7 @@ fun GlobalSearchScreen(
           SearchResultItem(
             id = it.id,
             title = it.name,
-            subtitle = "Scholar • Class ${it.fullClass} • Adm #${it.admissionNumber} • GPA: ${it.gpa}",
+            subtitle = "Student · Class ${it.fullClass} · Admission ${it.admissionNumber}",
             category = "SCHOLAR",
             icon = Icons.Default.Person,
             iconTint = ScholaTerracotta,
@@ -100,6 +100,11 @@ fun GlobalSearchScreen(
             targetRoute = Screen.Fees.route
           )
         )
+      }
+
+      assignments.filter { it.title.contains(q, true) || it.subject.contains(q, true) }.forEach {
+        list.add(SearchResultItem(it.id, it.title, "${it.subject} · Due ${it.dueDate}",
+          "ASSIGNMENT", Icons.Default.Assignment, ScholaTerracotta, Screen.Homework.route))
       }
 
       // Notices
@@ -142,7 +147,7 @@ fun GlobalSearchScreen(
           ScholaInputField(
             value = query,
             onValueChange = { query = it },
-            placeholder = "Omni search across scholars, faculty, invoices, circulars...",
+            placeholder = "Search students, faculty, invoices or notices",
             leadingIcon = Icons.Default.Search,
             onClear = { query = "" },
             modifier = Modifier.weight(1f)
@@ -155,7 +160,7 @@ fun GlobalSearchScreen(
       EmptyStateView(
         icon = Icons.Default.Search,
         title = "Search Revenex",
-        description = "Instant lookup across scholars, admissions, faculty credentials, tuition invoices, and circular broadcasts.",
+        description = "Search the school records available to your account.",
         modifier = Modifier.padding(paddingValues)
       )
     } else if (results.isEmpty()) {
@@ -175,40 +180,14 @@ fun GlobalSearchScreen(
         verticalArrangement = Arrangement.spacedBy(Spacing.s2),
         contentPadding = PaddingValues(bottom = Spacing.xl24)
       ) {
-        items(results, key = { "${it.category}_${it.id}" }) { item ->
-          AppCard(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clickable { onNavigateTo(item.targetRoute) }
-          ) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(38.dp)
-                  .clip(CircleShape)
-                  .background(item.iconTint.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(item.icon, contentDescription = null, tint = item.iconTint, modifier = Modifier.size(20.dp))
-              }
-              Spacer(modifier = Modifier.width(Spacing.s3))
-              Column(modifier = Modifier.weight(1f)) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                  ScholaPillBadge(status = item.category)
-                }
-                Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-            }
-          }
+        results.groupBy {it.category}.forEach {(category,entries)->
+          item {Text(when(category){"SCHOLAR"->"Students";"FACULTY"->"Faculty";"INVOICE"->"Invoices";"ASSIGNMENT"->"Assignments";else->"Notices"},Modifier.padding(top=Spacing.md12),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)}
+          item {SchoolGroup {entries.forEachIndexed {index,result->
+            SchoolRow(result.title,result.subtitle,result.icon,{onNavigateTo(result.targetRoute)})
+            if(index<entries.lastIndex) HorizontalDivider()
+          }}}
         }
+
       }
     }
   }

@@ -30,5 +30,12 @@ class SupabaseStudentSummaryTest {
     assertTrue(summary.feeSummaryAvailable)
     assertEquals(7000L,summary.feePendingAmount)
   }
+  @Test fun excusedCountsAsAttendedAndLeaveRemainsInRecordedSessionDenominator() {
+    val student=SampleData.initialStudents.first()
+    val records=listOf("PRESENT","LATE","EXCUSED","ABSENT","LEAVE").mapIndexed { i,status ->
+      SupabaseRow("status$i",student_id=student.id,status=status)
+    }+SupabaseRow("unknown",student_id=student.id,status="UNKNOWN")
+    assertEquals(60.0,summarizeSupabaseStudent(student,emptyList(),records).attendancePercent,0.001)
+  }
 }
 

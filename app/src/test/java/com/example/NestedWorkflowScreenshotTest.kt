@@ -95,7 +95,7 @@ class NestedWorkflowScreenshotTest {
     }
     compose.onNodeWithTag("input_notice_title").performTextInput("Class update")
     compose.onNodeWithTag("input_notice_content").performScrollTo().performTextInput("The class schedule has been updated.")
-    compose.onNodeWithTag("submit_publish_notice_button").performScrollTo().assertIsEnabled()
+    compose.onNodeWithTag("submit_publish_notice_button").assertIsDisplayed().assertIsEnabled()
     capture("notice_narrow_large_text")
   }
 

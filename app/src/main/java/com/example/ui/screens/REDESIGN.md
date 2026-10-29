@@ -1,3 +1,5 @@
+> Historical record. The active approved-board implementation and final evidence are in `docs/APPROVED_BOARD_IMPLEMENTATION.md` and `docs/APPROVED_SCREEN_CHECKLIST.md`. Artifact/source claims below belong to their stated earlier builds.
+
 > Superseded visual direction: the user subsequently requested the original black/orange UI. The original palette and carbon/ember shared components from `6efa23f` are restored. Supabase login, truthful loading/error/data states, administrator access, safe insets and reduced-motion detection remain. The green design rationale below is historical and does not describe the new APK.
 
 # Revenex visual direction and screen register
@@ -26,7 +28,7 @@
 
 ## Reachable screen inventory
 
-The public screen entry points below were enumerated from the existing UI source. State indicators identify code present in the file, not completed runtime certification. The five existing UI roles are Principal, School Administrator, Teacher, Student, Parent; extra backend roles are not added by this redesign.
+The public screen entry points below were enumerated from the existing UI source. State indicators identify code present in the file, not completed runtime certification. Mobile entry supports Principal, Teacher, Student and Parent. Administrator remains a backend role; its Android entry/dashboard is removed and admin-only identities are blocked with a clear unsupported message.
 
 | Source | Entry points | Existing important states |
 |---|---|---|
@@ -37,7 +39,6 @@ The public screen entry points below were enumerated from the existing UI source
 | attendance/PrincipalAttendanceScreen.kt | PrincipalAttendanceScreen | empty, errors/validation, dialogs/forms |
 | auth/AuthScreen.kt | AuthScreen | errors/validation, dialogs/forms |
 | communication/CommunicationScreens.kt | NoticesScreen, NotificationsScreen | empty |
-| dashboard/AdminDashboardScreen.kt | AdminDashboardScreen | empty |
 | dashboard/ParentDashboardScreen.kt | ParentDashboardScreen | errors/validation, dialogs/forms |
 | dashboard/PrincipalDashboardScreen.kt | PrincipalDashboardScreen | content/detail |
 | dashboard/StudentDashboardScreen.kt | StudentDashboardScreen | empty |

@@ -1,1 +1,13 @@
-{"name":"revenex-supabase-policy-tests","private":true,"type":"module","scripts":{"test":"node rls.test.mjs"},"devDependencies":{"@electric-sql/pglite":"0.5.10"}}
+{
+  "name": "revenex-supabase-policy-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node rls.test.mjs && node razorpay-edge.test.mjs",
+    "test:rls": "node rls.test.mjs",
+    "test:edge": "node razorpay-edge.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10"
+  }
+}

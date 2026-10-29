@@ -60,12 +60,25 @@ export async function handlePaymentRequest(request,deps) {
   if(body.action==='create'){
    if(typeof body.fee_id!=='string' || !body.fee_id || body.fee_id.length>200)fail(400,'Select a fee record.');
    let order=await deps.db.reserve(body.fee_id,user.id,deps.keyId);
+   if(order.key_id!==deps.keyId)fail(409,'Order key changed; server reconciliation required.');
    if(order.new_reservation){
     const created=await deps.provider.create({amount:order.amount,currency:'INR',receipt:order.id,partial_payment:false});
     if(!validId(created.id,'order') || created.amount!==order.amount || created.currency!=='INR')fail(502,'Invalid provider order.');
     order=await deps.db.bind(order.id,created.id);
    }
-   if(!order.provider_order_id)fail(409,'Order is still being prepared. Retry later; do not pay another order.');
+   if(!order.provider_order_id){
+    // A provider POST may have succeeded before the connection/bind was interrupted.
+    // Recover only its exact server-generated receipt; never blindly POST again.
+    const found=await deps.provider.ordersByReceipt(order.id);
+    const matches=found.items?.filter(candidate=>candidate.receipt===order.id)??[];
+    if(matches.length!==1 || found.items.length>=100)fail(409,'Order outcome needs reconciliation. Keep this reference: '+order.id+'. Do not pay another order.');
+    const recovered=matches[0];
+    if(!validId(recovered.id,'order') || recovered.amount!==order.amount || recovered.currency!=='INR')
+     fail(409,'Recovered provider order does not match this invoice. Contact the school with reference '+order.id+'.');
+    order=await deps.db.bind(order.id,recovered.id);
+    if(recovered.status==='paid')fail(409,'This order already has a payment. Check payment status for the verified receipt.');
+   }
+   if(!order.provider_order_id)fail(409,'Order binding was not confirmed. Check the existing payment reference before retrying.');
    return json({reference:order.id,order_id:order.provider_order_id,key_id:order.key_id,amount:order.amount,currency:'INR'});
   }
   if(!uuid(body.reference))fail(400,'Invalid payment reference.');
@@ -118,6 +131,7 @@ export function createServerDependencies(env,fetcher=fetch) {
   },
   provider:{
    create:body=>request('https://api.razorpay.com/v1/orders',providerHeaders,body),
+   ordersByReceipt:receipt=>request('https://api.razorpay.com/v1/orders?receipt='+encodeURIComponent(receipt)+'&count=100',providerHeaders),
    payment:id=>request('https://api.razorpay.com/v1/payments/'+encodeURIComponent(id),providerHeaders),
    payments:id=>request('https://api.razorpay.com/v1/orders/'+encodeURIComponent(id)+'/payments',providerHeaders)
   }

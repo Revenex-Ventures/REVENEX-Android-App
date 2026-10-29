@@ -13,6 +13,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.data.repository.ErpDataRepository
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.unit.dp
+import com.example.ui.components.*
+import com.example.ui.theme.Radius
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.SchoolFilterChip
 import com.example.ui.theme.Spacing
@@ -23,11 +30,17 @@ import kotlinx.coroutines.launch
 @Composable
 fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit = {}) {
   val actor by repository.currentUser.collectAsState()
-  val students by repository.students.collectAsState()
+  val mode by repository.dataMode.collectAsState()
+  val capabilities by repository.backendCapabilities.collectAsState()
+  val serviceReady=mode!=com.example.data.datasource.DataMode.SUPABASE_DEMO || capabilities.loaded&&capabilities.marks
+  val loadedStudents by repository.students.collectAsState()
+  val allocation=com.example.ui.screens.teachers.teacherAllocation(repository)
+  val students=if(actor.role==com.example.data.model.UserRole.TEACHER)loadedStudents.filter{it.fullClass in allocation?.assignedClasses.orEmpty()}else loadedStudents
   val reports by repository.reportCards.collectAsState()
   var selectedId by rememberSaveable(actor.id) { mutableStateOf("") }
   var query by rememberSaveable(actor.id) { mutableStateOf("") }
   val student = students.firstOrNull { it.id == selectedId } ?: students.firstOrNull()
+  var choosing by remember {mutableStateOf(false)}
   val scope = rememberCoroutineScope()
   var busy by remember(actor.id) { mutableStateOf(false) }
   var feedback by remember(actor.id) { mutableStateOf<String?>(null) }
@@ -35,9 +48,11 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
   var confirmPublish by remember(actor.id, student?.id) { mutableStateOf(false) }
   var term by rememberSaveable(actor.id, student?.id) { mutableStateOf("") }
   var subject by rememberSaveable(actor.id, student?.id) { mutableStateOf("") }
-  var obtained by rememberSaveable(actor.id, student?.id) { mutableStateOf("") }
-  var maximum by rememberSaveable(actor.id, student?.id) { mutableStateOf("100") }
+  var obtained by rememberSaveable(actor.id, student?.id,term,subject) { mutableStateOf("") }
+  var maximum by rememberSaveable(actor.id, student?.id,term,subject) { mutableStateOf("100") }
   val report = reports.firstOrNull { it.studentId == student?.id && it.term == term.trim() }
+  val savedScore=report?.scores?.firstOrNull{it.subjectName==subject.trim()}
+  var expectedVersion by rememberSaveable(actor.id,student?.id,term,subject){mutableIntStateOf(savedScore?.revision?:0)}
   val score = obtained.toIntOrNull()
   val total = maximum.toIntOrNull()
   fun perform(message: String, operation: suspend () -> Unit) {
@@ -61,60 +76,55 @@ fun StaffMarksWorkspace(repository: ErpDataRepository, onViewReports: () -> Unit
     }) { Text("Publish") } },
     dismissButton = { TextButton(onClick = { confirmPublish = false }) { Text("Cancel") } })
 
-  LazyColumn(Modifier.fillMaxSize().imePadding().testTag("staff_marks_workspace"),
-    contentPadding = PaddingValues(Spacing.screenPadding), verticalArrangement = Arrangement.spacedBy(Spacing.md12)) {
-    item {
-      Text("Marks & publication", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-      Text("Save private drafts, review, then publish to linked families.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    item { TextButton(onClick = onViewReports, enabled = !busy) { Text("View report cards & student details") } }
-    if (students.isEmpty()) item { EmptyStateView("No accessible students", "Your school must allocate a class before marks can be entered.") }
+  LazyColumn(Modifier.fillMaxSize().imePadding().testTag("staff_marks_workspace"),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.xl24)) {
+    item {WorkspacePageHeader("Marks & publication")}
+    item {TextButton(onClick=onViewReports,enabled=!busy){Text("Report cards")}}
+    if(students.isEmpty())item {EmptyStateView("No accessible students","Your school must allocate a class before marks can be entered.")}
     else {
-      item {
-        OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Find student or class") }, enabled = !busy, singleLine = true)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          items(students.filter { it.name.contains(query, true) || it.fullClass.contains(query, true) }, key = { it.id }) { candidate ->
-            SchoolFilterChip(student?.id == candidate.id, { selectedId = candidate.id; feedback = null },
-              { Text("${candidate.name} · ${candidate.fullClass}") }, enabled = !busy)
+      item {SchoolSection("1 · Student") {
+        OutlinedTextField(query,{query=it;choosing=true},Modifier.fillMaxWidth(),label={Text("Find student or class")},enabled=!busy,singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.input))
+        Box {
+          OutlinedButton(onClick={choosing=true},enabled=!busy,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input)){Text("${student!!.name} · ${student.fullClass}");Icon(Icons.Default.ExpandMore,null)}
+          DropdownMenu(expanded=choosing,onDismissRequest={choosing=false}) {
+            val matches=students.filter{it.name.contains(query,true)||it.fullClass.contains(query,true)}
+            if(matches.isEmpty())DropdownMenuItem(text={Text("No matching student")},enabled=false,onClick={})
+            matches.forEach {candidate->DropdownMenuItem(text={Text("${candidate.name} · ${candidate.fullClass}")},onClick={selectedId=candidate.id;feedback=null;choosing=false},enabled=!busy)}
           }
         }
-      }
-      item {
-        Text(student!!.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        OutlinedTextField(term, { term = it; feedback = null }, Modifier.fillMaxWidth().testTag("marks_term"),
-          label = { Text("Term / assessment") }, isError = term.length > 80, enabled = !busy, singleLine = true)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-          items(reports.filter { it.studentId == student.id }.map { it.term }.distinct()) { savedTerm ->
-            SchoolFilterChip(term == savedTerm, { term = savedTerm; feedback = null }, { Text(savedTerm) }, enabled = !busy)
-          }
+      }}
+      item {SchoolSection("2 · Assessment") {
+        OutlinedTextField(term,{term=it;feedback=null},Modifier.fillMaxWidth().testTag("marks_term"),label={Text("Term / assessment")},isError=term.length>80,enabled=!busy,singleLine=true,shape=RoundedCornerShape(Radius.input))
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {items(reports.filter{it.studentId==student!!.id}.map{it.term}.distinct()){savedTerm->SchoolFilterChip(term==savedTerm,{term=savedTerm;feedback=null},{Text(savedTerm)},enabled=!busy)}}
+      }}
+      item {SchoolSection("Saved subjects") {SchoolGroup {
+        Row(Modifier.fillMaxWidth().padding(Spacing.md12),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
+          Text(if(report?.published==true)"Published · Unpublish before editing" else "Private draft",style=MaterialTheme.typography.titleSmall)
+          Icon(if(report?.published==true)Icons.Default.Visibility else Icons.Default.Lock,null,tint=MaterialTheme.colorScheme.primary)
         }
-      }
-      item {
-        Text(if (report?.published == true) "Published · Unpublish before editing" else "Private draft", style = MaterialTheme.typography.titleSmall)
-        report?.scores?.forEach { mark ->
-          ListItem(headlineContent = { Text(mark.subjectName) }, trailingContent = { Text("${mark.obtainedMarks}/${mark.maxMarks}") })
-        }
-        if (report == null) Text("No saved marks in this term.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-      item {
-        val editable = !busy && report?.published != true
-        OutlinedTextField(subject, { subject = it }, Modifier.fillMaxWidth().testTag("marks_subject"), label = { Text("Subject") }, isError = subject.length > 120, enabled = editable, singleLine = true)
-        Spacer(Modifier.height(Spacing.sm8))
-        OutlinedTextField(obtained, { obtained = it }, Modifier.fillMaxWidth().testTag("marks_obtained"), label = { Text("Marks obtained") }, isError = obtained.isNotBlank() && (score == null || score < 0 || (total != null && score > total)), enabled = editable,
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-        Spacer(Modifier.height(Spacing.sm8))
-        OutlinedTextField(maximum, { maximum = it }, Modifier.fillMaxWidth().testTag("marks_maximum"), label = { Text("Maximum marks") }, isError = maximum.isNotBlank() && (total == null || total !in 1..10000), enabled = editable,
-          supportingText = { Text("0 ≤ obtained ≤ maximum · Maximum 10,000") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-        Button(modifier = Modifier.fillMaxWidth().testTag("save_draft_mark"), enabled = editable && term.trim().length in 1..80 && subject.trim().length in 1..120 && score != null && total != null && total in 1..10000 && score in 0..total,
-          onClick = { perform("Draft save confirmed.") { repository.saveMarksConfirmed(student!!.id, term, subject, score!!, total!!) } }) { Text(if (busy) "Saving…" else "Save private draft") }
-      }
-      if (report != null) item {
-        OutlinedButton(enabled = !busy && report.scores.isNotEmpty(), modifier = Modifier.fillMaxWidth(), onClick = {
-          if (report.published) perform("Unpublication confirmed.") { repository.publishResultsConfirmed(student!!.id, report.term, false) }
-          else confirmPublish = true
-        }) { Text(if (report.published) "Unpublish term" else "Review & publish term") }
+        if(report==null)Text("No saved marks in this term.",Modifier.padding(Spacing.md12),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        report?.scores?.forEach{mark->HorizontalDivider();Row(Modifier.fillMaxWidth().padding(Spacing.md12),horizontalArrangement=Arrangement.SpaceBetween){Text(mark.subjectName,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);Text("${mark.obtainedMarks}/${mark.maxMarks}",style=MaterialTheme.typography.titleSmall)}}
+      }}}
+      item {SchoolSection("3 · Enter marks") {
+        val editable=!busy&&report?.published!=true
+        OutlinedTextField(subject,{subject=it},Modifier.fillMaxWidth().testTag("marks_subject"),label={Text("Subject")},isError=subject.length>120,enabled=editable,singleLine=true,shape=RoundedCornerShape(Radius.input))
+        ResponsiveFormFields(
+          first = { field -> OutlinedTextField(obtained,{obtained=it},field.testTag("marks_obtained"),label={Text("Marks obtained")},isError=obtained.isNotBlank()&&(score==null||score<0||(total!=null&&score>total)),enabled=editable,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input)) },
+          second = { field -> OutlinedTextField(maximum,{maximum=it},field.testTag("marks_maximum"),label={Text("Maximum marks")},isError=maximum.isNotBlank()&&(total==null||total !in 1..10000),enabled=editable,supportingText={Text("0 ≤ obtained ≤ maximum · Maximum 10,000")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,shape=RoundedCornerShape(Radius.input)) }
+        )
+        Button(modifier=Modifier.fillMaxWidth().testTag("save_draft_mark"),shape=RoundedCornerShape(Radius.input),enabled=serviceReady&&editable&&term.trim().length in 1..80&&subject.trim().length in 1..120&&score!=null&&total!=null&&total in 1..10000&&score in 0..total,
+          onClick={perform("Draft save confirmed."){expectedVersion=repository.saveMarksConfirmed(student!!.id,term,subject,score!!,total!!,expectedVersion)}}){Text(if(busy)"Saving…" else "Save draft")}
+        if(savedScore!=null && expectedVersion!=savedScore.revision)TextButton(enabled=!busy,onClick={obtained=savedScore.obtainedMarks.toString();maximum=savedScore.maxMarks.toString();expectedVersion=savedScore.revision}){Text("Load saved marks · Version ${savedScore.revision}")}
+        if(!serviceReady)Text("School marks service needs setup or a connection refresh. Your input is retained.",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+        if(actor.role==com.example.data.model.UserRole.TEACHER && savedScore!=null && savedScore.reviewState=="DRAFT" && report.published==false)OutlinedButton(enabled=serviceReady&&!busy,onClick={perform("Submitted for school review."){expectedVersion=repository.submitMarksForReviewConfirmed(student!!.id,term.trim(),subject.trim(),savedScore.revision)}}){Text("Submit for review")}
+      }}
+      if(report!=null && actor.role!=com.example.data.model.UserRole.TEACHER)item {
+        OutlinedButton(enabled=!busy&&report.scores.isNotEmpty(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.input),onClick={
+          if(report.published)perform("Unpublication confirmed."){repository.publishResultsConfirmed(student!!.id,report.term,false)} else confirmPublish=true
+        }){Text(if(report.published)"Unpublish term" else "Review & publish")}
       }
     }
-    feedback?.let { message -> item { Text(message, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium) } }
+    feedback?.let{message->item{Surface(color=if(failed)MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(Radius.md)) {
+      Text(message,Modifier.padding(Spacing.md12),color=if(failed)MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,style=MaterialTheme.typography.bodyMedium)
+    }}}
   }
 }

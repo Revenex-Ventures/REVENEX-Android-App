@@ -32,6 +32,27 @@ class AppearanceTest {
     assertTrue(Appearance.SYSTEM.usesDark(true))
     assertEquals(Appearance.LIGHT, Appearance.parse("invalid"))
   }
+  @Test fun systemClearsPreviouslyForcedApplicationModeWithoutChangingAndroidSetting() {
+    val context=ApplicationProvider.getApplicationContext<android.content.Context>()
+    val manager=context.getSystemService(android.app.UiModeManager::class.java)
+    val androidSetting=manager.nightMode
+    val preference=AppearancePreference(context)
+    preference.select(Appearance.DARK)
+    assertEquals(android.app.UiModeManager.MODE_NIGHT_YES,org.robolectric.Shadows.shadowOf(manager).applicationNightMode)
+    preference.select(Appearance.SYSTEM)
+    assertEquals(android.app.UiModeManager.MODE_NIGHT_AUTO,org.robolectric.Shadows.shadowOf(manager).applicationNightMode)
+    assertEquals(androidSetting,manager.nightMode)
+  }
+  @Test @Config(sdk=[28],qualifiers="night")
+  fun startingBrandIsBlackWhileAppPalettesRemainIndependent() {
+    val context=ApplicationProvider.getApplicationContext<android.content.Context>()
+    listOf(R.style.Theme_Revenex_Starting_Light to 0xFF090C12.toInt(),
+      R.style.Theme_Revenex_Starting_Dark to 0xFF090C12.toInt()).forEach { (theme,color) ->
+      val wrapped=android.view.ContextThemeWrapper(context,theme)
+      val attributes=wrapped.obtainStyledAttributes(intArrayOf(androidx.core.splashscreen.R.attr.windowSplashScreenBackground))
+      try {assertEquals(color,attributes.getColor(0,0))} finally {attributes.recycle()}
+    }
+  }
   @Test fun everyPortalHasAtMostFiveDistinctPrimaryDestinations() {
     UserRole.entries.forEach { role ->
       val items = NavConfig.getBottomNavItems(role)

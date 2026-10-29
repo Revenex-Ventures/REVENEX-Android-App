@@ -49,6 +49,18 @@ data class SupabaseRow(
   val created_at: String = "",
   val assignment_id: String = "",
   val completed: Boolean = false,
+  val attachment_ref:String="",
+  val attachment_name:String="",
+  val note:String="",
+  val feedback:String="",
+  val review_status:String="SUBMITTED",
+  val version:Int=0,
+  val submitted_at:String?=null,
+  val reviewed_at:String?=null,
+  val actionable_id:String="",
+  val publication_state:String="PUBLISHED",
+  val closes_at:String?=null,
+  val review_state:String="DRAFT",
   val action: String = "",
   val table_name: String = "",
   val record_id: String = ""
@@ -59,15 +71,23 @@ data class BackendSyncState(val busy: Boolean = false, val message: String = "",
 /** Derive summaries only from rows already authorized by PostgreSQL RLS. */
 internal fun summarizeSupabaseStudent(student: Student, fees: List<FeeRecord>, attendance: List<SupabaseRow>): Student {
   val permittedFees=fees.filter { it.studentId==student.id }
-  val records=attendance.filter { it.student_id==student.id && it.status in setOf("PRESENT","LATE","ABSENT") }
+  val knownStatuses=AttendanceStatus.entries.map { it.name }.toSet()
+  val attendedStatuses=setOf("PRESENT","LATE","EXCUSED")
+  val records=attendance.filter { it.student_id==student.id && it.status in knownStatuses }
   return student.copy(
     feeSummaryAvailable=permittedFees.isNotEmpty(),
     feePendingAmount=permittedFees.sumOf { it.pendingAmount },
     feeStatus=permittedFees.firstOrNull { it.status==FeeStatus.OVERDUE }?.status
       ?: permittedFees.firstOrNull { it.pendingAmount>0 }?.status ?: FeeStatus.PAID,
-    attendancePercent=if(records.isEmpty()) 0.0 else 100.0*records.count { it.status!="ABSENT" }/records.size,
+    attendancePercent=if(records.isEmpty()) 0.0 else 100.0*records.count { it.status in attendedStatuses }/records.size,
     rank=0,gpa=0.0
   )
+}
+
+/** Submission status is child-specific, even when a guardian can read several children. */
+internal fun assignmentForStudent(assignment: HomeworkAssignment, submissions: List<SupabaseRow>, studentId: String): HomeworkAssignment {
+  val done=studentId.isNotBlank() && submissions.any {it.assignment_id==assignment.id && it.student_id==studentId && it.completed}
+  return assignment.copy(isCompletedByStudent=done,submissionStatus=if(done)"Submitted" else "Pending")
 }
 
 /** No sample fallback. PostgreSQL RLS, not these filters, is the authorization boundary. */
@@ -76,14 +96,22 @@ class SupabaseDataSource : ErpDataSource {
   private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
   private val rows = MutableStateFlow<Map<String,List<SupabaseRow>>>(emptyMap())
   private val user = MutableStateFlow(signedOutUser())
+  private val presentationStudent = MutableStateFlow("")
   val syncState = MutableStateFlow(BackendSyncState())
+  private val capabilities=MutableStateFlow(SchoolBackendCapabilities())
+  override fun getBackendCapabilitiesFlow():Flow<SchoolBackendCapabilities> = capabilities
+  private suspend fun loadCapabilities():SchoolBackendCapabilities = try {
+    client.postgrest.rpc("erp_capabilities").decodeAs<SchoolBackendCapabilities>()
+  }catch(e:CancellationException){throw e}catch(_:Exception){SchoolBackendCapabilities()}
   private var liveJob: Job? = null
   private var authenticated = false
   private val lifecycleLock=Mutex()
+  private val reconciliationLock=Mutex()
   private val sessionRevision=AtomicLong()
   private val tables = listOf("students","teachers","classes","sections","timetables","notices","attendance",
     "assignments","assignment_submissions","marks","exams","fee_records","study_materials","leave_requests",
     "events","transport_routes","library_books","inventory","notifications","audit_logs")
+  private val snapshotTables=tables+listOf("section_teachers","parent_student_links","subjects")
 
   private fun requireSession() { check(authenticated) { "Sign in to the Supabase demo first." } }
   private inline fun <reified T:Any> models(table: String): Flow<List<T>> = rows.map { all ->
@@ -110,6 +138,37 @@ class SupabaseDataSource : ErpDataSource {
     val result = client.from(name).select().decodeList<SupabaseRow>()
     rows.update { previous -> if(sessionRevision.get()==revision) previous+(name to result) else previous }
   }
+  /** Atomic replacement drops revoked rows and catches missed submission/allocation events. */
+  suspend fun reconcileSchoolData() = reconciliationLock.withLock {
+    requireSession()
+    val revision=sessionRevision.get();val actor=user.value;val session=activeSession
+    try {
+      val snapshot=fetchSchoolSnapshot(actor,session)
+      val available=loadCapabilities()
+      rows.update { old -> if(authenticated && sessionRevision.get()==revision) snapshot else old }
+      if(authenticated && sessionRevision.get()==revision)capabilities.value=available
+      if(sessionRevision.get()==revision && !syncState.value.busy)syncState.value=BackendSyncState(message="School data reconciled")
+    } catch(e:Exception) {
+      if(e is CancellationException)throw e
+      if(sessionRevision.get()==revision && e is SchoolAccessChanged){
+        sessionRevision.incrementAndGet();authenticated=false;rows.value=emptyMap();presentationStudent.value=""
+        user.value=signedOutUser();activeSession="";capabilities.value=SchoolBackendCapabilities()
+        syncState.value=BackendSyncState(message=e.message.orEmpty(),failed=true)
+        liveJob?.cancel()
+        withContext(NonCancellable){runCatching{withTimeout(5000){client.realtime.removeAllChannels();client.auth.clearSession()}}}
+      } else if(sessionRevision.get()==revision){
+        syncState.value=BackendSyncState(message="Unable to reconcile school data. Displayed data may be stale; retry when connected.",failed=true)
+      }
+      throw e
+    }
+  }
+  private suspend fun fetchSchoolSnapshot(actor:UserProfile,session:String,beforeRead:(String)->Unit={}):Map<String,List<SupabaseRow>> {
+    suspend fun profile()=client.from("profiles").select{filter{eq("id",actor.id)}}.decodeList<SupabaseRow>().singleOrNull()
+    validateReconciledScope(actor,session,profile(),emptyMap())
+    val snapshot=snapshotTables.associateWith { beforeRead(it);client.from(it).select().decodeList<SupabaseRow>() }
+    validateReconciledScope(actor,session,profile(),snapshot)
+    return snapshot
+  }
   suspend fun authenticate(email: String, password: String) = lifecycleLock.withLock {
     authenticateSession(email,password)
   }
@@ -118,7 +177,7 @@ class SupabaseDataSource : ErpDataSource {
     SupabaseProvider.configuration.validate()
     liveJob?.cancelAndJoin()
     sessionRevision.incrementAndGet()
-    rows.value=emptyMap(); authenticated=false;user.value=signedOutUser();activeSession=""
+    rows.value=emptyMap();presentationStudent.value=""; authenticated=false;user.value=signedOutUser();activeSession="";capabilities.value=SchoolBackendCapabilities()
     runCatching { client.realtime.removeAllChannels() }
     client.auth.clearSession()
     syncState.value=BackendSyncState(true,"Signing in and loading school data…")
@@ -132,9 +191,13 @@ class SupabaseDataSource : ErpDataSource {
       // Additional enum roles exist in SQL, but no dashboard is fabricated for them.
       val role = UserRole.entries.firstOrNull { it.name==profile.role }
         ?: error("This account role does not have a supported demo dashboard.")
+      // Preserve the backend ADMIN identity, but never load or route its mobile portal.
+      MobileRoleAccess.requireSupported(role)
       user.value=UserProfile(uid,profile.name,profile.email,role,role.displayName,"",profile.name.split(" ").mapNotNull { it.firstOrNull() }.joinToString("").take(2),schoolId=profile.school_id)
       activeSession=profile.session_id
-      tables.forEach { signInStage=it; refresh(it) }
+      signInStage="school data"
+      rows.value=fetchSchoolSnapshot(user.value,activeSession){signInStage=it}
+      capabilities.value=loadCapabilities()
       val students=table("students")
       val own = students.firstOrNull { it.profile_id==uid } ?: if(role==UserRole.PARENT) students.firstOrNull() else null
       val section = table("sections").firstOrNull { it.id==own?.section_id }
@@ -155,7 +218,7 @@ class SupabaseDataSource : ErpDataSource {
           while (isActive && sessionRevision.get()==liveRevision) {
             delay(30_000)
             try {
-              listOf("notifications","assignments","attendance","marks","notices","fee_records").forEach { refresh(it) }
+              reconcileSchoolData()
               if (sessionRevision.get()==liveRevision && !syncState.value.busy) {
                 syncState.value=BackendSyncState(message="School inbox and task data reconciled")
               }
@@ -176,7 +239,8 @@ class SupabaseDataSource : ErpDataSource {
                 delay(minOf(30000L,1000L*(attempt+1))); true
               }.collect { updated ->
                 if(sessionRevision.get()!=liveRevision) return@collect
-                rows.update { previous -> if(sessionRevision.get()==liveRevision) previous+(name to updated) else previous }
+                // Realtime's local cache can retain rows after scope changes. Re-read through RLS.
+                refresh(name)
                 ready.add(name)
                 val recovered=interrupted.remove(name)
                 if(ready.size==tables.size && interrupted.isEmpty() && !syncState.value.busy &&
@@ -188,15 +252,15 @@ class SupabaseDataSource : ErpDataSource {
         }
       }
     } catch (e: Exception) {
-      if (e is CancellationException) throw e
       liveJob?.cancel()
       liveJob = null
       authenticated = false
       rows.value = emptyMap()
+      capabilities.value=SchoolBackendCapabilities()
       user.value = signedOutUser()
       activeSession = ""
-      runCatching { client.realtime.removeAllChannels() }
-      runCatching { client.auth.clearSession() }
+      withContext(NonCancellable){runCatching{withTimeout(5000){client.realtime.removeAllChannels();client.auth.clearSession()}}}
+      if(e is CancellationException){syncState.value=BackendSyncState();throw e}
       syncState.value = BackendSyncState(message = supabaseSignInFailure(signInStage,e), failed = true)
       throw IllegalStateException(syncState.value.message)
     }
@@ -212,18 +276,18 @@ class SupabaseDataSource : ErpDataSource {
       ?: error("No accessible class section matches this selection.")
   }
   private inline fun <reified T:Any> payload(value:T): JsonElement = Json.parseToJsonElement(moshi.adapter(T::class.java).toJson(value))
+  private suspend fun <T> confirmedChange(persist: suspend () -> T, reload: suspend () -> Unit): T =
+    confirmInSession({sessionRevision.get()},{authenticated},persist,reload)
   private suspend fun write(table: String, body: JsonObject) {
     requireSession();val revision=sessionRevision.get()
     syncState.value=BackendSyncState(true,"Saving to school database…")
     try {
-      client.from(table).upsert(body)
-      if(sessionRevision.get()!=revision) return
-      refresh(table)
+      confirmedChange({client.from(table).upsert(body)},{refresh(table)})
       syncState.value=BackendSyncState(message="Saved to school database")
     } catch(e:Exception) {
       if(e is CancellationException) throw e
-      if(sessionRevision.get()!=revision) return
-      syncState.value=BackendSyncState(message="Save failed. No local success was assumed. Check access and network, then retry.",failed=true)
+      if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.")
+      syncState.value=BackendSyncState(message="Save was not confirmed. Check connection and access before retrying.",failed=true)
       throw IllegalStateException(syncState.value.message)
     }
   }
@@ -237,8 +301,8 @@ class SupabaseDataSource : ErpDataSource {
   override suspend fun login(email:String,role:UserRole,name:String):Unit=error("Use your Supabase email and password.")
   override suspend fun logout() = lifecycleLock.withLock {
     sessionRevision.incrementAndGet()
-    liveJob?.cancelAndJoin();liveJob=null;authenticated=false;rows.value=emptyMap();user.value=signedOutUser();activeSession=""
-    syncState.value=BackendSyncState()
+    liveJob?.cancelAndJoin();liveJob=null;authenticated=false;rows.value=emptyMap();presentationStudent.value="";user.value=signedOutUser();activeSession=""
+    syncState.value=BackendSyncState();capabilities.value=SchoolBackendCapabilities()
     runCatching { client.realtime.removeAllChannels() }
     runCatching { withTimeout(5000) { client.auth.signOut(io.github.jan.supabase.auth.SignOutScope.LOCAL) } }
     // Always erase the in-memory credential even if the network logout fails.
@@ -249,23 +313,26 @@ class SupabaseDataSource : ErpDataSource {
     val fees=all["fee_records"].orEmpty().map { decode<FeeRecord>(it) }
     all["students"].orEmpty().map { summarizeSupabaseStudent(decode<Student>(it),fees,all["attendance"].orEmpty()) }
   }
-  override fun getTeachersFlow()=models<Teacher>("teachers")
+  override fun getTeachersFlow():Flow<List<Teacher>> = rows.map { all ->
+    all["teachers"].orEmpty().map { row -> decode<Teacher>(row).copy(assignedClasses=authoritativeTeacherClasses(row.profile_id.orEmpty(),all)) }
+  }
   override suspend fun addStudent(student:Student) { enrollStudent(student,0L) }
   suspend fun enrollStudent(student:Student,feeAmount:Long) {
     requireSession()
     require(user.value.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) { "Only the principal or school administrator can enroll students." }
     require(feeAmount in 0L..1000000000L) { "Invalid fee amount." }
-    syncState.value=BackendSyncState(true,"Saving enrollment to Supabase�")
+    val revision=sessionRevision.get()
+    syncState.value=BackendSyncState(true,"Saving enrollment to Supabase…")
     try {
-      client.postgrest.rpc("enroll_student",buildJsonObject {
+      confirmedChange({ client.postgrest.rpc("enroll_student",buildJsonObject {
         put("p_id",student.id);put("p_section",section(student.classGrade,student.division))
         put("p_payload",payload(student));put("p_fee_amount",feeAmount)
-      })
-      listOf("students","fee_records","notifications","audit_logs").forEach { refresh(it) }
+      }) }, { listOf("students","fee_records","notifications","audit_logs").forEach { refresh(it) } })
       syncState.value=BackendSyncState(message="Student enrolled in school database. School inbox updated.")
     } catch(e:Exception) {
       if(e is CancellationException) throw e
-      syncState.value=BackendSyncState(message="Enrollment could not be confirmed. Check the student directory before retrying; verify class, duplicate admission number, access and migration 7.",failed=true)
+      if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.")
+      syncState.value=BackendSyncState(message="Enrollment was not confirmed. Check the student directory before retrying. Contact your school administrator if the record is missing.",failed=true)
       throw IllegalStateException(syncState.value.message)
     }
   }
@@ -280,7 +347,7 @@ class SupabaseDataSource : ErpDataSource {
       val st=records.map { record ->
         val student=all["students"].orEmpty().firstOrNull { it.id==record.student_id }?.let { decode<Student>(it) }
         StudentAttendance(record.student_id!!,student?.name.orEmpty(),student?.rollNumber ?: 0,
-          AttendanceStatus.valueOf(record.status),record.payload["remark"]?.jsonPrimitive?.content.orEmpty())
+          AttendanceStatus.valueOf(record.status),record.payload["remark"]?.jsonPrimitive?.content.orEmpty(),record.version)
       }
       val first=records.first();val student=all["students"].orEmpty().firstOrNull { it.id==first.student_id }?.let { decode<Student>(it) }
       ClassAttendanceRecord(first.id,student?.classGrade.orEmpty(),student?.division.orEmpty(),date=first.attendance_date,sessionSlot=first.session_slot,totalStudents=st.size,
@@ -293,27 +360,67 @@ class SupabaseDataSource : ErpDataSource {
   }
   suspend fun saveRollCall(classGrade:String,division:String,date:String,studentList:List<StudentAttendance>,slot:String) {
     requireSession();val sec=section(classGrade,division)
+    check(capabilities.value.loaded&&capabilities.value.attendance){"School attendance backend update required. Your register was not submitted."}
     require(studentList.isNotEmpty()) { "Select a populated class before saving attendance." }
-    // One PostgREST statement makes the roll call atomic.
-    val batch=studentList.map { st -> JsonObject(boundary("${st.studentId}_${activeSession}_${date}_$slot",sec,st.studentId)+mapOf(
-      "attendance_date" to JsonPrimitive(date),"session_slot" to JsonPrimitive(slot),"status" to JsonPrimitive(st.status.name),"payload" to payload(st))) }
+    val day=parseSchoolDate(date)?:error("Attendance date is invalid.")
+    val batch=buildJsonArray { studentList.forEach { st -> add(buildJsonObject {
+      put("student_id",st.studentId);put("status",st.status.name);put("remark",st.remark);put("expected_version",st.revision)
+    }) } }
     syncState.value=BackendSyncState(true,"Saving attendance…")
-    try { client.from("attendance").upsert(batch);refresh("attendance");syncState.value=BackendSyncState(message="Attendance saved") }
-    catch(e:Exception) { if(e is CancellationException) throw e;syncState.value=BackendSyncState(message="Attendance was not saved. Check access and network.",failed=true);throw IllegalStateException(syncState.value.message) }
+    val revision=sessionRevision.get()
+    try { confirmedChange({client.postgrest.rpc("save_roll_call",buildJsonObject{
+      put("p_section",sec);put("p_date",day.toString());put("p_slot",slot);put("p_entries",batch)
+    })},{refresh("attendance")});syncState.value=BackendSyncState(message="Attendance saved") }
+    catch(e:Exception) { if(e is CancellationException) throw e;if(sessionRevision.get()!=revision) throw IllegalStateException("Account changed. Check the original account before retrying.");syncState.value=BackendSyncState(message="Attendance was not saved. Check access and network.",failed=true);throw IllegalStateException(syncState.value.message) }
   }
-  override fun getAssignmentsFlow():Flow<List<HomeworkAssignment>> = rows.map { all ->
-    all["assignments"].orEmpty().map { row ->
-      val a=decode<HomeworkAssignment>(row)
-      val done=all["assignment_submissions"].orEmpty().any { it.assignment_id==row.id && it.student_id==user.value.associatedStudentId && it.completed }
-      a.copy(isCompletedByStudent=done,submissionStatus=if(done) "Submitted" else "Pending")
-    }
+  fun selectStudentForPresentation(id: String) {
+    requireSession()
+    check(user.value.role==UserRole.PARENT && table("students").any {it.id==id}) {"Student is not available to this account."}
+    presentationStudent.value=id
   }
-  override suspend fun createAssignment(assignment:HomeworkAssignment)=save("assignments",assignment.id,assignment,section(assignment.classGrade,assignment.division))
+  override fun getAssignmentsFlow():Flow<List<HomeworkAssignment>> = combine(rows,presentationStudent,user) {all,selected,actor ->
+    val child=if(actor.role==UserRole.PARENT && all["students"].orEmpty().any {it.id==selected}) selected else actor.associatedStudentId
+    all["assignments"].orEmpty().map { row -> assignmentForStudent(decode<HomeworkAssignment>(row).copy(publicationState=row.publication_state,revision=row.version,closesAt=row.closes_at.orEmpty()),all["assignment_submissions"].orEmpty(),child) }
+  }
+  override suspend fun createAssignment(assignment:HomeworkAssignment) {
+    requireSession()
+    check(capabilities.value.loaded&&capabilities.value.assignments){"School assignment backend update required. Refresh after setup."}
+    val due=listOf(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE,java.time.format.DateTimeFormatter.ofPattern("dd MMM uuuu",java.util.Locale.US))
+      .firstNotNullOfOrNull{runCatching{java.time.LocalDate.parse(assignment.dueDate,it)}.getOrNull()}
+      ?:error("Use a valid due date, for example 28 Oct 2026.")
+    confirmedChange({client.postgrest.rpc("write_assignment",buildJsonObject{
+      put("p_id",assignment.id);put("p_section",section(assignment.classGrade,assignment.division));put("p_payload",payload(assignment))
+      put("p_due_date",due.toString());put("p_publish",assignment.publicationState=="PUBLISHED");put("p_expected_version",assignment.revision)
+    })},{listOf("assignments","notifications").forEach{refresh(it)}})
+  }
   override suspend fun toggleAssignmentCompletion(assignmentId:String) {
-    val a=table("assignments").first { it.id==assignmentId };val st=user.value.associatedStudentId
-    check(user.value.role==UserRole.STUDENT && st.isNotBlank()) { "Only the linked student can submit work." }
-    val old=table("assignment_submissions").firstOrNull { it.assignment_id==assignmentId && it.student_id==st }
-    write("assignment_submissions",JsonObject(boundary("${assignmentId}_$st",a.section_id,st)+mapOf("assignment_id" to JsonPrimitive(assignmentId),"completed" to JsonPrimitive(old?.completed!=true))))
+    error("Open the assignment and submit a file or note. Cloud submissions cannot be changed by a completion toggle.")
+  }
+  private fun submission(row:SupabaseRow,all:Map<String,List<SupabaseRow>> = rows.value)=AssignmentSubmission(
+    row.id,row.assignment_id,row.student_id.orEmpty(),all["students"].orEmpty().firstOrNull{it.id==row.student_id}?.payload?.get("name")?.jsonPrimitive?.content.orEmpty(),
+    row.attachment_ref,row.attachment_name,row.note,row.feedback,row.review_status,row.version,row.submitted_at.orEmpty(),row.reviewed_at.orEmpty(),row.school_id,row.session_id)
+  override fun getAssignmentSubmissionsFlow():Flow<List<AssignmentSubmission>> = rows.map{all->
+    all["assignment_submissions"].orEmpty().filter{it.completed&&it.version>0}.map{submission(it,all)}
+  }
+  override suspend fun submitAssignment(assignmentId:String,attachmentRef:String,note:String,expectedVersion:Int):AssignmentSubmission {
+    requireSession()
+    check(capabilities.value.loaded&&capabilities.value.submissions){"School submission backend update required. Your draft is retained."}
+    check(user.value.role==UserRole.STUDENT){"Only the linked student can submit work."}
+    require(note.length<=8000 && (note.isNotBlank() || attachmentRef.isNotBlank()) && expectedVersion>=0)
+    val saved=confirmedChange({client.postgrest.rpc("submit_assignment",buildJsonObject{
+      put("p_assignment",assignmentId);put("p_attachment",attachmentRef);put("p_note",note);put("p_expected_version",expectedVersion)
+    }).decodeAs<SupabaseRow>()},{listOf("assignment_submissions","notifications").forEach{refresh(it)}})
+    return submission(saved)
+  }
+  override suspend fun reviewSubmission(id:String,feedback:String,expectedVersion:Int):AssignmentSubmission {
+    requireSession()
+    check(capabilities.value.loaded&&capabilities.value.submissions){"School submission backend update required."}
+    check(user.value.role in setOf(UserRole.TEACHER,UserRole.PRINCIPAL,UserRole.ADMIN)){"Staff review access required."}
+    require(feedback.trim().length in 1..4000 && expectedVersion>=0)
+    val saved=confirmedChange({client.postgrest.rpc("review_submission",buildJsonObject{
+      put("p_submission",id);put("p_feedback",feedback);put("p_expected_version",expectedVersion)
+    }).decodeAs<SupabaseRow>()},{listOf("assignment_submissions","notifications").forEach{refresh(it)}})
+    return submission(saved)
   }
   override fun getStudyMaterialsFlow()=models<StudyMaterial>("study_materials")
   override suspend fun uploadStudyMaterial(material:StudyMaterial) {
@@ -325,17 +432,27 @@ class SupabaseDataSource : ErpDataSource {
     all["marks"].orEmpty().groupBy { "${it.student_id}_${it.term}" }.mapNotNull { (_,scores) ->
       val first=scores.first();val s=all["students"].orEmpty().firstOrNull { it.id==first.student_id }?.let { decode<Student>(it) } ?: return@mapNotNull null
       ReportCard("${s.id}_${first.term}",s.id,s.name,s.classGrade,s.division,s.rollNumber,first.term,activeSession,
-        scores.map { SubjectScore(it.subject,it.maximum,it.obtained,SubjectScore.calculateCbseGrade(it.obtained,it.maximum),"",it.payload["checkedPaperUrl"]?.jsonPrimitive?.content.orEmpty(),it.payload["answerKeyUrl"]?.jsonPrimitive?.content.orEmpty()) },
+        scores.map { SubjectScore(it.subject,it.maximum,it.obtained,SubjectScore.calculateCbseGrade(it.obtained,it.maximum),"",it.payload["checkedPaperUrl"]?.jsonPrimitive?.content.orEmpty(),it.payload["answerKeyUrl"]?.jsonPrimitive?.content.orEmpty(),it.version,it.review_state) },
         s.attendancePercent,0,0,"","",s.schoolId,activeSession,scores.all { it.published })
     }
   }
   override suspend fun saveStudentMarks(studentId:String,term:String,subjectName:String,obtainedMarks:Int,maxMarks:Int) {
+    error("Reload the marks editor before saving. Blind cloud mark updates are disabled.")
+  }
+  override suspend fun saveDraftMarks(studentId:String,term:String,subject:String,obtained:Int,maximum:Int,expectedVersion:Int):Int {
     requireSession()
-    client.postgrest.rpc("save_draft_mark", buildJsonObject {
-      put("p_student",studentId); put("p_term",term.trim()); put("p_subject",subjectName.trim())
-      put("p_obtained",obtainedMarks); put("p_maximum",maxMarks)
-    })
-    refresh("marks")
+    check(capabilities.value.loaded&&capabilities.value.marks){"School marks backend update required. Your draft is retained."}
+    return confirmedChange({ client.postgrest.rpc("save_draft_mark", buildJsonObject {
+      put("p_student",studentId); put("p_term",term.trim()); put("p_subject",subject.trim())
+      put("p_obtained",obtained); put("p_maximum",maximum);put("p_expected_version",expectedVersion)
+    }).decodeAs<SupabaseRow>() }, { refresh("marks") }).version
+  }
+  override suspend fun submitMarksForReview(studentId:String,term:String,subject:String,expectedVersion:Int):Int {
+    requireSession()
+    check(capabilities.value.loaded&&capabilities.value.marks){"School marks backend update required."}
+    return confirmedChange({client.postgrest.rpc("submit_mark_review",buildJsonObject{
+      put("p_student",studentId);put("p_term",term);put("p_subject",subject);put("p_expected_version",expectedVersion)
+    }).decodeAs<SupabaseRow>()},{listOf("marks","notifications").forEach{refresh(it)}}).version
   }
   override suspend fun saveCheckedPaper(studentId:String,term:String,subjectName:String,checkedPaperUrl:String) {
     updateMarkAttachments(table("marks").filter { it.student_id==studentId && it.term==term && it.subject==subjectName },"checkedPaperUrl",checkedPaperUrl)
@@ -346,23 +463,33 @@ class SupabaseDataSource : ErpDataSource {
   }
   private suspend fun updateMarkAttachments(marks:List<SupabaseRow>,key:String,url:String) {
     check(marks.isNotEmpty()) { "Save marks before attaching documents." }
-    marks.forEach { m -> write("marks",JsonObject(boundary(m.id,m.section_id,m.student_id)+mapOf("term" to JsonPrimitive(m.term),"subject" to JsonPrimitive(m.subject),"obtained" to JsonPrimitive(m.obtained),"maximum" to JsonPrimitive(m.maximum),"published" to JsonPrimitive(m.published),"payload" to JsonObject(m.payload+(key to JsonPrimitive(url)))))) }
+    marks.forEach { m -> confirmedChange({client.postgrest.rpc("attach_mark_document",buildJsonObject{
+      put("p_id",m.id);put("p_field",key);put("p_ref",url);put("p_expected_version",m.version)
+    })},{refresh("marks")}) }
   }
   override suspend fun publishReportCard(studentId:String,term:String,published:Boolean) {
     requireSession()
-    client.postgrest.rpc("set_result_publication", buildJsonObject {
+    check(user.value.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) { "Result publication requires school approval." }
+    confirmedChange({ client.postgrest.rpc("set_result_publication", buildJsonObject {
       put("p_student",studentId); put("p_term",term); put("p_published",published)
-    })
-    refresh("marks")
+    }) }, { refresh("marks") })
   }
   override fun getExamSchedulesFlow()=models<ExamSchedule>("exams")
   override fun getTimetableFlow()=models<TimetableSlot>("timetables")
   override fun getEventsFlow()=models<SchoolEvent>("events")
-  override fun getNoticesFlow()=models<SchoolNotice>("notices")
-  override suspend fun publishNotice(notice:SchoolNotice)=save("notices",notice.id,notice)
+  override fun getNoticesFlow():Flow<List<SchoolNotice>> = rows.map{all->all["notices"].orEmpty().map{decode<SchoolNotice>(it).copy(revision=it.version)}}
+  override suspend fun publishNotice(notice:SchoolNotice) {
+    requireSession()
+    check(capabilities.value.loaded&&capabilities.value.targeted_notices){"School notice backend update required. Your notice was not submitted."}
+    val target=if(notice.targetAudience=="Class")section(notice.targetClass.substringBeforeLast('-'),notice.targetClass.substringAfterLast('-'))else null
+    confirmedChange({client.postgrest.rpc("write_notice",buildJsonObject{
+      put("p_id",notice.id);put("p_payload",payload(notice));put("p_audience",notice.targetAudience)
+      put("p_section",target?.let{JsonPrimitive(it)}?:JsonNull);put("p_expected_version",notice.revision)
+    })},{listOf("notices","notifications").forEach{refresh(it)}})
+  }
   override fun getNotificationsFlow():Flow<List<ErpNotification>> = rows.map { all ->
     all["notifications"].orEmpty().sortedByDescending { it.created_at }.map { n ->
-      ErpNotification(n.id,n.title,n.message,runCatching { NotificationCategory.valueOf(n.category) }.getOrDefault(NotificationCategory.SYSTEM),n.created_at,n.is_read,schoolId=n.school_id)
+      ErpNotification(n.id,n.title,n.message,runCatching { NotificationCategory.valueOf(n.category) }.getOrDefault(NotificationCategory.SYSTEM),n.created_at,n.is_read,actionableId=n.actionable_id,schoolId=n.school_id)
     }
   }
   override suspend fun addNotification(title:String,message:String,category:NotificationCategory,targetRole:UserRole?):Unit = error("The database creates notifications from saved school events.")
@@ -384,14 +511,21 @@ class SupabaseDataSource : ErpDataSource {
     check(sessionRevision.get()==revision && table("notifications").all { it.is_read }) { "Inbox read state was not confirmed." }
   }
   override fun getLeaveRequestsFlow()=models<LeaveRequest>("leave_requests")
+  override suspend fun requestLeave(id:String,type:String,start:String,end:String,reason:String) {
+    requireSession()
+    check(capabilities.value.loaded&&capabilities.value.leaves){"School leave backend update required. Your request was not submitted."}
+    val first=parseSchoolDate(start)?:error("Enter a valid start date.")
+    val last=parseSchoolDate(end)?:error("Enter a valid end date.")
+    confirmedChange({client.postgrest.rpc("request_leave",buildJsonObject{
+      put("p_id",id);put("p_type",type);put("p_start",first.toString());put("p_end",last.toString());put("p_reason",reason)
+    })},{listOf("leave_requests","notifications").forEach{refresh(it)}})
+  }
   override suspend fun applyLeave(applicantName:String,applicantRole:UserRole,applicantId:String,classOrDept:String,leaveType:String,startDate:String,endDate:String,daysCount:Int,reason:String) {
-    val id=UUID.randomUUID().toString()
-    save("leave_requests",id,LeaveRequest(id,user.value.id,user.value.name,user.value.role,classOrDept,leaveType,startDate,endDate,daysCount,reason,"Today",LeaveStatus.PENDING,schoolId=user.value.schoolId))
+    error("Use the confirmed leave form so retries retain the original request reference.")
   }
   override suspend fun updateLeaveStatus(leaveId:String,status:LeaveStatus,approverRemark:String) {
     requireSession()
-    client.postgrest.rpc("decide_leave",buildJsonObject { put("p_id",leaveId);put("p_status",status.name);put("p_remark",approverRemark) })
-    refresh("leave_requests")
+    confirmedChange({client.postgrest.rpc("decide_leave",buildJsonObject { put("p_id",leaveId);put("p_status",status.name);put("p_remark",approverRemark) })},{refresh("leave_requests")})
   }
   override fun getTransportRoutesFlow()=models<TransportRoute>("transport_routes")
   override fun getLibraryBooksFlow()=models<LibraryBook>("library_books")

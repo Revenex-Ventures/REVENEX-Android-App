@@ -46,8 +46,8 @@ class AdminWorkflowUiTest {
     File("build/reports/redesign/admin").mkdirs()
     compose.onRoot().captureRoboImage("build/reports/redesign/admin/$name.png")
   }
-  @Test fun staffCanSaveReviewAndPublishDraftWithoutRemovingReports() {
-    val repository = repository(UserRole.TEACHER)
+  @Test fun principalCanSaveReviewAndPublishDraftWithoutRemovingReports() {
+    val repository = repository(UserRole.PRINCIPAL)
     var reportOpened = false
     compose.setContent { ScholaTheme(false) { Surface(Modifier.fillMaxSize()) { StaffMarksWorkspace(repository, { reportOpened = true }) } } }
     compose.onNodeWithTag("marks_term").performScrollTo().performTextInput("UI verification term")
@@ -59,20 +59,22 @@ class AdminWorkflowUiTest {
     compose.waitUntil { repository.reportCards.value.any { it.term == "UI verification term" } }
     assertFalse(repository.reportCards.value.first { it.term == "UI verification term" }.published)
     capture("marks_draft_light")
-    compose.onNodeWithText("Review & publish term").performScrollTo().performClick()
+    compose.onNodeWithTag("staff_marks_workspace").performScrollToNode(hasText("Review & publish"))
+    compose.onNodeWithText("Review & publish").performClick()
     compose.onNodeWithText("Publish results?").assertExists()
     capture("marks_review_light")
     compose.onNodeWithText("Publish").performClick()
     org.robolectric.shadows.ShadowLooper.idleMainLooper()
     compose.waitUntil { repository.reportCards.value.first { it.term == "UI verification term" }.published }
     compose.onNodeWithTag("save_draft_mark").performScrollTo().assertIsNotEnabled()
-    compose.onNodeWithText("View report cards & student details").performScrollTo().performClick()
+    compose.onNodeWithTag("staff_marks_workspace").performScrollToNode(hasText("Report cards"))
+    compose.onNodeWithText("Report cards").performClick()
     assertTrue(reportOpened)
   }
 
   @Test @Config(qualifiers = "w320dp-h640dp-xhdpi")
   fun narrowLargeTextDirectorySearchRetainsWorkingDestination() {
-    val repository = repository(UserRole.ADMIN)
+    val repository = repository(UserRole.PRINCIPAL)
     var destination = ""
     compose.setContent {
       val density = LocalDensity.current
@@ -89,7 +91,7 @@ class AdminWorkflowUiTest {
 
   @Test @Config(qualifiers = "w800dp-h1100dp-xhdpi")
   fun tabletDirectoryRendersInBothThemes() {
-    val repository = repository(UserRole.ADMIN)
+    val repository = repository(UserRole.PRINCIPAL)
     var dark by mutableStateOf(false)
     compose.setContent { ScholaTheme(dark) { Surface(Modifier.fillMaxSize()) { OperationsHubScreen(repository, {}, {}, {}, {}, {}) } } }
     capture("directory_tablet_light")
@@ -101,11 +103,11 @@ class AdminWorkflowUiTest {
     val repository = repository(UserRole.PARENT)
     var destination = ""
     compose.setContent { ScholaTheme(false) { GlobalCommandPaletteModal(repository, {}, { destination = it }, {}) } }
-    compose.onNodeWithTag("command_palette_search_field").performTextInput("Enrol")
-    compose.onNodeWithText("Enrol student").assertDoesNotExist()
+    compose.onNodeWithTag("command_palette_search_field").performTextInput("Add")
+    compose.onNodeWithText("Add student").assertDoesNotExist()
     compose.onNodeWithTag("command_palette_search_field").performTextClearance()
     compose.onNodeWithTag("command_palette_search_field").performTextInput("Fee")
-    compose.onNodeWithText("Fee accounts").performClick()
+    compose.onNodeWithText("Fees").performClick()
     assertEquals(Screen.Fees.route, destination)
   }
 

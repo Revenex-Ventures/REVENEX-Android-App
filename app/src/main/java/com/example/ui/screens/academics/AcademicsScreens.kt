@@ -33,321 +33,121 @@ import kotlinx.coroutines.launch
 // Segmented sub-tabs: "Timetable & Slots" â†” "Gradebook & GPA"
 // ============================================================================
 @Composable
-fun TimetableScreen(
-  repository: ErpDataRepository
-) {
-  val currentUser by repository.currentUser.collectAsState()
+fun TimetableScreen(repository: ErpDataRepository) {
   val timetable by repository.timetable.collectAsState()
-  val gradebookEntries by repository.gradebookEntries.collectAsState()
-  val dataMode by repository.dataMode.collectAsState()
-
-  var selectedSubTab by remember { mutableStateOf(0) } // 0 = Timetable & Slots, 1 = Gradebook & GPA
-  var selectedDay by remember { mutableStateOf("Monday") }
-  val days = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
-
-  val filteredSlots = remember(timetable, selectedDay) {
-    timetable
-      .filter { it.dayOfWeek.equals(selectedDay, ignoreCase = true) }
-      .sortedBy { it.periodNumber }
-  }
-
-  val todayName = remember { currentDayOfWeekName() }
-  var nowMinutes by remember { mutableIntStateOf(currentMinutesOfDay()) }
-  LaunchedEffect(Unit) {
-    while (true) {
-      delay(20_000)
-      nowMinutes = currentMinutesOfDay()
-    }
-  }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background)
-      .testTag("timetable_screen"),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      WorkspaceHeading(
-        if (selectedSubTab == 0) "Class timetable" else "Assessment scores",
-        if (selectedSubTab == 0) "Choose a day to see teaching periods, rooms and subjects."
-        else "Read-only scores available to your account. Drafts are restricted by school permissions."
-      )
-    }
-
-    // 2. SEGMENTED SUB-TAB SWITCHER ("Timetable & Slots" â†” "Gradebook & GPA")
-    item {
-      Surface(
-        shape = RoundedCornerShape(Radius.pill),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(Radius.pill))
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(4.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-          listOf("Timetable", "Scores").forEachIndexed { index, title ->
-            val isSelected = selectedSubTab == index
-            Box(
-              modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(Radius.pill))
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                .clickable { selectedSubTab = index }
-                .heightIn(min = 48.dp).padding(vertical = Spacing.sm8),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-            }
-          }
-        }
-      }
-    }
-
-    // 3. SUB-TAB CONTENT
-    if (selectedSubTab == 0) {
-      // TAB 1: TIMETABLE & SLOTS — VERTICAL TIMELINE
-      item {
-        // Day selector chips (Monday - Friday)
-        LazyRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(Spacing.s2)
-        ) {
-          items(days) { day ->
-            val isSelected = selectedDay == day
-            Surface(
-              shape = RoundedCornerShape(Radius.pill),
-              color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-              modifier = Modifier
-                .clip(RoundedCornerShape(Radius.pill))
-                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.pill))
-                .clickable { selectedDay = day }
-            ) {
-              Text(
-                text = day,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = Spacing.s3, vertical = 6.dp)
-              )
-            }
-          }
-        }
-      }
-
-      if (filteredSlots.isEmpty()) {
+  val scores by repository.gradebookEntries.collectAsState()
+  val actor by repository.currentUser.collectAsState()
+  val cloud=repository.dataMode.collectAsState().value==com.example.data.datasource.DataMode.SUPABASE_DEMO
+  var tab by remember(actor.id){mutableIntStateOf(0)}
+  val days=listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+  var day by remember(actor.id){mutableStateOf(currentDayOfWeekName())}
+  var cohort by remember(actor.id){mutableStateOf("")}
+  var choosing by remember {mutableStateOf(false)}
+  val classes=timetable.map {"${it.classGrade}-${it.division}"}.distinct().sorted()
+  val slots=timetable.filter {it.dayOfWeek.equals(day,true)&&(cohort.isBlank()||"${it.classGrade}-${it.division}"==cohort)}.sortedBy {it.periodNumber}
+  Column(Modifier.fillMaxSize().testTag("timetable_screen")) {
+    Box(Modifier.padding(horizontal=Spacing.screenPadding)) {WorkspacePageHeader("Timetable")}
+    TabRow(selectedTabIndex=tab,containerColor=MaterialTheme.colorScheme.background) {listOf("Timetable","Scores").forEachIndexed {index,title->Tab(selected=tab==index,onClick={tab=index},text={Text(title)})}}
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      if(tab==0) {
         item {
-          EmptyStateView(
-            title = "No Lectures Scheduled",
-            message = "No timetable slots found for $selectedDay."
-          )
+          LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)){items(days){value->SchoolFilterChip(day==value,{day=value},{Text(value.take(3))})}}
+          Box {OutlinedButton(onClick={choosing=true},shape=RoundedCornerShape(Radius.sm)){Text(cohort.ifBlank {"All classes"});Icon(Icons.Default.ExpandMore,null)}
+            DropdownMenu(choosing,{choosing=false}){DropdownMenuItem(text={Text("All classes")},onClick={cohort="";choosing=false});classes.forEach {value->DropdownMenuItem(text={Text(value)},onClick={cohort=value;choosing=false})}}
+          }
+          Text("$day · ${slots.size} scheduled periods",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if(slots.isEmpty()) item {EmptyStateView(title="No classes scheduled",message="No accessible timetable periods are available for this day and class.")}
+        items(slots,key={it.id}) {slot->Surface(color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(Radius.sm)) {
+          Row(Modifier.padding(Spacing.md12),horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+            Column(Modifier.width(72.dp)){Text(slot.startTime,style=MaterialTheme.typography.labelLarge);Text(slot.endTime,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+            Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Circle,null,Modifier.size(Spacing.sm8),tint=MaterialTheme.colorScheme.primary);Box(Modifier.width(1.dp).height(Spacing.xxxl48).background(MaterialTheme.colorScheme.outlineVariant))}
+            Column(Modifier.weight(1f)) {
+              Text(slot.subject,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+              Text("Class ${slot.classGrade}-${slot.division} · ${slot.roomNumber}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+              Text(slot.teacherName,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+          }
+        }}
       } else {
-        // Timeline card: clean flat container hosting a continuous live rail, with each period as its own card
-        item {
-          val isToday = selectedDay.equals(todayName, ignoreCase = true)
-
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(Radius.xl))
-              .background(MaterialTheme.colorScheme.surface)
-              .border(0.8.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.xl))
-          ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-              // ── LIVE HEADER ──────────────────────────────────
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(start = 14.dp, end = 16.dp, top = 14.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                if (isToday) {
-                  ScheduleLiveClock(minutes = nowMinutes)
-                } else {
-                  Text(
-                    text = "SCHEDULE",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = TypeTokens.trackingMicroLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                }
-                Text(
-                  text = "${filteredSlots.size} LECTURES",
-                  style = MaterialTheme.typography.labelSmall,
-                  letterSpacing = TypeTokens.trackingMicroLabel,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-
-              HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-
-              filteredSlots.forEachIndexed { index, slot ->
-                ScheduleTimelineRow(
-                  slot = slot,
-                  status = scheduleStatus(isToday, nowMinutes, slot),
-                  showDivider = index < filteredSlots.lastIndex,
-                  modifier = Modifier.fillMaxWidth()
-                )
-              }
-            }
-          }
-        }
-      }
-    } else {
-      // TAB 2: GRADEBOOK & GPA
-      item {
-        SectionHeader(horizontalPadding = 0.dp, title = "Accessible assessment scores (${gradebookEntries.size})")
-      }
-
-      if (gradebookEntries.isEmpty()) item {
-        EmptyStateView(title = "No assessment scores", message = "No accessible scores are loaded. Published results will appear when your school makes them available.")
-      }
-      items(gradebookEntries, key = { it.id }) { entry ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = entry.assessmentTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-              Text(
-                text = "Scholar: ${entry.studentName} (${entry.cohort}) · ${entry.subject}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-              Text(
-                text = "Instructor: ${entry.instructorName} · Evaluated ${entry.date}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-              )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                  text = "${entry.score} / ${entry.maxScore}",
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                ScholaPillBadge(status = entry.letterGrade)
-              }
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(
-                text = if(dataMode==com.example.data.datasource.DataMode.SUPABASE_DEMO) "GPA not calculated" else "GPA: ${entry.gpaPoint}",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = SemanticColors.onWarning
-              )
-            }
-          }
-        }
+        item {Text("Published scores · Edit and publish in Results",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+        if(scores.isEmpty()) item {EmptyStateView(title="No assessment scores",message="Published results appear when available to your account.")}
+        items(scores,key={it.id}) {score->SchoolGroup {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Row(Modifier.fillMaxWidth()){Text(score.assessmentTitle,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall);Text("${score.score}/${score.maxScore}",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)}
+          Text("${score.subject} · ${score.cohort} · ${score.date}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          Text("${score.instructorName} · Grade ${score.letterGrade}",style=MaterialTheme.typography.bodySmall)
+          if(!cloud) Text("Local demo GPA: ${score.gpaPoint}",style=MaterialTheme.typography.bodySmall)
+        }}}
       }
     }
   }
 }
 
 // Homework Screen
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeworkScreen(
-  repository: ErpDataRepository,
-  onShowCreateAssignment: () -> Unit
-) {
+fun HomeworkScreen(repository: ErpDataRepository, onShowCreateAssignment: () -> Unit) {
   val assignments by repository.assignments.collectAsState()
   val currentUser by repository.currentUser.collectAsState()
-  val scope = rememberCoroutineScope()
-  var subjectFilter by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf("") }
-  var pendingOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) { mutableStateOf(false) }
-  val subjects = assignments.map { it.subject }.distinct().sorted()
-  val filteredAssignments = assignments.filter { (subjectFilter.isBlank() || it.subject == subjectFilter) && (!pendingOnly || !it.isCompletedByStudent) }
-  var submitting by remember(currentUser.id) { mutableStateOf<String?>(null) }
-  var submissionError by remember(currentUser.id) { mutableStateOf<String?>(null) }
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text("Assignments", modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        if (currentUser.role == UserRole.TEACHER || currentUser.role == UserRole.PRINCIPAL || currentUser.role == UserRole.ADMIN) {
-          Button(onClick = onShowCreateAssignment, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-            Text("Assign", fontWeight = FontWeight.Bold)
-          }
+  val scope=rememberCoroutineScope()
+  var subjectFilter by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) {mutableStateOf("")}
+  var pendingOnly by androidx.compose.runtime.saveable.rememberSaveable(currentUser.id) {mutableStateOf(false)}
+  var resources by remember(currentUser.id) {mutableStateOf(false)}
+  var submitting by remember(currentUser.id) {mutableStateOf<String?>(null)}
+  var submissionError by remember(currentUser.id) {mutableStateOf<String?>(null)}
+  val subjects=assignments.map {it.subject}.distinct().sorted()
+  val selectedStudent by repository.selectedStudentId.collectAsState()
+  val students by repository.students.collectAsState()
+  val child=students.firstOrNull {it.id==selectedStudent}
+  val filtered=assignments.filter {
+    (currentUser.role!=UserRole.PARENT || (child!=null && it.classGrade==child.classGrade && it.division==child.division)) &&
+    (subjectFilter.isBlank()||it.subject==subjectFilter)&&(!pendingOnly||!it.isCompletedByStudent)
+  }
+  Column(Modifier.fillMaxSize()) {
+    WorkspacePageHeader("Assignments",Modifier.padding(horizontal=Spacing.screenPadding)) {
+      if(!resources && currentUser.role in setOf(UserRole.TEACHER,UserRole.PRINCIPAL,UserRole.ADMIN)) Button(onClick=onShowCreateAssignment,shape=RoundedCornerShape(Radius.sm)) {Icon(Icons.Default.Add,null);Text("Add")}
+    }
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal=Spacing.screenPadding,vertical=Spacing.sm8)) {
+      listOf("Tasks","Resources").forEachIndexed {index,label ->
+        SegmentedButton(selected=resources==(index==1),onClick={resources=index==1},shape=SegmentedButtonDefaults.itemShape(index,2)){Text(label)}
+      }
+    }
+    if(resources) StudyMaterialScreen(repository)
+    else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+      item {
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          item {SchoolFilterChip(subjectFilter.isBlank(),{subjectFilter=""},{Text("All")})}
+          items(subjects) {subject -> SchoolFilterChip(subjectFilter==subject,{subjectFilter=subject},{Text(subject)})}
+        }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+          Text("${filtered.size} tasks",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          SchoolFilterChip(pendingOnly,{pendingOnly=!pendingOnly},{Text("Pending only")})
         }
       }
-    }
-
-    item {
-      LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-        item { SchoolFilterChip(subjectFilter.isBlank(), { subjectFilter = "" }, { Text("All subjects") }) }
-        items(subjects) { subject -> SchoolFilterChip(subjectFilter == subject, { subjectFilter = subject }, { Text(subject) }) }
-      }
-      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("${filteredAssignments.size} assignments", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SchoolFilterChip(pendingOnly, { pendingOnly = !pendingOnly }, { Text("Pending only") })
-      }
-    }
-    submissionError?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
-    if (filteredAssignments.isEmpty()) {
-      item { EmptyStateView(title = "No matching assignments", message = "Change the subject or pending filter to see other work.") }
-    } else {
-      items(filteredAssignments, key = { it.id }) { hw ->
-        var expanded by remember(hw.id) { mutableStateOf(false) }
-        AppCard(modifier = Modifier.fillMaxWidth().testTag("assignment_details_${hw.id}"), onClick = { expanded = !expanded }) {
-          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm8)) {
-            Surface(color = SemanticColors.lavenderContainer, shape = RoundedCornerShape(Radius.pill)) {
-              Text(hw.subject, modifier = Modifier.padding(horizontal = Spacing.md12, vertical = Spacing.sm8),
-                style = MaterialTheme.typography.labelMedium, color = SemanticColors.onLavender)
+      submissionError?.let {message -> item {Text(message,color=MaterialTheme.colorScheme.error)}}
+      if(filtered.isEmpty()) item {EmptyStateView(title="No matching assignments",message="Change the subject or status filter to see other work.")}
+      items(filtered,key={it.id}) {hw ->
+        var expanded by remember(hw.id) {mutableStateOf(false)}
+        val well=when {hw.subject.contains("math",true)->SemanticColors.lavenderContainer;hw.subject.contains("science",true)||hw.subject.contains("physics",true)->SemanticColors.successContainer;hw.subject.contains("english",true)->SemanticColors.blueContainer;else->SemanticColors.peachContainer}
+        Surface(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth().testTag("assignment_details_${hw.id}"),shape=RoundedCornerShape(Radius.md),color=well) {
+          Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+              Icon(Icons.Default.Description,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.onSurface)
+              Column(Modifier.weight(1f)) {
+                Text(hw.title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+                Text("${hw.subject} · Class ${hw.classGrade}-${hw.division}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Due ${hw.dueDate}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+              Box(Modifier.widthIn(max=120.dp)){ScholaPillBadge(status=if(hw.publicationState=="DRAFT")"Draft"else hw.submissionStatus)}
+              Icon(if(expanded)Icons.Default.ExpandLess else Icons.Default.ChevronRight,if(expanded)"Hide details" else "Show details",Modifier.size(18.dp))
             }
-            Spacer(Modifier.weight(1f))
-            ScholaPillBadge(status = hw.submissionStatus)
-          }
-          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(hw.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-              contentDescription = if (expanded) "Hide instructions" else "View instructions", tint = MaterialTheme.colorScheme.primary)
-          }
-          if (expanded) Text(hw.instructions, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm8), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-            Text("Due ${hw.dueDate} · Class ${hw.classGrade}-${hw.division}",
-              style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-          if(hw.attachmentUrl.isNotBlank()) SchoolDocumentButton(hw.attachmentUrl,hw.attachmentName.ifBlank { "Open attachment" })
-          if(currentUser.role==UserRole.STUDENT) {
+            androidx.compose.animation.AnimatedVisibility(expanded) {
+              Column(verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+                HorizontalDivider()
+                Text(hw.instructions,style=MaterialTheme.typography.bodyMedium)
+                Text("${hw.teacherName} · Assigned ${hw.assignedDate} · ${hw.maxPoints} points",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(hw.attachmentUrl.isNotBlank()) SchoolDocumentButton(hw.attachmentUrl,hw.attachmentName.ifBlank {"Open attachment"})
+                if(currentUser.role==UserRole.STUDENT) {
             TextButton(enabled = submitting == null, onClick={
               submitting = hw.id; submissionError = null
               scope.launch {
@@ -360,6 +160,9 @@ fun HomeworkScreen(
             }) {
               Text(if(submitting == hw.id) "Saving…" else if(hw.isCompletedByStudent) "Undo submission" else "Mark submitted")
             }
+                }
+              }
+            }
           }
         }
       }
@@ -371,82 +174,48 @@ fun HomeworkScreen(
 @Composable
 fun StudyMaterialScreen(repository: ErpDataRepository) {
   val materials by repository.studyMaterials.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      WorkspaceHeading("Study materials", "Subject resources and reference documents shared with your account.")
-    }
-
-    if (materials.isEmpty()) item {
-      EmptyStateView(title = "No materials shared", message = "Your class documents will appear here when a teacher shares them.")
-    }
-    items(materials, key = { it.id }) { mat ->
-      AppCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Column(modifier = Modifier.weight(1f)) {
-            Text(mat.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("${mat.subject} · ${mat.chapter} · By ${mat.teacherName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-          Surface(shape = RoundedCornerShape(Radius.pill), color = MaterialTheme.colorScheme.secondaryContainer) {
-            Text(mat.fileType, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-          }
-        }
-        if(mat.attachmentUrl.isNotBlank()) SchoolDocumentButton(mat.attachmentUrl,mat.attachmentName.ifBlank { "Open material" })
+  var query by remember {mutableStateOf("")}
+  val visible=materials.filter {query.isBlank()||it.title.contains(query,true)||it.subject.contains(query,true)||it.chapter.contains(query,true)}
+  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {WorkspacePageHeader("Resources")
+      OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),placeholder={Text("Search documents or subjects")},singleLine=true,leadingIcon={Icon(Icons.Default.Search,null)},shape=RoundedCornerShape(Radius.sm))}
+    if(visible.isEmpty()) item {EmptyStateView(title="No matching resources",message="Shared notes and documents appear here when available.")}
+    items(visible,key={it.id}) {material->
+      var expanded by remember(material.id){mutableStateOf(false)}
+      SchoolGroup {
+        SchoolRow(material.title,"${material.subject} · ${material.chapter}",Icons.Default.Description,{expanded=!expanded},material.fileType)
+        androidx.compose.animation.AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+          Text(material.description,style=MaterialTheme.typography.bodyMedium)
+          SchoolDetailRow("Shared by",material.teacherName)
+          SchoolDetailRow("Class",material.classGrade)
+          SchoolDetailRow("Uploaded",material.uploadDate)
+          SchoolDetailRow("File", "${material.fileType} · ${material.fileSize}")
+          if(material.attachmentUrl.isNotBlank()) SchoolDocumentButton(material.attachmentUrl,material.attachmentName.ifBlank {"Open document"})
+          else Text("Document attachment is not available.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }}
       }
     }
   }
 }
 
-// Exams Screen
 @Composable
 fun ExamsScreen(repository: ErpDataRepository) {
   val schedules by repository.examSchedules.collectAsState()
-
-  LazyColumn(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background),
-    contentPadding = PaddingValues(start = Spacing.s4, end = Spacing.s4, top = Spacing.s2, bottom = Spacing.xl24),
-    verticalArrangement = Arrangement.spacedBy(Spacing.s3)
-  ) {
-    item {
-      WorkspaceHeading("Examinations", "Dates, rooms and assessment details for your available schedules.")
-    }
-
-    if (schedules.isEmpty()) item {
-      EmptyStateView(title = "No examinations scheduled", message = "No exam schedule is available for this account yet.")
-    }
-    schedules.forEach { sched ->
-      item {
-        SectionHeader(horizontalPadding = 0.dp, title = "${sched.title} (${sched.term})")
-      }
-      items(sched.subjects) { subj ->
-        AppCard(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column(Modifier.weight(1f)) {
-              Text(subj.subjectName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-              Text("Room: ${subj.room} · Max Marks: ${subj.maxMarks}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-              Text(subj.date, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-              Text(subj.time, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-            }
+  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(Spacing.screenPadding),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+    item {WorkspacePageHeader("Examinations")
+      Text("Schedules available to your account",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+    if(schedules.isEmpty()) item {EmptyStateView(title="No examinations scheduled",message="Examination schedules appear when available to your account.")}
+    items(schedules,key={it.id}) {exam->
+      var expanded by remember(exam.id){mutableStateOf(false)}
+      SchoolGroup {
+        SchoolRow(exam.title,"Class ${exam.classGrade} · ${exam.startDate} – ${exam.endDate}",Icons.Default.CalendarMonth,{expanded=!expanded},if(exam.isPublished)"Published" else "Draft")
+        androidx.compose.animation.AnimatedVisibility(expanded) {Column(Modifier.padding(Spacing.md12),verticalArrangement=Arrangement.spacedBy(Spacing.md12)) {
+          SchoolDetailRow("Term",exam.term)
+          exam.subjects.forEach {subject->
+            Column {Text(subject.subjectName,style=MaterialTheme.typography.titleSmall);Text("${subject.date} · ${subject.time} · ${subject.room}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text("Maximum ${subject.maxMarks} · Passing ${subject.passingMarks}",style=MaterialTheme.typography.bodySmall)}
+            HorizontalDivider()
           }
-        }
+        }}
       }
     }
   }

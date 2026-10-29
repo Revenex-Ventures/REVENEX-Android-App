@@ -57,6 +57,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -180,42 +183,6 @@ fun CompactStatTile(
 // 3. COMPACT BOTTOM NAVIGATION
 // ============================================================================
 
-@Composable
-fun ScholaFloatingDock(
-  items: List<ScholaDockItem>,
-  currentRoute: String?,
-  onItemSelected: (String) -> Unit,
-  modifier: Modifier = Modifier
-) {
-  val largeText = LocalDensity.current.fontScale > 1.3f
-  fun destinationLabel(label: String): String = when (label) {
-    "Attendance" -> "Roll call"
-    "Admissions" -> "Students"
-    "Homework" -> "Tasks"
-    "Resources" -> "Notes"
-    "Timetable" -> "Schedule"
-    else -> label
-  }
-  Column(modifier.clip(RoundedCornerShape(Radius.lg)).background(MaterialTheme.colorScheme.surface)
-    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Radius.lg))) {
-    if (largeText) Text(destinationLabel(items.firstOrNull { it.route == currentRoute }?.label.orEmpty()),
-      style = MaterialTheme.typography.labelLarge,
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md12, vertical = Spacing.xs4))
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = Elev.e0,
-      windowInsets = WindowInsets(0, 0, 0, 0)) {
-      items.forEach { item ->
-        val selected = currentRoute == item.route
-        NavigationBarItem(colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-          selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
-          selected = selected, onClick = { onItemSelected(item.route) },
-          icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
-          label = if (largeText) null else { { Text(destinationLabel(item.label), style = MaterialTheme.typography.labelSmall,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center) } })
-      }
-    }
-  }
-}
-
 data class ScholaDockItem(
   val route: String,
   val label: String,
@@ -223,55 +190,30 @@ data class ScholaDockItem(
   val unselectedIcon: ImageVector
 )
 
-private class DockClick {
-  private val sampleRate = 44100
-  private val track: AudioTrack
-
-  init {
-    val duration = 0.008f
-    val total = (sampleRate * duration).toInt()
-    val pcm = ShortArray(total)
-    for (i in 0 until total) {
-      val t = i.toFloat() / sampleRate
-      val decay = exp(-t * 500f)
-      val body = sin(2.0 * Math.PI.toFloat() * 1200.0f * t)
-      pcm[i] = ((body * decay) * 0.20f * Short.MAX_VALUE).toInt().toShort()
-    }
-    track = AudioTrack.Builder()
-      .setAudioAttributes(
-        AudioAttributes.Builder()
-          .setUsage(AudioAttributes.USAGE_MEDIA)
-          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-          .build()
-      )
-      .setAudioFormat(
-        AudioFormat.Builder()
-          .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-          .setSampleRate(sampleRate)
-          .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-          .build()
-      )
-      .setBufferSizeInBytes(pcm.size * 2)
-      .setTransferMode(AudioTrack.MODE_STATIC)
-      .build()
-    track.write(pcm, 0, pcm.size)
-    track.reloadStaticData()
-  }
-
-  fun play() {
-    try {
-      track.stop()
-      track.reloadStaticData()
-      track.play()
-    } catch (_: Exception) {
+@Composable
+fun ScholaFloatingDock(items: List<ScholaDockItem>,currentRoute: String?,onItemSelected:(String)->Unit,modifier:Modifier=Modifier) {
+  val largeText=LocalDensity.current.fontScale>1.3f
+  fun label(value:String)=when(value){"Homework"->"Tasks";"Resources"->"Notes";"Timetable"->"Schedule";else->value}
+  @Composable fun Entry(item:ScholaDockItem,index:Int,entryModifier:Modifier) {
+    val selected=currentRoute==item.route
+    val ink=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(entryModifier.semantics{this.selected=selected}.clickable(role=Role.Tab,onClickLabel=item.label){onItemSelected(item.route)}
+      .heightIn(min=64.dp).padding(vertical=Spacing.xs4),horizontalAlignment=Alignment.CenterHorizontally,
+      verticalArrangement=Arrangement.spacedBy(Spacing.xs4,Alignment.CenterVertically)) {
+      val featured=!largeText && items.size==5 && index==2 && item.label in setOf("Homework","Attendance")
+      if(featured) Surface(shape=CircleShape,color=if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer) {
+        Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.padding(Spacing.sm8).size(Spacing.xl24),tint=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
+      } else Icon(if(selected)item.selectedIcon else item.unselectedIcon,item.label,Modifier.size(Spacing.xl24),tint=ink)
+      Text(label(item.label),style=MaterialTheme.typography.labelSmall,color=ink)
     }
   }
-
-  fun release() {
-    try {
-      track.stop()
-      track.release()
-    } catch (_: Exception) {
+  Surface(modifier.fillMaxWidth(),shape=RoundedCornerShape(Radius.lg),color=MaterialTheme.colorScheme.surface,
+    border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),shadowElevation=Elev.e1) {
+    Column {
+      // Larger type keeps every destination named; do not replace navigation labels with icons.
+      items.chunked(if(largeText)3 else items.size.coerceAtLeast(1)).forEachIndexed {row,chunk->
+        Row(Modifier.fillMaxWidth()) {chunk.forEachIndexed {column,item->Entry(item,row*3+column,Modifier.weight(1f))}}
+      }
     }
   }
 }
@@ -355,7 +297,7 @@ fun ScholaPillBadge(
     modifier = modifier
   ) {
     Text(
-      text = status.uppercase(Locale.getDefault()),
+      text = status.lowercase(Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) },
       color = textColor,
       style = MaterialTheme.typography.labelSmall,
       fontWeight = FontWeight.Bold,
@@ -596,12 +538,7 @@ fun RevenexLogoCrest(
       .background(backgroundColor),
     contentAlignment = Alignment.Center
   ) {
-    Icon(
-      imageVector = Icons.Default.AccountBalance,
-      contentDescription = "Schola Crest",
-      tint = tint,
-      modifier = Modifier.size(size * 0.6f)
-    )
+    Image(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_monogram),"Revenex RV logo",Modifier.size(size*.72f))
   }
 }
 
@@ -839,5 +776,26 @@ fun Badge(
 @Composable
 fun rememberReducedMotion(): Boolean {
   val context = LocalContext.current
-  return android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+  val preference=com.example.ui.theme.LocalStudentExperience.current?:com.example.ui.theme.rememberStudentExperience()
+  return preference.reduced || android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+}
+
+
+/** Official company-card contours; shared by launch, account entry and app bars. */
+@Composable
+fun RevenexBrand(modifier: Modifier = Modifier, stacked: Boolean = false,
+  onDark: Boolean = MaterialTheme.colorScheme.background.luminance() < .5f, nameWidth: Dp = EntryTokens.compactName) {
+  val mark = if(onDark) com.example.R.drawable.revenex_monogram else com.example.R.drawable.revenex_monogram_ink
+  val ink = if(onDark) EntryTokens.brandWhite else MaterialTheme.colorScheme.onSurface
+  if(stacked) Column(modifier,horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(Spacing.lg16)) {
+    Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(EntryTokens.stackedMark).aspectRatio(184f/135f))
+    Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(EntryTokens.formWidth/2).aspectRatio(490f/54f),tint=ink)
+  } else BoxWithConstraints(modifier.widthIn(max=EntryTokens.compactMark+Spacing.sm8+nameWidth)) {
+    // Keep the official aspect ratio while reserving room for app-bar actions.
+    val availableName=(maxWidth-EntryTokens.compactMark-Spacing.sm8).coerceAtLeast(0.dp).coerceAtMost(nameWidth)
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(Spacing.sm8)) {
+      Image(androidx.compose.ui.res.painterResource(mark),null,Modifier.width(EntryTokens.compactMark).aspectRatio(184f/135f))
+      Icon(androidx.compose.ui.res.painterResource(com.example.R.drawable.revenex_wordmark),"REVENEX",Modifier.width(availableName).aspectRatio(490f/54f),tint=ink)
+    }
+  }
 }

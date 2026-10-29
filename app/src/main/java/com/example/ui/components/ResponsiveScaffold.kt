@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -28,6 +29,7 @@ import com.example.data.model.UserRole
 import com.example.ui.navigation.NavConfig
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.*
+import com.example.ui.screens.principal.PrincipalBottomNavigation
 import java.util.Locale
 
 // Device Form Factor Breakpoints
@@ -64,22 +66,35 @@ fun ScholaResponsiveScaffold(
   onOpenNotifications: () -> Unit,
   onOpenProfile: () -> Unit,
   onLogout: () -> Unit,
+  onBack: (() -> Unit)? = null,
   content: @Composable (PaddingValues) -> Unit
 ) {
+  if (!com.example.data.model.MobileRoleAccess.supports(currentUser.role)) {
+    com.example.ui.screens.auth.UnsupportedMobileAccountScreen(onLogout)
+    return
+  }
+  val pageContent: @Composable () -> Unit = {
+    CompositionLocalProvider(LocalWorkspaceBack provides onBack) { content(PaddingValues(0.dp)) }
+  }
   val windowSizeClass = rememberWindowSizeClass()
-  val navItems = remember(currentUser.role) {
+  val studentDark = LocalStudentDark.current
+  val selectDestination: (String) -> Unit = { route ->
+    onNavigateToRoute(if(studentDark && route==Screen.OperationsHub.route) Screen.Profile.route else route)
+  }
+  val navItems = remember(currentUser.role,studentDark) {
     NavConfig.getBottomNavItems(currentUser.role).filterNot {
       currentUser.role == UserRole.TEACHER && it.route == Screen.TeacherProfile.route
     }.map {
       ScholaDockItem(
         route = it.route,
-        label = it.label,
-        selectedIcon = it.selectedIcon,
-        unselectedIcon = it.unselectedIcon
+        label = if(studentDark && it.route==Screen.OperationsHub.route) "You" else it.label,
+        selectedIcon = if(studentDark && it.route==Screen.OperationsHub.route) Icons.Outlined.Person else it.selectedIcon,
+        unselectedIcon = if(studentDark && it.route==Screen.OperationsHub.route) Icons.Outlined.Person else it.unselectedIcon
       )
     }
   }
 
+  val selectedPrimaryRoute = NavConfig.selectedPrimaryRoute(currentUser.role, currentRoute)
   val isTopLevelRoute = currentRoute in navItems.map { it.route } || currentRoute == Screen.Loading.route
 
   // Own device insets once at the shell boundary. Descendant scaffolds see
@@ -97,8 +112,8 @@ fun ScholaResponsiveScaffold(
       Scaffold(
         containerColor = GlassBgTransparent,
         topBar = {
-          if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
-            ScholaTopAppBar(
+          if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
+            if(currentUser.role==UserRole.STUDENT)com.example.ui.screens.students.portal.StudentHeader(currentUser,unreadNotificationsCount,onOpenNotifications,onOpenProfile) else ScholaTopAppBar(
               title = "REVENEX",
               subtitle = "School ERP demonstration",
               currentRole = currentUser.role,
@@ -112,11 +127,17 @@ fun ScholaResponsiveScaffold(
           }
         },
         bottomBar = {
-          if (isTopLevelRoute && currentRoute != Screen.Auth.route) {
+          if (currentUser.role == UserRole.PRINCIPAL && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route,Screen.PrincipalApprovalDetail.route,Screen.Profile.route)) {
+            PrincipalBottomNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if(currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route,Screen.Attendance.route)) {
+            com.example.ui.screens.teachers.TeacherNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if(currentUser.role==UserRole.STUDENT && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route)) {
+            com.example.ui.screens.students.portal.StudentNavigation(selectedPrimaryRoute,onNavigateToRoute)
+          } else if (isTopLevelRoute && currentRoute != Screen.Auth.route && currentRoute != Screen.Attendance.route) {
             ScholaFloatingDock(
               items = navItems,
-              currentRoute = currentRoute,
-              onItemSelected = onNavigateToRoute,
+              currentRoute = selectedPrimaryRoute,
+              onItemSelected = selectDestination,
               modifier = Modifier.padding(
                 start = Spacing.s2,
                 end = Spacing.s2,
@@ -129,7 +150,7 @@ fun ScholaResponsiveScaffold(
       ) { paddingValues ->
         GlassBackground {
           Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
         }
       }
@@ -146,8 +167,8 @@ fun ScholaResponsiveScaffold(
           if (currentRoute != Screen.Auth.route) {
             TabletNavigationRail(
               items = navItems,
-              currentRoute = currentRoute,
-              onItemSelected = onNavigateToRoute,
+              currentRoute = selectedPrimaryRoute,
+              onItemSelected = selectDestination,
               onOpenCommandPalette = onOpenCommandPalette,
               currentUser = currentUser
             )
@@ -157,8 +178,8 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
-                ScholaTopAppBar(
+              if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
+                if(currentUser.role==UserRole.STUDENT)com.example.ui.screens.students.portal.StudentHeader(currentUser,unreadNotificationsCount,onOpenNotifications,onOpenProfile) else ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
                   currentRole = currentUser.role,
@@ -174,7 +195,7 @@ fun ScholaResponsiveScaffold(
           ) { paddingValues ->
             GlassBackground {
               Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
             }
           }
@@ -193,10 +214,10 @@ fun ScholaResponsiveScaffold(
           if (currentRoute != Screen.Auth.route) {
             DesktopNavigationDrawer(
               items = navItems,
-              currentRoute = currentRoute,
+              currentRoute = selectedPrimaryRoute,
               currentUser = currentUser,
               unreadCount = unreadNotificationsCount,
-              onItemSelected = onNavigateToRoute,
+              onItemSelected = selectDestination,
               onOpenCommandPalette = onOpenCommandPalette,
               onOpenNotifications = onOpenNotifications,
               onOpenProfile = onOpenProfile,
@@ -208,8 +229,8 @@ fun ScholaResponsiveScaffold(
           Scaffold(
             containerColor = GlassBgTransparent,
             topBar = {
-              if (currentRoute != Screen.Auth.route && currentRoute != Screen.GlobalSearch.route) {
-                ScholaTopAppBar(
+              if (currentRoute == Screen.Dashboard.route || (currentUser.role==UserRole.TEACHER && currentRoute !in setOf(Screen.Auth.route,Screen.Loading.route))) {
+                if(currentUser.role==UserRole.STUDENT)com.example.ui.screens.students.portal.StudentHeader(currentUser,unreadNotificationsCount,onOpenNotifications,onOpenProfile) else ScholaTopAppBar(
                   title = "REVENEX",
                   subtitle = "School ERP demonstration",
                   currentRole = currentUser.role,
@@ -225,7 +246,7 @@ fun ScholaResponsiveScaffold(
           ) { paddingValues ->
             GlassBackground {
               Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { content(PaddingValues(0.dp)) }
+            Box(Modifier.widthIn(max = 1200.dp).fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues)) { pageContent() }
           }
             }
           }
@@ -265,20 +286,8 @@ private fun TabletNavigationRail(
     ) {
       // Top Crest Emblem
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-Box(
-            modifier = Modifier
-              .size(44.dp)
-              .clip(RoundedCornerShape(Radius.md))
-              .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.AccountBalance,
-              contentDescription = "REVENEX",
-              tint = MaterialTheme.colorScheme.onPrimary,
-              modifier = Modifier.size(24.dp)
-            )
-          }
+androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(
+          if(MaterialTheme.colorScheme.background.luminance()<.5f)com.example.R.drawable.revenex_monogram else com.example.R.drawable.revenex_monogram_ink),"Revenex RV logo",Modifier.size(Spacing.xxl32))
 
         Spacer(modifier = Modifier.height(Spacing.s4))
 
@@ -381,41 +390,7 @@ private fun DesktopNavigationDrawer(
     ) {
       // Top section: Crest Branding + ⌘K trigger pill + nav links
       Column {
-        // Institutional Header
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier.padding(bottom = Spacing.s4)
-        ) {
-Box(
-              modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(Radius.md))
-                .background(MaterialTheme.colorScheme.primary),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.AccountBalance,
-                contentDescription = "REVENEX crest",
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(24.dp)
-              )
-            }
-          Spacer(modifier = Modifier.width(Spacing.s3))
-          Column {
-            Text(
-              text = "REVENEX",
-              color = MaterialTheme.colorScheme.onSurface,
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "School ERP demonstration",
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              style = MaterialTheme.typography.bodySmall,
-              fontSize = 10.sp
-            )
-          }
-        }
+        RevenexBrand(Modifier.padding(bottom=Spacing.lg16))
 
         // ⌘K Search Pill Trigger
         Surface(

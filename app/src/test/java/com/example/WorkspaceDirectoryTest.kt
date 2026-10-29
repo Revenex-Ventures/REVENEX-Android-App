@@ -19,13 +19,19 @@ class WorkspaceDirectoryTest {
   }
 
   @Test fun searchFindsMetadataAndRespectsAreaAndRole() {
-    assertEquals(listOf(Screen.Fees.route), WorkspaceDirectory.visible(UserRole.ADMIN, " receipts ").map { it.route })
+    assertEquals(listOf(Screen.Fees.route), WorkspaceDirectory.visible(UserRole.PRINCIPAL, " receipts ").map { it.route })
     assertTrue(WorkspaceDirectory.visible(UserRole.TEACHER, "receipts").isEmpty())
     assertTrue(WorkspaceDirectory.visible(UserRole.ADMIN, "receipts", WorkspaceArea.ACADEMICS).isEmpty())
   }
 
+  @Test fun principalRetainsSharedModulesAndAdminHasNoMobileDirectory() {
+    assertEquals(WorkspaceArea.entries.toSet(),WorkspaceDirectory.visible(UserRole.PRINCIPAL).map {it.area}.toSet())
+    assertTrue(WorkspaceDirectory.visible(UserRole.ADMIN).isEmpty())
+    assertFalse(WorkspaceDirectory.visible(UserRole.PARENT).any {it.route==Screen.Audit.route})
+  }
+
   @Test fun everyRoleHasUniqueRoutesAndInboxSettingsAndSearch() {
-    for (role in UserRole.entries) {
+    for (role in com.example.data.model.MobileRoleAccess.supportedRoles) {
       val routes = WorkspaceDirectory.visible(role).map { it.route }
       assertEquals(routes.size, routes.distinct().size)
       assertTrue(routes.containsAll(listOf(Screen.Notifications.route, Screen.Profile.route, Screen.GlobalSearch.route)))

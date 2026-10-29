@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -107,6 +108,28 @@ object Motion {
   )
 }
 
+/** Company-card artwork geometry and focused account-entry layout. */
+object EntryTokens {
+  val launchBackground = Color(0xFF090C12)
+  val brandWhite = Color(0xFFF2F8FC)
+  val fieldLight = Color(0xFFECEBE6)
+  val markWidth = 192.dp
+  val markTravel = 36.dp
+  val wordmarkOffset = 84.dp
+  val wordmarkMaxWidth = 420.dp
+  val brandStageHeight = 280.dp
+  val compactMark = 36.dp
+  val compactName = 140.dp
+  val stackedMark = 96.dp
+  val formWidth = 480.dp
+  val tabletBreakpoint = 720.dp
+  val inputHeight = 56.dp
+  const val photoFraction = .42f
+  const val wordmarkFraction = .90f
+  const val brandDuration = 1400
+  const val contentFade = 140
+}
+
 // Role Accent Configuration (soft academic pastel family)
 object RoleAccent {
   // Role identity wells remain dark in both palettes.
@@ -133,4 +156,130 @@ object RoleAccent {
     UserRole.PARENT -> PastelPowderContainer
     null -> ScholaSlateContainer
   }
+}
+
+/** Approved-board proportions; large text can grow beyond these minima. */
+object Presentation {
+  val sectionHeading = 32.dp
+  val rowHeight = 56.dp
+  val chartHeight = 112.dp
+  val timelineTimeWidth = 64.dp
+  val timelineStem = 28.dp
+}
+
+/** Geometry and functional colors taken from the approved Principal panels. */
+object PrincipalLayout {
+  val navigationWrapWidth = 360.dp
+  val appearanceBreakpoint = 340.dp
+  val compactModuleHeight = 88.dp
+  val contextWidth = 160.dp
+  val reportColumn = 144.dp
+  val summaryHeight = 80.dp
+  val historyHeight = 320.dp
+  val attentionRowHeight = 52.dp
+  val wordmarkWidth = EntryTokens.compactName
+  val metricHeight = 108.dp
+  val moduleWell = 64.dp
+  val moduleIcon = 30.dp
+  val listAvatar = 40.dp
+  val rowHeight = 72.dp
+  val titleSize = 24.sp
+  val sectionSize = 20.sp
+  val metricSize = 26.sp
+}
+object PortalDockLayout {
+  val target=64.dp
+}
+/** Approved Student light board. These tokens never alter another portal. */
+object StudentLightPalette {
+  val canvas=Color.White
+  val navy=Color(0xFF202B49)
+  val orange=Color(0xFFC6653C)
+  val powder=Color(0xFFA9C9ED)
+  val information=Color(0xFFE6F1FD)
+  val highlight=Color(0xFFFFF0E6)
+  val muted=Color(0xFF52627A)
+  val border=Color(0xFFD8E2EF)
+  val quiet=Color(0xFFF3F6FA)
+  val onAction=Color(0xFF090F1A)
+  val actionText=Color(0xFFA34923)
+}
+object StudentLightLayout {
+  val margin=24.dp
+  val section=28.dp
+  val shortcut=56.dp
+  val shortcutIcon=28.dp
+  val dateWidth=72.dp
+  val accountAvatar=48.dp
+  val coverWidth=96.dp
+  val coverHeight=136.dp
+}
+/** Teacher workspace reference palette; accents have stable semantic purposes. */
+object TeacherColors {
+  val canvas=Color(0xFFF8F9FC)
+  val surface=Color.White
+  val orange=Color(0xFFE85B0B)
+  val pressed=Color(0xFFC94B08)
+  val ink=Color(0xFF202735)
+  val muted=Color(0xFF647084)
+  val border=Color(0xFFE7EBF1)
+  private val dark: Boolean @androidx.compose.runtime.Composable get()=androidx.compose.material3.MaterialTheme.colorScheme.background.luminance()<.5f
+  val peach:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF382A23)else Color(0xFFFFF0E5)
+  val mint:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF20372D)else Color(0xFFEAF6EF)
+  val blue:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF233247)else Color(0xFFEAF1FC)
+  val lavender:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF302A42)else Color(0xFFF0ECFA)
+  val green:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFF95D9B4)else Color(0xFF18794E)
+  val red:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFFFFB4AA)else Color(0xFFB42318)
+  val purple:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFFCDBBFF)else Color(0xFF51338F)
+  val blueInk:Color @androidx.compose.runtime.Composable get()=if(dark)Color(0xFFA9C9FF)else Color(0xFF1859B7)
+}
+object TeacherLayout {
+  val margin=20.dp
+  val section=24.dp
+  val gap=12.dp
+  val iconWell=44.dp
+  val moduleHeight=88.dp
+  val radius=12.dp
+  val header=64.dp
+}
+/** Student timetable rail: time column, connected stroke and readable lesson rows. */
+object StudentTimelineLayout {
+  val timeColumn = 56.dp
+  val largeTimeColumn = 72.dp
+  val rail = 24.dp
+  val rowHeight = 96.dp
+  val gapHeight = 52.dp
+  val stroke = 2.dp
+  val nodeRadius = 5.dp
+  val cursorTick = 10.dp
+}
+object PrincipalColors {
+  val canvasLight = Color(0xFFFCFCFB)
+  val inkLight = Color(0xFF111827)
+  val mutedLight = Color(0xFF515665)
+  val actionLight = Color(0xFFD44200)
+  private val dark: Boolean @androidx.compose.runtime.Composable get() = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < .5f
+  val blue: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.blue else if(dark) SemanticColors.blueContainer else Color(0xFFEDF6FF)
+  val blueInk: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.ink else if(dark) SemanticColors.onBlue else Color(0xFF1460D9)
+  val mint: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.mint else if(dark) SemanticColors.successContainer else Color(0xFFECFAF2)
+  val mintInk: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.ink else if(dark) SemanticColors.onSuccess else Color(0xFF087741)
+  val peach: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.orange else if(dark) SemanticColors.peachContainer else Color(0xFFFFF4E7)
+  val peachInk: Color @androidx.compose.runtime.Composable get() = if(LocalPrincipalDark.current) PrincipalDarkPalette.ink else if(dark) SemanticColors.onPeach else Color(0xFFD54500)
+  val lavender: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.lavenderContainer else Color(0xFFF2EDFF)
+  val lavenderInk: Color @androidx.compose.runtime.Composable get() = if(dark) SemanticColors.onLavender else Color(0xFF4816AA)
+}
+
+/** Role isolation keeps the approved light and other portal palettes unchanged. */
+val LocalPrincipalDark = androidx.compose.runtime.staticCompositionLocalOf { false }
+object PrincipalDarkPalette {
+  val canvas=Color(0xFF0B1220)
+  val surface=Color(0xFF1C2B43)
+  val navigation=Color(0xFF162237)
+  val orange=Color(0xFFFF743D)
+  val blue=Color(0xFF92BAF2)
+  val mint=Color(0xFFA6D9BF)
+  val text=Color(0xFFF4F6FC)
+  val muted=Color(0xFFB6C7E0)
+  val ink=Color(0xFF0B1220)
+  val border=Color(0xFF34455E)
 }

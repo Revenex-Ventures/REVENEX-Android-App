@@ -27,6 +27,7 @@ class SupabaseDataIntegrationTest {
     assertTrue(source.getNotificationsFlow().first().isEmpty())
     assertTrue(source.getFeeRecordsFlow().first().isEmpty())
     assertTrue(runCatching { source.switchRole(UserRole.PRINCIPAL) }.isFailure)
+    assertTrue(runCatching { source.selectStudentForPresentation("unpermitted") }.isFailure)
     assertTrue(runCatching { source.login("someone@example.com",UserRole.PRINCIPAL,"Fake") }.isFailure)
     assertTrue(runCatching { source.markAllNotificationsAsRead() }.isFailure)
   }

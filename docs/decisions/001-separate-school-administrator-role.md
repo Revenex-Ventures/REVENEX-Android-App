@@ -1,5 +1,6 @@
 # ADR-001: Separate the school administrator from the principal
 
+> Android portal scope superseded on 27 October 2026: see [mobile access removal](../ADMIN_MOBILE_REMOVAL.md). The backend ADMIN role and policies remain.
 ## Status
 
 Accepted — 19 October 2026.
@@ -23,7 +24,7 @@ The two management roles have deliberately different primary jobs:
 | Teacher | Assigned academic work | Attendance for assigned classes, homework, marks workflow and own profile |
 | Parent / Student | Linked learner data | Own timetable, homework, notices, results and fee status only |
 
-The client role is only a presentation hint. Firebase Auth custom claims (`role`, `schoolId`, `sessionId`) and server-side authorization remain the enforcement point. Every mutable production route must validate scope and capability again. A future permissions model will use additive capability grants for delegated work such as bursar, transport manager, librarian and registrar; it will not introduce a browser-like superuser menu for every staff member.
+The client role is only a presentation hint. Supabase Auth identities, protected school/session profiles, RLS and scoped RPCs remain the enforcement point. Every mutable production route must validate scope and capability again. A future permissions model will use additive capability grants for delegated work such as bursar, transport manager, librarian and registrar; it will not introduce a browser-like superuser menu for every staff member.
 
 ## Interaction model
 
@@ -40,8 +41,8 @@ Motion is limited to short entrance and content transitions already supplied by 
 ## Consequences
 
 - Demo users can now evaluate a fourth, realistic school-operations persona.
-- Production identity provisioning must explicitly issue an `ADMIN` claim for approved administrator accounts; client selection must never grant that role.
-- The existing principal-only checks are being widened only where the administrator needs the same operational screen. Backend and Firestore policy remain the final authority.
+- Production identity provisioning must explicitly provision a protected `ADMIN` profile for approved administrator accounts; client selection must never grant that role.
+- The existing principal-only checks are being widened only where the administrator needs the same operational screen. Backend and PostgreSQL RLS policy remain the final authority.
 - System configuration, user provisioning UI, imports, exports, real notification delivery, live payments and change-approval workflows still require their own vertical slices and acceptance tests before they are advertised as complete.
 
 ## Alternatives considered

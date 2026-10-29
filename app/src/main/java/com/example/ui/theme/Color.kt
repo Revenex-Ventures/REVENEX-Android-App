@@ -7,17 +7,18 @@ import androidx.compose.ui.graphics.Color
 // Warm canvas, ink typography, orange actions, sage/lavender/blue/butter module groupings.
 
 // 1. Foundation (neutral, monochrome)
-val ScholaLinen = Color(0xFFFFF9F0)
+val ScholaLinen = Color(0xFFF8F7F3)
+val RevenexBrandOrange = Color(0xFFF56600)
 val ScholaSurface = Color(0xFFFFFFFF)
-val ScholaSurfaceWarm = Color(0xFFF4EFE7)
-val ScholaBorder = Color(0xFFE7DED3)
+val ScholaSurfaceWarm = Color(0xFFF7F6F3)
+val ScholaBorder = Color(0xFFE8E7E3)
 val ScholaBorderFocused = Color(0xFFAD3F00)
 val ScholaMuted = Color(0xFF665D55)
-val ScholaTextPrimary = Color(0xFF292621)
+val ScholaTextPrimary = Color(0xFF20242B)
 val ScholaTextSecondary = Color(0xFF665D55)
 
 // 2. Burnt orange actions (white text meets contrast requirements)
-val ScholaTerracotta = Color(0xFFAD3F00)
+val ScholaTerracotta = Color(0xFFC74400)
 val ScholaTerracottaLight = Color(0xFFFFB681)
 val ScholaTerracottaDark = Color(0xFF7D2C00)
 val ScholaTerracottaContainer = Color(0xFFFFE2CB)
@@ -108,13 +109,13 @@ val LightTextPrimary = ScholaTextPrimary
 val LightTextSecondary = ScholaTextSecondary
 val LightTextMuted = ScholaMuted
 
-val DarkBackground = InkBlack
-val DarkSurface = ScholaSlateNavy
-val DarkSurfaceVariant = Color(0xFF37302A)
-val DarkBorder = Color(0xFF716257)
-val DarkTextPrimary = Color(0xFFFFF9F0)
-val DarkTextSecondary = Color(0xFFDBCEC2)
-val DarkTextMuted = Color(0xFFC5B5A6)
+val DarkBackground = Color(0xFF1D2228)
+val DarkSurface = Color(0xFF252B33)
+val DarkSurfaceVariant = Color(0xFF303741)
+val DarkBorder = Color(0xFF626D79)
+val DarkTextPrimary = Color(0xFFF8F7F3)
+val DarkTextSecondary = Color(0xFFD3D9E0)
+val DarkTextMuted = Color(0xFFBBC4CE)
 
 val VitalRingSky = Color(0xFFFFB681)
 val VitalRingCyan = Color(0xFFAD3F00)

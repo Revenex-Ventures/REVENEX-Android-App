@@ -8,6 +8,7 @@ import com.example.data.datasource.DocumentFiles
 import com.example.data.datasource.LocalDemoDataSource
 import com.example.data.datasource.SupabaseDataSource
 import com.example.data.datasource.BackendSyncState
+import com.example.data.datasource.SchoolBackendCapabilities
 import com.example.data.datasource.SupabaseFileStore
 import com.example.data.model.*
 import kotlinx.coroutines.*
@@ -39,6 +40,8 @@ class ErpDataRepository private constructor() {
   val supabaseDataSource by lazy { SupabaseDataSource() }
   private val _backendState = MutableStateFlow(BackendSyncState())
   val backendState: StateFlow<BackendSyncState> = _backendState.asStateFlow()
+  private val _backendCapabilities=MutableStateFlow(SchoolBackendCapabilities())
+  val backendCapabilities:StateFlow<SchoolBackendCapabilities> = _backendCapabilities.asStateFlow()
 
   // Current Mode
   private val _dataMode = MutableStateFlow(AppEnvironment.currentMode)
@@ -60,6 +63,8 @@ class ErpDataRepository private constructor() {
 
   private val _assignments = MutableStateFlow(SampleData.initialAssignments)
   val assignments: StateFlow<List<HomeworkAssignment>> = _assignments.asStateFlow()
+  private val _assignmentSubmissions=MutableStateFlow<List<AssignmentSubmission>>(emptyList())
+  val assignmentSubmissions:StateFlow<List<AssignmentSubmission>> = _assignmentSubmissions.asStateFlow()
 
   private val _studyMaterials = MutableStateFlow(SampleData.initialStudyMaterials)
   val studyMaterials: StateFlow<List<StudyMaterial>> = _studyMaterials.asStateFlow()
@@ -143,12 +148,14 @@ class ErpDataRepository private constructor() {
     onResult: ((Boolean) -> Unit)? = null
   ) {
     if (_dataMode.value == DataMode.SUPABASE_DEMO) {
+      val actorId=_currentUser.value.id
       repositoryScope.launch {
         try {
           supabaseDataSource.saveRollCall(classGrade,division,getCurrentFormattedDate(),studentList,sessionSlot)
-          onResult?.invoke(true)
+          if(_dataMode.value==DataMode.SUPABASE_DEMO && _currentUser.value.id==actorId) onResult?.invoke(true)
         } catch(e:Exception) {
           if(e is CancellationException) throw e
+          if(_dataMode.value!=DataMode.SUPABASE_DEMO || _currentUser.value.id!=actorId) return@launch
           _backendState.value=BackendSyncState(message="Attendance was not saved. Check access and connection.",failed=true)
           onResult?.invoke(false)
         }
@@ -170,6 +177,7 @@ class ErpDataRepository private constructor() {
       presentCount = present,
       absentCount = absent,
       lateCount = late,
+      leaveCount = studentList.count { it.status == AttendanceStatus.LEAVE },
       excusedCount = excused,
       markedBy = _currentUser.value.name,
       studentList = studentList
@@ -225,6 +233,7 @@ class ErpDataRepository private constructor() {
   val selectedStudentId: StateFlow<String> = _selectedStudentId.asStateFlow()
 
   fun setSelectedStudentId(id: String) {
+    if(_dataMode.value==DataMode.SUPABASE_DEMO) supabaseDataSource.selectStudentForPresentation(id)
     _selectedStudentId.value = id
   }
 
@@ -287,9 +296,11 @@ class ErpDataRepository private constructor() {
     activeSourceJob?.cancel()
     activeSourceJob = repositoryScope.launch {
       val source = activeSource
+      _backendCapabilities.value=SchoolBackendCapabilities()
+      launch{source.getBackendCapabilitiesFlow().collect{_backendCapabilities.value=it}}
       if (source is SupabaseDataSource) {
         _students.value=emptyList();_teachers.value=emptyList();_feeRecords.value=emptyList()
-        _assignments.value=emptyList();_studyMaterials.value=emptyList();_notices.value=emptyList()
+        _assignments.value=emptyList();_assignmentSubmissions.value=emptyList();_studyMaterials.value=emptyList();_notices.value=emptyList()
         _leaveRequests.value=emptyList();_reportCards.value=emptyList();_examSchedules.value=emptyList()
         _timetable.value=emptyList();_events.value=emptyList();_transportRoutes.value=emptyList()
         _libraryBooks.value=emptyList();_inventory.value=emptyList();_notifications.value=emptyList()
@@ -318,29 +329,20 @@ class ErpDataRepository private constructor() {
       launch { source.getTeachersFlow().collect { _teachers.value = it } }
       launch {
         source.getFeeRecordsFlow().collect { records ->
-          _feeRecords.value = records
-          if (source is SupabaseDataSource) {
-            _invoices.value = records.map { fee ->
-              LedgerInvoice(
-                id = fee.id,
-                invoiceNumber = fee.id,
-                studentId = fee.studentId,
-                studentName = fee.studentName,
-                cohort = if (fee.classGrade.isNotBlank()) "${fee.classGrade}-${fee.division}" else "Standard",
-                title = "Tuition & Academic Dues",
-                totalAmount = fee.totalFee,
-                paidAmount = fee.paidAmount,
-                dueDate = fee.dueDate,
-                issueDate = "Not recorded",
-                status = fee.status,
-                paymentChannel = "Razorpay Test (server verified)",
-                description = "Tuition & Academic Dues"
-              )
-            }
-          }
+          _feeRecords.value=records
+          // Home, invoices, reports and receipts share one fee-record ledger in both modes.
+          _invoices.value=records.map {fee -> LedgerInvoice(
+            id=fee.id,invoiceNumber=fee.id,studentId=fee.studentId,studentName=fee.studentName,
+            cohort=if(fee.classGrade.isNotBlank()) "${fee.classGrade}-${fee.division}" else "Not provided",
+            title="School fees",totalAmount=fee.totalFee,paidAmount=fee.paidAmount,dueDate=fee.dueDate,
+            issueDate="Not recorded",status=fee.status,
+            paymentChannel=if(source is SupabaseDataSource)"Razorpay TEST" else "Local Demo",
+            description="School fee record"
+          )}
         }
       }
       launch { source.getAssignmentsFlow().collect { _assignments.value = it } }
+      launch { source.getAssignmentSubmissionsFlow().collect { _assignmentSubmissions.value=it } }
       launch { source.getStudyMaterialsFlow().collect { _studyMaterials.value = it } }
       launch { source.getNoticesFlow().collect { _notices.value = it } }
       launch { source.getLeaveRequestsFlow().collect { _leaveRequests.value = it } }
@@ -420,15 +422,26 @@ class ErpDataRepository private constructor() {
   fun logout() {
     repositoryScope.launch {
       activeSource.logout()
+      _backendCapabilities.value=SchoolBackendCapabilities()
       _selectedStudentId.value = ""
       if (_dataMode.value == DataMode.SUPABASE_DEMO) {
         _students.value = emptyList(); _teachers.value = emptyList(); _feeRecords.value = emptyList()
-        _assignments.value = emptyList(); _studyMaterials.value = emptyList(); _notices.value = emptyList()
+        _assignments.value = emptyList(); _assignmentSubmissions.value=emptyList(); _studyMaterials.value = emptyList(); _notices.value = emptyList()
         _leaveRequests.value = emptyList(); _reportCards.value = emptyList(); _examSchedules.value = emptyList()
         _timetable.value = emptyList(); _events.value = emptyList(); _transportRoutes.value = emptyList()
         _libraryBooks.value = emptyList(); _inventory.value = emptyList(); _notifications.value = emptyList()
         _classAttendance.value = emptyMap(); _auditLogs.value = emptyList(); _invoices.value = emptyList(); _gradebookEntries.value = emptyList()
       }
+    }
+  }
+
+  /** Foreground catch-up uses the same guarded reconciliation as periodic recovery. */
+  fun reconcileOnResume() {
+    if(dataMode.value!=DataMode.SUPABASE_DEMO || currentUser.value.id.isBlank())return
+    repositoryScope.launch {
+      try { supabaseDataSource.reconcileSchoolData() }
+      catch(e:CancellationException){throw e}
+      catch(_:Exception){ /* The datasource exposes an honest stale/error state. */ }
     }
   }
 
@@ -496,19 +509,20 @@ class ErpDataRepository private constructor() {
   /**
    * Returns today's attendance status for a student by searching all class attendance records.
    */
-  fun getStudentTodayAttendance(studentId: String): AttendanceStatus {
+  fun getStudentTodayAttendance(studentId: String): AttendanceStatus? {
     for ((_, record) in _classAttendance.value) {
+      if(com.example.data.model.parseSchoolDate(record.date)!=com.example.data.model.parseSchoolDate(getCurrentFormattedDate()))continue
       val found = record.studentList.firstOrNull { it.studentId == studentId }
       if (found != null) {
         return found.status
       }
     }
-    return AttendanceStatus.PRESENT
+    return null
   }
 
   /**
    * Calculates attendance percentage from actual ClassAttendanceRecords.
-   * This is the CORRECT calculation — counts actual PRESENT+LATE / total records.
+   * Matches the register: PRESENT, LATE and EXCUSED / all recorded sessions, including LEAVE.
    */
   fun calculateStudentAttendancePercentage(studentId: String, defaultBaseline: Double = 95.0): Double {
     val studentAttendanceHistory = _classAttendance.value.values.mapNotNull { rec ->
@@ -518,7 +532,7 @@ class ErpDataRepository private constructor() {
       return if (_dataMode.value == DataMode.SUPABASE_DEMO) 0.0 else defaultBaseline
     }
     val attendedCount = studentAttendanceHistory.count {
-      it.status == AttendanceStatus.PRESENT || it.status == AttendanceStatus.LATE
+      it.status in setOf(AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.EXCUSED)
     }
     val totalCount = studentAttendanceHistory.size
     val computed = (attendedCount.toDouble() / totalCount.toDouble()) * 100.0
@@ -529,13 +543,8 @@ class ErpDataRepository private constructor() {
     val records = _classAttendance.value.values
     if (records.isEmpty()) return if (_dataMode.value == DataMode.SUPABASE_DEMO) 0.0 else 96.4
     val totalStudents = records.sumOf { it.totalStudents }
-    val totalPresent = records.sumOf { it.presentCount + it.lateCount }
+    val totalPresent = records.sumOf { it.presentCount + it.lateCount + it.excusedCount }
     return if (totalStudents > 0) (totalPresent.toDouble() / totalStudents.toDouble()) * 100.0 else if (_dataMode.value == DataMode.SUPABASE_DEMO) 0.0 else 96.4
-  }
-
-  fun getTodayStaffAttendanceRate(): Double {
-    val total = _teachers.value.size
-    return if (total > 0) 100.0 else 0.0
   }
 
   // ========================================================================
@@ -628,9 +637,26 @@ class ErpDataRepository private constructor() {
 
   suspend fun createAssignmentConfirmed(assignment: HomeworkAssignment) = activeSource.createAssignment(assignment)
   suspend fun publishNoticeConfirmed(notice: SchoolNotice) = activeSource.publishNotice(notice)
+  suspend fun requestLeaveConfirmed(id:String,type:String,start:String,end:String,reason:String) {
+    val actor=currentUser.value;val mode=dataMode.value
+    activeSource.requestLeave(id,type,start,end,reason)
+    check(currentUser.value.id==actor.id&&dataMode.value==mode){"Account changed. Check the original request before retrying."}
+  }
   suspend fun readNotificationConfirmed(id: String) = activeSource.markNotificationAsRead(id)
   suspend fun readAllNotificationsConfirmed() = activeSource.markAllNotificationsAsRead()
   suspend fun submitAssignmentConfirmed(id: String) = activeSource.toggleAssignmentCompletion(id)
+  suspend fun submitAssignmentContentConfirmed(id:String,attachmentRef:String,note:String,version:Int):AssignmentSubmission {
+    val actor=currentUser.value;val mode=dataMode.value
+    val saved=activeSource.submitAssignment(id,attachmentRef,note,version)
+    check(currentUser.value.id==actor.id && dataMode.value==mode){"Account changed. Reload the assignment."}
+    return saved
+  }
+  suspend fun reviewSubmissionConfirmed(id:String,feedback:String,version:Int):AssignmentSubmission {
+    val actor=currentUser.value;val mode=dataMode.value
+    val saved=activeSource.reviewSubmission(id,feedback,version)
+    check(currentUser.value.id==actor.id && dataMode.value==mode){"Account changed. Reload submissions."}
+    return saved
+  }
 
   fun createAssignment(assignment: HomeworkAssignment) {
     repositoryScope.launch {
@@ -644,20 +670,25 @@ class ErpDataRepository private constructor() {
     }
   }
 
-  private suspend fun confirmedStaffAction(action: suspend (ErpDataSource) -> Unit) {
+  private suspend fun <T> confirmedStaffAction(action: suspend (ErpDataSource) -> T):T {
     val actor = currentUser.value
     val mode = dataMode.value
     check(actor.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN, UserRole.TEACHER)) { "Staff access required." }
-    action(activeSource)
+    val result=action(activeSource)
     check(currentUser.value.id == actor.id && dataMode.value == mode) { "Account changed. Reload this workspace." }
+    return result
   }
 
-  suspend fun saveMarksConfirmed(studentId: String, term: String, subject: String, obtained: Int, maximum: Int) = confirmedStaffAction {
+  suspend fun saveMarksConfirmed(studentId: String, term: String, subject: String, obtained: Int, maximum: Int,expectedVersion:Int=0):Int = confirmedStaffAction {
     require(term.trim().isNotEmpty() && subject.trim().isNotEmpty() && maximum in 1..10000 && obtained in 0..maximum)
-    it.saveStudentMarks(studentId, term.trim(), subject.trim(), obtained, maximum)
+    it.saveDraftMarks(studentId, term.trim(), subject.trim(), obtained, maximum,expectedVersion)
+  }
+  suspend fun submitMarksForReviewConfirmed(studentId:String,term:String,subject:String,expectedVersion:Int):Int = confirmedStaffAction {
+    it.submitMarksForReview(studentId,term,subject,expectedVersion)
   }
 
   suspend fun publishResultsConfirmed(studentId: String, term: String, published: Boolean) = confirmedStaffAction {
+    check(currentUser.value.role in setOf(UserRole.PRINCIPAL, UserRole.ADMIN)) { "Result publication requires school approval." }
     it.publishReportCard(studentId, term, published)
   }
 
@@ -726,6 +757,12 @@ class ErpDataRepository private constructor() {
       "Local demo does not upload files. Sign in to Supabase demo to store a document."
     )
   }
+  fun discardUnusedAttachment(reference:String) {
+    if(dataMode.value!=DataMode.SUPABASE_DEMO || reference.isBlank())return
+    repositoryScope.launch {
+      try{SupabaseFileStore.discardStaged(reference)}catch(e:CancellationException){throw e}catch(_:Exception){/* Linked/unavailable files remain protected; never report a deletion. */}
+    }
+  }
 
   // ========================================================================
   // Notices — Pure delegation
@@ -787,8 +824,7 @@ class ErpDataRepository private constructor() {
   }
 
   private fun getCurrentFormattedDate(): String {
-    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    return sdf.format(Date())
+    return com.example.data.model.schoolDate()
   }
 
   companion object {
