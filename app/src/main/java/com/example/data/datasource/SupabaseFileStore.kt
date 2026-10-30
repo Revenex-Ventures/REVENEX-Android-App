@@ -6,6 +6,10 @@ import com.example.data.model.UserProfile
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.functions.functions
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.ContentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -40,6 +44,12 @@ object SupabaseFileStore {
     })
     try {
       client.storage.from("erp-documents").upload(path,bytes) { contentType=ContentType.parse(mimeType);upsert=false }
+      val inspection=client.functions.invoke("inspect-document", body=buildJsonObject { put("file_id",id) },
+        headers=Headers.build { append(HttpHeaders.ContentType,ContentType.Application.Json.toString()) })
+      check(inspection.status.value in 200..299 && inspectionConfirmed(inspection.bodyAsText())) {
+        "Document validation failed. Choose a supported file and retry."
+      }
+      check(client.auth.currentUserOrNull()?.id==user.id) { "School account changed. Upload the file again." }
     } catch(e:Exception) {
       // Unknown outcomes are safe to retry with a fresh file; cleanup is RLS-limited to unlinked objects.
       kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable){runCatching{
@@ -56,6 +66,12 @@ object SupabaseFileStore {
     client.storage.from("erp-documents").delete(path)
     client.from("file_metadata").delete { filter { eq("object_path",path) } }
   }
+
+  internal fun inspectionConfirmed(body:String):Boolean = runCatching {
+    val result=Json.parseToJsonElement(body).jsonObject
+    result["validated"]?.jsonPrimitive?.booleanOrNull==true &&
+      result["inspection"]?.jsonPrimitive?.content=="FORMAT_ONLY"
+  }.getOrDefault(false)
 
   internal fun documentPath(reference: String): String? {
     if (!reference.startsWith("supabase://erp-documents/")) return null

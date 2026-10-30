@@ -10,6 +10,12 @@ import org.junit.Test
 import java.time.LocalDate
 
 class BackendRemediationTest {
+  @Test fun documentInspectionRequiresExplicitServerConfirmation() {
+    assertTrue(SupabaseFileStore.inspectionConfirmed("""{"validated":true,"inspection":"FORMAT_ONLY"}"""))
+    for(body in listOf("{}","bad","""{"validated":true}""", """{"validated":false,"inspection":"FORMAT_ONLY"}""",
+      """{"validated":true,"inspection":"CLEAN"}""")) assertFalse(SupabaseFileStore.inspectionConfirmed(body))
+  }
+
   private val student = SampleData.initialStudents.first()
   private fun attendance(id: String, status: String, session: String = student.sessionId, date: String = "2026-10-01") =
     SupabaseRow(id, school_id = student.schoolId, session_id = session, student_id = student.id,

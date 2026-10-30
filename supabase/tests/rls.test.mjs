@@ -16,7 +16,7 @@ create publication supabase_realtime; insert into storage.buckets(id,name,public
 for(const [role,id] of Object.entries(ids)) await db.query('insert into auth.users values($1,$2)',[id,`${role}@revenex.demo`]);
 // Exercise legacy contracts first, then verify the strict publication upgrade
 // below. Migration22 intentionally removes the old unpublish/per-student API.
-for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&!f.startsWith('202610300022')).sort()) {
+for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&f<'202610300022').sort()) {
  await db.exec(await readFile(new URL(`../migrations/${f}`,import.meta.url),'utf8'));
  console.log(`APPLIED ${f}`);
 }

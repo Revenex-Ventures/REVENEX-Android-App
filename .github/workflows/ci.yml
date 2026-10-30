@@ -41,11 +41,13 @@ jobs:
       - name: Audit active demo Node dependencies
         run: npm audit --prefix supabase/tests --audit-level=high
       - name: Check Edge Function types
-        run: deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts
+        run: deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts supabase/functions/inspect-document/index.ts
       - name: Lint Edge Functions
-        run: deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments
+        run: deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments supabase/functions/inspect-document
       - name: Exercise real Deno entrypoint and server prompt loading
         run: deno test --allow-read=supabase/functions --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,OPENAI_API_KEY,OPENAI_MODEL,REVENEX_AI_ENABLED --allow-net=127.0.0.1 supabase/tests/assistant-entrypoint.test.mjs
+      - name: Hosted verification tool regression tests
+        run: python3 -m unittest discover -s supabase/tests -p test_verify_hosted.py
       - name: Schema and row-level security tests
         run: npm test --prefix supabase/tests
       - name: AI and payment handler security tests
@@ -111,7 +113,7 @@ jobs:
   deploy-demo:
     name: Deploy verified Supabase demo functions
     needs: [backend, android]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.ENABLE_SUPABASE_DEPLOY == 'true'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.ENABLE_SUPABASE_DEPLOY == 'true' && vars.BACKEND_HARDENING_SCHEMA_CONFIRMED == '24'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: supabase-demo
@@ -133,6 +135,7 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo 'Configure the deployment environment token.'; exit 1; }
           test -n "$SUPABASE_PROJECT_REF" || { echo 'Configure the demo project reference.'; exit 1; }
           supabase functions deploy razorpay-payments --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          supabase functions deploy inspect-document --project-ref "$SUPABASE_PROJECT_REF" --use-api
           supabase functions deploy revenex-ai --project-ref "$SUPABASE_PROJECT_REF" --use-api
       - name: Verify deployed handlers reject anonymous requests
         env:

@@ -4,7 +4,7 @@ from urllib.request import Request,urlopen
 from urllib.error import HTTPError
 
 base=os.environ['SUPABASE_URL'].rstrip('/')
-for name in ['revenex-ai','razorpay-payments']:
+for name in ['revenex-ai','razorpay-payments','inspect-document']:
     request=Request(base+'/functions/v1/'+name,method='POST',data=b'{}',headers={'apikey':os.environ['SUPABASE_PUBLISHABLE_KEY'],'Content-Type':'application/json'})
     try:
         with urlopen(request,timeout=30) as response: code=response.status

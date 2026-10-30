@@ -9,3 +9,7 @@ verify_jwt = false
 # The handler validates every Bearer token through Supabase Auth before deriving context.
 verify_jwt = false
 static_files = ["./functions/revenex-ai/prompt.md"]
+
+[functions.inspect-document]
+# Every request is authenticated through Auth inside the handler.
+verify_jwt = false
