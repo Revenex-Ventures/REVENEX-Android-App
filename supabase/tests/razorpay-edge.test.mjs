@@ -6,7 +6,7 @@ const order={id:reference,amount:500000,currency:'INR',key_id:'rzp_test_unit',pr
 function fixture() {
  const calls=[];
  const deps={keyId:'rzp_test_unit',keySecret:'unit-only-secret',webhookSecret:'unit-only-webhook',
-  auth:async()=>({id:'actor'}),
+  auth:async()=>({id:'actor'}),quota:async()=>true,
   db:{failed:async(...args)=>{calls.push(['failed',...args]);return true;},reserve:async(...args)=>{calls.push(['reserve',...args]);return {...order,new_reservation:false};},
    bind:async()=>order,order:async()=>order,providerOrder:async()=>order,
    settle:async(...args)=>{calls.push(['settle',...args]);return {receipt_no:'RZP-TEST-unit',amount:500000};}},
@@ -18,6 +18,21 @@ function fixture() {
 function request(body,auth=true,path='') {return new Request('https://example.test/razorpay-payments'+path,{method:'POST',headers:auth?{Authorization:'Bearer user-token'}:{},body:JSON.stringify(body)});}
 async function signature(secret,text) {const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return Buffer.from(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(text))).toString('hex');}
 test('unsigned callers cannot create an order',async()=>{const {deps,calls}=fixture();assert.equal((await handlePaymentRequest(request({action:'create',fee_id:'fee'},false),deps)).status,401);assert.equal(calls.length,0);});
+
+test('shared abuse limit denies payment work before reservation or provider access',async()=>{
+ const {deps,calls}=fixture();let checked;
+ deps.quota=async(actor,operation)=>{checked=[actor,operation];return false;};
+ const response=await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps);
+ assert.equal(response.status,429);assert.deepEqual(checked,['actor','payment_create']);assert.equal(calls.length,0);
+ assert.equal(response.headers.get('Retry-After'),'60');
+});
+test('missing shared limiter and invalid sessions fail closed without payment writes',async()=>{
+ const {deps,calls}=fixture();delete deps.quota;
+ assert.equal((await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps)).status,503);
+ deps.auth=async()=>null;
+ assert.equal((await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps)).status,401);
+ assert.equal(calls.length,0);
+});
 test('client cannot submit an amount or actor override',async()=>{const {deps,calls}=fixture();assert.equal((await handlePaymentRequest(request({action:'create',fee_id:'fee',amount:1,actor_id:'other'}),deps)).status,400);assert.equal(calls.length,0);});
 test('checkout amount and public key come only from stored reservation',async()=>{const {deps,calls}=fixture();const response=await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps);const body=await response.json();assert.equal(body.amount,500000);assert.equal(body.currency,'INR');assert.equal(body.key_id,'rzp_test_unit');assert.equal(JSON.stringify(body).includes(deps.keySecret),false);assert.deepEqual(calls[0],['reserve','fee','actor','rzp_test_unit']);});
 test('live keys are rejected even on a test-labeled Android app',async()=>{const {deps}=fixture();deps.keyId='rzp_live_unit';assert.equal((await handlePaymentRequest(request({action:'create',fee_id:'fee'}),deps)).status,503);});

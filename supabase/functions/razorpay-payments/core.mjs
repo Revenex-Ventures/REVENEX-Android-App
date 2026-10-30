@@ -3,7 +3,7 @@ class PaymentError extends Error {
  constructor(status,message){super(message);this.status=status;}
 }
 const fail=(status,message)=>{throw new PaymentError(status,message);};
-const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
+const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store',...(status===429?{'Retry-After':'60'}:{})}});
 const validId=(value,prefix)=>typeof value==='string' && new RegExp('^'+prefix+'_[A-Za-z0-9]+$').test(value);
 const uuid=value=>typeof value==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 async function limitedText(request,limit) {
@@ -57,6 +57,8 @@ export async function handlePaymentRequest(request,deps) {
   let body;try{body=JSON.parse(await limitedText(request,8192));}catch(e){if(e instanceof PaymentError)throw e;fail(400,'Invalid JSON');}
   const allowed={create:['action','fee_id'],verify:['action','reference','payment_id','provider_order_id','signature'],status:['action','reference']};
   if(!body || !Object.hasOwn(allowed,body.action) || Object.keys(body).some(key=>!allowed[body.action].includes(key)))fail(400,'Invalid payment request.');
+  if(typeof deps.quota!=='function')fail(503,'Payment protection is unavailable. No payment action was performed.');
+  if((await deps.quota(user.id,'payment_'+body.action)) !== true)fail(429,'Payment request limit reached. Wait before retrying the existing reference.');
   if(body.action==='create'){
    if(typeof body.fee_id!=='string' || !body.fee_id || body.fee_id.length>200)fail(400,'Select a fee record.');
    let order=await deps.db.reserve(body.fee_id,user.id,deps.keyId);
@@ -121,6 +123,7 @@ export function createServerDependencies(env,fetcher=fetch) {
  return {
   keyId:env.RAZORPAY_KEY_ID,keySecret:env.RAZORPAY_KEY_SECRET,webhookSecret:env.RAZORPAY_WEBHOOK_SECRET,
   auth:async bearer=>{try{return await request(base+'/auth/v1/user',{apikey:anon,Authorization:bearer});}catch{return null;}},
+  quota:(actor,operation)=>rpc('reserve_backend_request',{p_actor_id:actor,p_operation:operation}),
   db:{
    reserve:(fee,actor,key)=>rpc('reserve_razorpay_order',{p_fee_id:fee,p_actor_id:actor,p_key_id:key}),
    bind:(id,provider)=>rpc('bind_razorpay_order',{p_reference:id,p_provider_id:provider}),
