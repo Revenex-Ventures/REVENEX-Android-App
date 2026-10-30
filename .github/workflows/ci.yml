@@ -16,7 +16,7 @@ concurrency:
 jobs:
   backend:
     name: Server security and policy tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -55,7 +55,7 @@ jobs:
 
   android:
     name: Android build, tests and lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -114,7 +114,7 @@ jobs:
     name: Deploy verified Supabase demo functions
     needs: [backend, android]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.ENABLE_SUPABASE_DEPLOY == 'true' && vars.BACKEND_HARDENING_SCHEMA_CONFIRMED == '24'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: supabase-demo
     concurrency:

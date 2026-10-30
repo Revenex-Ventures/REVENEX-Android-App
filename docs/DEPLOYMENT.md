@@ -24,3 +24,10 @@ A successful push is not a test result. Match `git rev-parse HEAD` to the remote
 The latest previously inspected green run was [40468041788](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/40468041788), for a different Dependabot commit. It does not verify the backend hardening commits. Current branch runs and any fixes are recorded in [verification](VERIFICATION.md).
 
 Before enabling CD, confirm the demo target and migrations 20–24, review backups, and coordinate handlers (`razorpay-payments`, `inspect-document`, `revenex-ai`) with the compatible Android client. No database migration runs automatically in CI. The post-deploy check requires anonymous HTTP 401 from all three handlers and cannot prove authenticated behavior. Owner-configured branch/ruleset requirements, restricted environments, deployment secrets and privileged MFA remain operator responsibilities; they are not silently changed here.
+
+
+## Runner version and current repository settings
+
+All three jobs explicitly select `ubuntu-24.04` to keep the OS release stable during the [announced Ubuntu 26.04 alias migration](https://github.com/actions/runner-images/issues/14748). Hosted images still receive their vendor updates. This configuration change does not diagnose an in-progress runner or weaken Android/backend gates.
+
+Read-only metadata on 31 October: the available account has push permission and no admin/maintain permission; the API returned zero visible rulesets and zero environments. The main protection endpoint returned 404, so enforcement could not be certified. A workflow `environment:` reference alone is not a configured reviewer-approval rule. Before enabling CD, a repository owner must create/restrict the intended environment and configure required backend/Android status checks and branch protections.
