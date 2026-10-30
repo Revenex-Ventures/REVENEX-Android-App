@@ -1,3 +1,4 @@
+import {BodyReadError,readBoundedBytes} from '../_shared/bounded-body.mjs';
 // Format validation, not malware scanning. No untrusted file is rendered here.
 class InspectionError extends Error {constructor(status,message){super(message);this.status=status;}}
 const fail=(status,message)=>{throw new InspectionError(status,message);};
@@ -5,18 +6,10 @@ const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Contr
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
 const MAX_FILE=10*1024*1024,MAX_EXPANDED=20*1024*1024;
 async function bounded(stream,max){
- if(!stream)return new Uint8Array();
- const reader=stream.getReader(),chunks=[];let total=0;const deadline=Date.now()+15000;
- try{
-  while(true){
-   let timer;
-   const result=await Promise.race([reader.read(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new InspectionError(408,'File inspection timed out. Retry later.')),Math.max(1,deadline-Date.now()));})]).finally(()=>clearTimeout(timer));
-   if(result.done)break;total+=result.value.length;
-   if(total>max)fail(413,'Document exceeds the permitted inspection size.');
-   chunks.push(result.value);
-  }
- }catch(error){await reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
- const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
+ try{return await readBoundedBytes(stream,max);}catch(error){
+  if(error instanceof BodyReadError)fail(error.status,error.message);
+  throw error;
+ }
 }
 const invalid=()=>fail(400,'Document content does not match the supported format.');
 function crc32(bytes){let value=0xffffffff;for(const byte of bytes){value^=byte;for(let bit=0;bit<8;bit++)value=(value>>>1)^((value&1)?0xedb88320:0);}return (value^0xffffffff)>>>0;}

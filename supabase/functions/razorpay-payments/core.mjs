@@ -1,3 +1,4 @@
+import {BodyReadError,readBoundedBytes} from '../_shared/bounded-body.mjs';
 // Portable Web API handler, exercised by Node tests and hosted by Deno.
 class PaymentError extends Error {
  constructor(status,message){super(message);this.status=status;}
@@ -7,11 +8,7 @@ const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control
 const validId=(value,prefix)=>typeof value==='string' && new RegExp('^'+prefix+'_[A-Za-z0-9]+$').test(value);
 const uuid=value=>typeof value==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 async function limitedText(request,limit) {
- if(!request.body) return '';
- const reader=request.body.getReader();let size=0;const chunks=[];
- while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();fail(413,'Request too large');}chunks.push(value);}
- const bytes=new Uint8Array(size);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}
- return new TextDecoder().decode(bytes);
+ return new TextDecoder().decode(await readBoundedBytes(request.body,limit));
 }
 async function validSignature(secret,text,signature) {
  if(!secret || typeof signature!=='string' || !/^[0-9a-f]{64}$/i.test(signature))return false;
@@ -54,7 +51,7 @@ export async function handlePaymentRequest(request,deps) {
   const user=await deps.auth(bearer);
   if(!user?.id)fail(401,'School session expired. Sign in again.');
   testConfig(deps);
-  let body;try{body=JSON.parse(await limitedText(request,8192));}catch(e){if(e instanceof PaymentError)throw e;fail(400,'Invalid JSON');}
+  let body;try{body=JSON.parse(await limitedText(request,8192));}catch(e){if(e instanceof PaymentError || e instanceof BodyReadError)throw e;fail(400,'Invalid JSON');}
   const allowed={create:['action','fee_id'],verify:['action','reference','payment_id','provider_order_id','signature'],status:['action','reference']};
   if(!body || !Object.hasOwn(allowed,body.action) || Object.keys(body).some(key=>!allowed[body.action].includes(key)))fail(400,'Invalid payment request.');
   if(typeof deps.quota!=='function')fail(503,'Payment protection is unavailable. No payment action was performed.');
@@ -99,7 +96,7 @@ export async function handlePaymentRequest(request,deps) {
   if(failed) return await settle(order,failed,deps);
   return json({status:'pending',reference:order.id,message:'No captured payment yet. You can retry checkout or check status later.'});
  }catch(error){
-  if(error instanceof PaymentError)return json({message:error.message},error.status);
+  if(error instanceof PaymentError || error instanceof BodyReadError)return json({message:error.message},error.status);
   if(error?.code==='42501')return json({message:'Fee access denied.'},403);
   if(['23514','23505'].includes(error?.code))return json({message:'Fee balance or pending order changed. Reconcile the existing payment first.'},409);
   return json({message:'Payment service unavailable. Check server deployment and retry; no success was assumed.'},503);

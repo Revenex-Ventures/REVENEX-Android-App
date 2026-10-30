@@ -22,7 +22,7 @@ npm ci --ignore-scripts --prefix supabase/tests
 npm test --prefix supabase/tests
 node --test supabase/tests/assistant-edge.test.mjs supabase/tests/razorpay-edge.test.mjs
 deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts supabase/functions/inspect-document/index.ts
-deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments supabase/functions/inspect-document
+deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments supabase/functions/inspect-document supabase/functions/_shared
 deno test --allow-read=supabase/functions --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,OPENAI_API_KEY,OPENAI_MODEL,REVENEX_AI_ENABLED --allow-net=127.0.0.1 supabase/tests/assistant-entrypoint.test.mjs
 ```
 
@@ -49,3 +49,6 @@ See [device acceptance](DEVICE_TESTING.md), [evidence](VERIFICATION.md) and [kno
 Run `python -m unittest discover -s supabase/tests -p test_verify_hosted.py` for hidden-input/sanitized diagnostics regressions. Run the secure role command in the [Supabase README](../supabase/README.md) only through local password entry; no hosted credentials are needed for isolated tests.
 
 The focused cached-dependency Kotlin diagnostic from the prior hardening run is not a replacement for the complete Android CI build/tests/lint/APK-boundary gates. It passed 15 tests; prior local Gradle environment failures are retained. The current exact-commit remote result is recorded in [verification](VERIFICATION.md), including any failure and fix. [Root README](../README.md) distinguishes source/local/CI/hosted status.
+
+
+The latest security review adds `request-body-security.test.mjs` to `npm test`: eleven fake-clock/stream tests cover total deadlines, drip feeds, never-completing cancellation, private downloads, byte boundaries and chunk floods. AI tests additionally reject malformed quota acknowledgements before model work. No slow-network test performs a real provider call. See [findings](BACKEND_SECURITY_REVIEW.md).

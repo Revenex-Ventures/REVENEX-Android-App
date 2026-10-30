@@ -43,3 +43,8 @@ Local Demo requires no cloud password. Cloud Auth remains enabled; no credential
 | On suspected exposure | Revoke affected sessions/access, rotate compromised secrets through the operator store, preserve sanitized incident evidence and recheck tenant isolation | Incident record with affected scope and verification; no destructive school-data reset |
 
 These tasks follow the [official Supabase production checklist](https://supabase.com/docs/guides/deployment/going-into-prod). No system is guaranteed unhackable; document demonstrated controls and open risks honestly. Prototype status does not authorize access to another school's data. Do not enable paid services, external messaging, production load or destructive recovery without the existing scope/authorization.
+
+
+## Latest source corrections
+
+The [31 October security check](BACKEND_SECURITY_REVIEW.md) reproduced and fixed request-stream availability gaps and AI quota response validation. Source readers enforce a total 15-second deadline plus byte/chunk ceilings and do not await potentially hanging stream cancellation. This includes unsigned candidate webhook bodies before HMAC verification; signature/replay enforcement is retained. No new cloud permissions or Auth flow is introduced. Fresh anonymous probes show AI and inspection are unavailable (404); their source protections are not claimed deployed.

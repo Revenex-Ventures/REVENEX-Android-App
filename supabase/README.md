@@ -72,3 +72,10 @@ The new file handler performs format inspection only; antivirus/content-disarm s
 ## Change documentation
 
 Update this README's migration/command/compatibility entries and the [root change record](../README.md) for every backend change. Record exact-commit tests separately from authenticated hosted evidence; never label prepared migrations as applied. CI/push changes are explained in [deployment](../docs/DEPLOYMENT.md).
+
+
+## Latest security review
+
+[31 October findings](../docs/BACKEND_SECURITY_REVIEW.md): payment/webhook, AI and inspection now use a shared bounded reader with a 15-second total read deadline, existing byte limits, 16,384-chunk limit and cancellation that cannot hold the error response open. AI quota requires explicit boolean true. These are handler source fixes, requiring coordinated redeployment; no additional SQL migration is prepared or applied.
+
+Fresh anonymous hosted probes reject students/fees/orders/payment requests with 401, but **AI and inspect-document return 404**. Auth health is reachable. No current hosted AI execution, successful new inspection upload, captured payment or authenticated write/Realtime acceptance is established. The source-level CI pass does not close these integration gaps.

@@ -22,7 +22,8 @@ def main():
              ('/rest/v1/fee_records?select=id&limit=0', 'GET'),
              ('/rest/v1/razorpay_orders?select=id&limit=0', 'GET'),
              ('/functions/v1/razorpay-payments', 'POST'),
-             ('/functions/v1/revenex-ai', 'POST')]
+             ('/functions/v1/revenex-ai', 'POST'),
+             ('/functions/v1/inspect-document', 'POST')]
     for path, method in paths:
         req = Request(base + path, method=method,
                       data=b'{}' if method == 'POST' else None,

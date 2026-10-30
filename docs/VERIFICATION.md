@@ -1,3 +1,7 @@
+## Additional backend security check — 31 October 2026
+
+Source changes and fresh hosted status probes are recorded in [backend security review](BACKEND_SECURITY_REVIEW.md). Stream deadline/cancellation tests and malformed AI quota validation reproduced the issues before their fixes. The prior exact-commit [CI run 41110750187](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/41110750187) passed backend and Android for `348769a`; that run predates these additional source changes. New checks must be tied to the new commit. Fresh probes at 00:43:44 IST returned Auth 200, protected data/payment 401, AI 404 and inspection 404; no authenticated write/model/capture/Realtime behavior was tested and no hosted changes were made.
+
 # Backend/CI documentation follow-up — 31 October 2026
 
 Scope: backend, documentation and CI only; no UI/frontend files or hosted records changed. The earlier dated checkpoint below remains historical.

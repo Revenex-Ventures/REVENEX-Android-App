@@ -6,7 +6,7 @@
 | `check_secrets.py` | Redacted credential scan, optionally including Git history |
 | `check_apk_boundary.py` | Reject server prompt/private configuration markers in an APK |
 | `check_docs.py` | Check maintained documentation links |
-| `check_integration_health.py` | Read-only public service reachability; not authenticated acceptance |
+| `check_integration_health.py` | Read-only Auth/data/payment/AI/inspect-document reachability; status-only output, no authenticated acceptance |
 | `check_deployed_functions.py` | Read-only unsigned POST probes require HTTP 401 from AI, payments and inspect-document after gated deployment; no provider calls or login |
 
 Run commands from the repository root. See [testing](../docs/TESTING.md). Scripts must not print secret values, migrate/reset hosted data or invent successful provider verification.
@@ -25,3 +25,6 @@ The hosted verification tool lives at [supabase/verify_hosted.py](../supabase/ve
 For GitHub verification, authenticated `gh run list --branch codex/project-review-2026-10-29` identifies runs; `gh run view RUN_ID` shows backend/Android/deployment conclusions. Inspect failures and commit identity before claiming success. A missing branch run is not green CI. Network or credentials problems must be reported without printing tokens.
 
 31 October update: scripts documentation now covers all three deployed handlers and separates anonymous rejection from authenticated acceptance. Update this README and the [root change record](../README.md) whenever a script, flag, output contract or verification step changes, including small changes. See [pipeline configuration](../.github/workflows/ci.yml) and [verification history](../docs/VERIFICATION.md).
+
+
+Latest probe coverage includes `inspect-document`. On 31 October the payment route rejected anonymous access (401); AI and inspection were unavailable (404). `python scripts/check_integration_health.py` uses only ignored public configuration and writes a sanitized ignored report; its process exit does not certify integration readiness. Review each status and [the security findings](../docs/BACKEND_SECURITY_REVIEW.md), never call 404 successful setup.

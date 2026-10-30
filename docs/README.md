@@ -10,6 +10,7 @@ Use these documents as the current entry points. Historical delivery reports and
 | [Device testing](DEVICE_TESTING.md) | Manual cross-portal acceptance checklist |
 | [Screens and workflows](SCREENS_AND_WORKFLOWS.md) | Routed actions, permissions and honest gaps |
 | [Backend remediation](BACKEND_REMEDIATION.md) | Attendance, complete reads, stored-object and publication fixes; synthetic hosted-test plan |
+| [Backend security review](BACKEND_SECURITY_REVIEW.md) | Stream/quota fixes, fresh integration probes and remaining security gaps |
 | [Backend hardening](BACKEND_HARDENING.md) | Quotas, object-version inspection, rollout order and remaining operator work |
 | [Deployment](DEPLOYMENT.md) | Exact CI triggers, quality/deployment gates and operator prerequisites |
 | [Security](SECURITY.md) | Credentials, RLS, private files and payment boundaries |

@@ -4,6 +4,14 @@ import {handleAssistantRequest,createAssistantDependencies} from '../functions/r
 const context={user_id:'actor',role:'STUDENT',school_id:'revenex_demo',session_id:'demo_2026',language:'hi',permitted_student_ids:['student1'],tool_permissions:['student_summary','attendance','timetable','assignments','notices','marks','fees']};
 const call=(body,auth=true)=>new Request('https://example.test/revenex-ai',{method:'POST',headers:auth?{Authorization:'Bearer verified-token'}:{},body:JSON.stringify(body)});
 function fixture(){const calls=[];return {calls,deps:{enabled:true,prompt:'SERVER PROMPT',auth:async()=>({id:'actor'}),context:async()=>context,quota:async()=>true,read:async(...args)=>{calls.push(['read',...args]);return {records:[{student_id:'student1',pending_amount:5000}],has_more:false};},model:async body=>{calls.push(['model',body]);return {output:[{type:'message',content:[{type:'output_text',text:'Answer'}]}]};}}};}
+
+test('malformed quota confirmations cannot authorize model work',async()=>{
+ for(const value of [{allowed:true},'true',1,null]){
+  const {deps,calls}=fixture();deps.quota=async()=>value;
+  assert.equal((await handleAssistantRequest(call({message:'Hello'}),deps)).status,429);
+  assert.equal(calls.length,0);
+ }
+});
 test('assistant rejects missing bearer before model call',async()=>{const {deps,calls}=fixture();assert.equal((await handleAssistantRequest(call({message:'Hello'},false),deps)).status,401);assert.equal(calls.length,0);});
 test('assistant rejects forged authorization and language fields',async()=>{for(const field of ['role','school_id','session_id','permitted_student_ids','tool_permissions','language','model','api_key']){const {deps,calls}=fixture();assert.equal((await handleAssistantRequest(call({message:'Hello',[field]:'PRINCIPAL'},true),deps)).status,400);assert.equal(calls.length,0);}});
 test('verified backend context and server prompt reach model only',async()=>{const {deps,calls}=fixture();const response=await handleAssistantRequest(call({message:'Hello'}),deps);assert.equal(response.status,200);const input=calls[0][1];assert.ok(input.instructions.includes('SERVER PROMPT'));assert.ok(input.instructions.includes('demo_2026'));assert.ok(input.instructions.includes('hi'));assert.equal(input.store,false);assert.equal(JSON.stringify(input).includes('verified-token'),false);});

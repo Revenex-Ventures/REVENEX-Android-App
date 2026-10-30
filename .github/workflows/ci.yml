@@ -43,7 +43,7 @@ jobs:
       - name: Check Edge Function types
         run: deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts supabase/functions/inspect-document/index.ts
       - name: Lint Edge Functions
-        run: deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments supabase/functions/inspect-document
+        run: deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments supabase/functions/inspect-document supabase/functions/_shared
       - name: Exercise real Deno entrypoint and server prompt loading
         run: deno test --allow-read=supabase/functions --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,OPENAI_API_KEY,OPENAI_MODEL,REVENEX_AI_ENABLED --allow-net=127.0.0.1 supabase/tests/assistant-entrypoint.test.mjs
       - name: Hosted verification tool regression tests
