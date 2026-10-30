@@ -1,3 +1,16 @@
+# Backend/CI documentation follow-up — 31 October 2026
+
+Scope: backend, documentation and CI only; no UI/frontend files or hosted records changed. The earlier dated checkpoint below remains historical.
+
+- Remote working branch was checked through `git ls-remote`: `18c0c936398fd2cf08485af528e82a1b3d294877` matched local source at the start of this follow-up. Main is a separate branch; pushing this branch did not merge it into main.
+- GitHub had no Actions runs or PR for `codex/project-review-2026-10-29`. Diagnosis: the workflow accepted only `main` pushes, PRs and dispatch. New source adds `codex/**` push coverage; deployment still requires main and explicit operator gates.
+- Historical failed run [40123057312](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/40123057312) failed Android quality checks on a different redesign commit. A later [40468041788](https://github.com/Revenex-Ventures/REVENEX-Android-App/actions/runs/40468041788) passed backend and Android for a different Dependabot commit. Neither is current-branch evidence.
+- The four README files and security/testing/limitations/deployment guidance now include the prepared migrations, source changes, secure read-only role command, compatibility, operator backlog and evidence distinctions. Repository instructions require ongoing small-change README updates.
+- Exact-commit branch CI and fresh local test results are recorded below after this follow-up's run completes. Until then the previous hardening test counts are historical, not a fresh CI pass.
+- Hosted state is unchanged: prior role read evidence only, migrations 20–24 not applied here. No credentials, private keys, school-data reset or deployment is part of this work.
+
+---
+
 # Revenex connected-backend checkpoint — 26 October 2026
 
 This is an implementation/evidence checkpoint, not a certificate that every ERP workflow is finished. Approved portal presentation, Supabase records and the payment ledger are preserved. Older delivery reports describe older binaries.

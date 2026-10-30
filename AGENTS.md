@@ -33,3 +33,9 @@ Everything under `app/src/main/java/com/example/ui/` is UI. Everything else is l
 - Reuse existing tokens (`ScholaTerracotta`, `Radius.hero`, `Spacing.*`) from the theme files; do not hardcode new values inline.
 - Preserve the public API of shared components like `AnimatedAttendanceHero` unless the caller updates.
 - Design fanout (screens that host a shared component): keep each dashboard's hero call in sync.
+
+## Documentation and verification
+- For every backend/configuration change, update the root README change record and the relevant `supabase/README.md`, `scripts/README.md` or `docs/README.md` entry in the same change. Include small behavior changes, commands, prerequisites, compatibility and remaining limits.
+- Distinguish implemented source, local test evidence, exact-commit GitHub CI and authenticated hosted verification. A push is not a passing CI run; a CI pass is not a hosted deployment.
+- Preserve historical evidence with dates; never present old test counts or deployment checkpoints as a fresh run. Record new failures and their fixes without weakening checks.
+- Keep passwords, tokens, private keys and personal/school data out of READMEs and logs. Local Demo is synthetic/offline; cloud authorization remains protected even for a prototype.

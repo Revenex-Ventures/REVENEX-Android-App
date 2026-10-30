@@ -21,8 +21,8 @@ An APK compile is not visual verification. Inspect actual renders or the install
 npm ci --ignore-scripts --prefix supabase/tests
 npm test --prefix supabase/tests
 node --test supabase/tests/assistant-edge.test.mjs supabase/tests/razorpay-edge.test.mjs
-deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts
-deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments
+deno check supabase/functions/revenex-ai/index.ts supabase/functions/razorpay-payments/index.ts supabase/functions/inspect-document/index.ts
+deno lint supabase/functions/revenex-ai supabase/functions/razorpay-payments supabase/functions/inspect-document
 deno test --allow-read=supabase/functions --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,OPENAI_API_KEY,OPENAI_MODEL,REVENEX_AI_ENABLED --allow-net=127.0.0.1 supabase/tests/assistant-entrypoint.test.mjs
 ```
 
@@ -40,3 +40,12 @@ python scripts/check_secrets.py --history
 Hosted rollback acceptance SQL lives under `supabase/verify_*_rollback.sql`. Review it against the actual schema and use only explicitly authorized synthetic records. Never blindly rerun migrations or seed an existing project.
 
 See [device acceptance](DEVICE_TESTING.md), [evidence](VERIFICATION.md) and [known limits](KNOWN_LIMITATIONS.md).
+
+
+## Backend follow-up — 31 October 2026
+
+`npm test` includes legacy RLS/publication upgrade, payment, attendance periods, result batch completeness, quota isolation, document handler and document-inspection SQL regressions. The legacy suite intentionally exercises its original migration stage before the strict publication upgrade; new-rule suites separately exercise migrations 23/24. Add tests for changed behavior rather than weakening prior assertions.
+
+Run `python -m unittest discover -s supabase/tests -p test_verify_hosted.py` for hidden-input/sanitized diagnostics regressions. Run the secure role command in the [Supabase README](../supabase/README.md) only through local password entry; no hosted credentials are needed for isolated tests.
+
+The focused cached-dependency Kotlin diagnostic from the prior hardening run is not a replacement for the complete Android CI build/tests/lint/APK-boundary gates. It passed 15 tests; prior local Gradle environment failures are retained. The current exact-commit remote result is recorded in [verification](VERIFICATION.md), including any failure and fix. [Root README](../README.md) distinguishes source/local/CI/hosted status.
