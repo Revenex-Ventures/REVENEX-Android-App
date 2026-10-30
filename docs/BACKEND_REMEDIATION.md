@@ -93,4 +93,18 @@ Pagination API signatures were checked against cached Supabase SDK 3.2.3 and the
 .\gradlew.bat --no-daemon --no-configuration-cache --max-workers=1 assembleDebug testDebugUnitTest lintDebug verifyNoFirebaseDependencies
 ```
 
-VERIFIED HOSTED: none for this remediation. Migrations 20–22 remain prepared only. No current operator session, securely entered account credentials or deployed-definition comparison was available, so no hosted mutation was attempted. This report records implementation and exact verification limits, not a repeat of the discovery audit.
+At initial remediation completion there was no authenticated hosted evidence. Migrations 20–22 remain prepared only; no hosted mutation was attempted. The following later user-run checks supersede that initial access blocker for authenticated reads only.
+
+## Authenticated hosted read evidence received
+
+The user securely entered credentials locally and ran the verifier against `nhaxnuaxyqkgnlkwpqkw.supabase.co`. Saved reports confirm synthetic tenant `revenex_demo` / session `demo_2026` and the following outcomes on 30 October 2026:
+
+| Role alias | Verification time (IST) | Evidence | Result |
+| --- | --- | --- | --- |
+| Principal | Exact completion time not retained | User-provided console output from the earlier multi-role run | Auth login, protected profile, scoped reads and inbox passed; the older script did not save progress before the later Teacher failure |
+| Teacher | 20:28:39 | `app/build/reports/supabase-hosted-20261030T145822415879Z.json` | Complete selected-role run; capability version 19; 1 visible pupil and 2 recipient inbox rows; scoped reads/teacher fee denial checks passed |
+| Student | 20:29:24 | `app/build/reports/supabase-hosted-20261030T145911096361Z.json` | Complete selected-role run; capability version 19; 1 authorized pupil and 2 recipient inbox rows; scoped reads passed |
+
+These are current HOSTED AUTH reads, not local mocks. The role reports' `complete=true` applies to each invocation's selected role, not a complete backend acceptance test. The latest `supabase-hosted.json` contains Student only; timestamped reports preserve Teacher separately.
+
+The reports explicitly record `schema_definitions_compared=false`. The backend advertises capability version 19; that is not proof of exact deployed migration/function definitions, nor evidence that the prepared remediation is deployed. No authenticated school write, private Storage HTTP delivery, websocket reconnect, result-batch publication, payment capture or AI execution was verified by these commands. The remaining next step is the operator's read-only deployed-definition/preflight comparison before any separately approved migration or disposable connected-write test.
