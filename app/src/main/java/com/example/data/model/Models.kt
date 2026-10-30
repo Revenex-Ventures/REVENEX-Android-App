@@ -279,7 +279,10 @@ data class ReportCard(
   val issueDate: String,
   val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027",
-  val published: Boolean = false
+  val published: Boolean = false,
+  val attendanceScope: String = "SESSION_TO_DATE",
+  val attendancePeriodStart: String? = null,
+  val attendancePeriodEnd: String? = null
 ) {
   val totalObtained: Int get() = scores.sumOf { it.obtainedMarks }
   val totalMax: Int get() = scores.sumOf { it.maxMarks }
@@ -331,7 +334,7 @@ data class HomeworkAssignment(
   val submissionStatus: String = "Pending",
   val schoolId: String = "schola_school_001",
   val sessionId: String = "session_2026_2027",
-  val publicationState:String="PUBLISHED",
+  val publicationState:String="DRAFT",
   val revision:Int=0,
   val closesAt:String=""
 )

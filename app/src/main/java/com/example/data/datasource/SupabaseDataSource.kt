@@ -8,6 +8,8 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Count
+import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.realtime.selectAsFlow
 import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.*
@@ -61,6 +63,10 @@ data class SupabaseRow(
   val publication_state:String="PUBLISHED",
   val closes_at:String?=null,
   val review_state:String="DRAFT",
+  val required_subjects:List<String> = emptyList(),
+  val eligible_student_ids:List<String> = emptyList(),
+  val exam_id:String="",
+  val published_at:String?=null,
   val action: String = "",
   val table_name: String = "",
   val record_id: String = ""
@@ -71,15 +77,12 @@ data class BackendSyncState(val busy: Boolean = false, val message: String = "",
 /** Derive summaries only from rows already authorized by PostgreSQL RLS. */
 internal fun summarizeSupabaseStudent(student: Student, fees: List<FeeRecord>, attendance: List<SupabaseRow>): Student {
   val permittedFees=fees.filter { it.studentId==student.id }
-  val knownStatuses=AttendanceStatus.entries.map { it.name }.toSet()
-  val attendedStatuses=setOf("PRESENT","LATE","EXCUSED")
-  val records=attendance.filter { it.student_id==student.id && it.status in knownStatuses }
   return student.copy(
     feeSummaryAvailable=permittedFees.isNotEmpty(),
     feePendingAmount=permittedFees.sumOf { it.pendingAmount },
     feeStatus=permittedFees.firstOrNull { it.status==FeeStatus.OVERDUE }?.status
       ?: permittedFees.firstOrNull { it.pendingAmount>0 }?.status ?: FeeStatus.PAID,
-    attendancePercent=if(records.isEmpty()) 0.0 else 100.0*records.count { it.status in attendedStatuses }/records.size,
+    attendancePercent=schoolAttendanceSummary(student,attendance).percentage,
     rank=0,gpa=0.0
   )
 }
@@ -113,6 +116,14 @@ class SupabaseDataSource : ErpDataSource {
     "events","transport_routes","library_books","inventory","notifications","audit_logs")
   private val snapshotTables=tables+listOf("section_teachers","parent_student_links","subjects")
 
+  private suspend fun readCompleteTable(name:String):List<SupabaseRow> = readCompleteRows(id=SupabaseRow::id) { after, size ->
+    val response=client.from(name).select {
+      count(Count.EXACT);order("id",Order.ASCENDING);limit(size.toLong())
+      if(after!=null)filter{gt("id",after)}
+    }
+    SchoolPage(response.decodeList<SupabaseRow>(),response.countOrNull())
+  }
+
   private fun requireSession() { check(authenticated) { "Sign in to the Supabase demo first." } }
   private inline fun <reified T:Any> models(table: String): Flow<List<T>> = rows.map { all ->
     all[table].orEmpty().map { row -> decode<T>(row) }
@@ -135,8 +146,11 @@ class SupabaseDataSource : ErpDataSource {
   }
   private suspend fun refresh(name: String) {
     val revision=sessionRevision.get()
-    val result = client.from(name).select().decodeList<SupabaseRow>()
-    rows.update { previous -> if(sessionRevision.get()==revision) previous+(name to result) else previous }
+    val result = readCompleteTable(name)
+    val summaries=if(capabilities.value.attendance_summaries && name in setOf("attendance","students","marks"))readCompleteTable("attendance_summaries")else null
+    rows.update { previous -> if(authenticated && sessionRevision.get()==revision)
+      (previous+(name to result)).let{if(summaries!=null)it+("attendance_summaries" to summaries)else it}
+        .also{validateAttendanceSummaryCompleteness(it)} else previous }
   }
   /** Atomic replacement drops revoked rows and catches missed submission/allocation events. */
   suspend fun reconcileSchoolData() = reconciliationLock.withLock {
@@ -144,9 +158,8 @@ class SupabaseDataSource : ErpDataSource {
     val revision=sessionRevision.get();val actor=user.value;val session=activeSession
     try {
       val snapshot=fetchSchoolSnapshot(actor,session)
-      val available=loadCapabilities()
-      rows.update { old -> if(authenticated && sessionRevision.get()==revision) snapshot else old }
-      if(authenticated && sessionRevision.get()==revision)capabilities.value=available
+      rows.update { old -> if(authenticated && sessionRevision.get()==revision) snapshot.first else old }
+      if(authenticated && sessionRevision.get()==revision)capabilities.value=snapshot.second
       if(sessionRevision.get()==revision && !syncState.value.busy)syncState.value=BackendSyncState(message="School data reconciled")
     } catch(e:Exception) {
       if(e is CancellationException)throw e
@@ -162,12 +175,17 @@ class SupabaseDataSource : ErpDataSource {
       throw e
     }
   }
-  private suspend fun fetchSchoolSnapshot(actor:UserProfile,session:String,beforeRead:(String)->Unit={}):Map<String,List<SupabaseRow>> {
+  private suspend fun fetchSchoolSnapshot(actor:UserProfile,session:String,beforeRead:(String)->Unit={}):Pair<Map<String,List<SupabaseRow>>,SchoolBackendCapabilities> {
     suspend fun profile()=client.from("profiles").select{filter{eq("id",actor.id)}}.decodeList<SupabaseRow>().singleOrNull()
     validateReconciledScope(actor,session,profile(),emptyMap())
-    val snapshot=snapshotTables.associateWith { beforeRead(it);client.from(it).select().decodeList<SupabaseRow>() }
+    val available=loadCapabilities()
+    check(available.loaded){"School backend capabilities could not be verified. No partial data was loaded."}
+    val names=snapshotTables+if(available.attendance_summaries)listOf("attendance_summaries")else emptyList()
+    val completeNames=names+if(available.result_batches)listOf("result_publication_scopes")else emptyList()
+    val snapshot=completeNames.associateWith { beforeRead(it);readCompleteTable(it) }
     validateReconciledScope(actor,session,profile(),snapshot)
-    return snapshot
+    validateAttendanceSummaryCompleteness(snapshot)
+    return snapshot to available
   }
   suspend fun authenticate(email: String, password: String) = lifecycleLock.withLock {
     authenticateSession(email,password)
@@ -196,8 +214,9 @@ class SupabaseDataSource : ErpDataSource {
       user.value=UserProfile(uid,profile.name,profile.email,role,role.displayName,"",profile.name.split(" ").mapNotNull { it.firstOrNull() }.joinToString("").take(2),schoolId=profile.school_id)
       activeSession=profile.session_id
       signInStage="school data"
-      rows.value=fetchSchoolSnapshot(user.value,activeSession){signInStage=it}
-      capabilities.value=loadCapabilities()
+      val snapshot=fetchSchoolSnapshot(user.value,activeSession){signInStage=it}
+      rows.value=snapshot.first
+      capabilities.value=snapshot.second
       val students=table("students")
       val own = students.firstOrNull { it.profile_id==uid } ?: if(role==UserRole.PARENT) students.firstOrNull() else null
       val section = table("sections").firstOrNull { it.id==own?.section_id }
@@ -311,7 +330,10 @@ class SupabaseDataSource : ErpDataSource {
   }
   override fun getStudentsFlow():Flow<List<Student>> = rows.map { all ->
     val fees=all["fee_records"].orEmpty().map { decode<FeeRecord>(it) }
-    all["students"].orEmpty().map { summarizeSupabaseStudent(decode<Student>(it),fees,all["attendance"].orEmpty()) }
+    all["students"].orEmpty().map { row ->
+      val student=decode<Student>(row)
+      summarizeSupabaseStudent(student,fees,all["attendance"].orEmpty()).copy(attendancePercent=attendanceFromSnapshot(student,all).percentage)
+    }
   }
   override fun getTeachersFlow():Flow<List<Teacher>> = rows.map { all ->
     all["teachers"].orEmpty().map { row -> decode<Teacher>(row).copy(assignedClasses=authoritativeTeacherClasses(row.profile_id.orEmpty(),all)) }
@@ -429,11 +451,14 @@ class SupabaseDataSource : ErpDataSource {
     save("study_materials",material.id,material,sections.single().id)
   }
   override fun getReportCardsFlow():Flow<List<ReportCard>> = rows.map { all ->
-    all["marks"].orEmpty().groupBy { "${it.student_id}_${it.term}" }.mapNotNull { (_,scores) ->
+    all["marks"].orEmpty().groupBy { Triple(it.school_id,it.session_id,it.student_id to it.term) }.mapNotNull { (_,scores) ->
       val first=scores.first();val s=all["students"].orEmpty().firstOrNull { it.id==first.student_id }?.let { decode<Student>(it) } ?: return@mapNotNull null
-      ReportCard("${s.id}_${first.term}",s.id,s.name,s.classGrade,s.division,s.rollNumber,first.term,activeSession,
+      if(first.school_id!=s.schoolId || first.session_id!=s.sessionId)return@mapNotNull null
+      val attendance=attendanceFromSnapshot(s,all,first.term)
+      ReportCard("${s.id}_${first.term}",s.id,s.name,s.classGrade,s.division,s.rollNumber,first.term,first.session_id,
         scores.map { SubjectScore(it.subject,it.maximum,it.obtained,SubjectScore.calculateCbseGrade(it.obtained,it.maximum),"",it.payload["checkedPaperUrl"]?.jsonPrimitive?.content.orEmpty(),it.payload["answerKeyUrl"]?.jsonPrimitive?.content.orEmpty(),it.version,it.review_state) },
-        s.attendancePercent,0,0,"","",s.schoolId,activeSession,scores.all { it.published })
+        attendance.percentage,0,0,"","",s.schoolId,first.session_id,scores.all { it.published },
+        attendance.scope,attendance.start,attendance.end)
     }
   }
   override suspend fun saveStudentMarks(studentId:String,term:String,subjectName:String,obtainedMarks:Int,maxMarks:Int) {
@@ -470,9 +495,19 @@ class SupabaseDataSource : ErpDataSource {
   override suspend fun publishReportCard(studentId:String,term:String,published:Boolean) {
     requireSession()
     check(user.value.role in setOf(UserRole.PRINCIPAL,UserRole.ADMIN)) { "Result publication requires school approval." }
-    confirmedChange({ client.postgrest.rpc("set_result_publication", buildJsonObject {
-      put("p_student",studentId); put("p_term",term); put("p_published",published)
-    }) }, { refresh("marks") })
+    check(published){"Published result corrections require an authorized, reasoned review workflow. It is not configured."}
+    val current=table("marks").filter{it.student_id==studentId&&it.term==term}
+    if(current.isNotEmpty()&&current.all{it.published}) {
+      confirmedChange({client.postgrest.rpc("set_result_publication",buildJsonObject{
+        put("p_student",studentId);put("p_term",term);put("p_published",true)
+      })},{refresh("marks")})
+      return
+    }
+    check(capabilities.value.result_batches){"School result-batch backend update required. No results were published."}
+    val (scope,observed)=observedResultBatch(studentId,term,table("result_publication_scopes"),table("marks"))
+    confirmedChange({client.postgrest.rpc("publish_result_batch",buildJsonObject{
+      put("p_scope",scope.id);put("p_expected_scope_version",scope.version);put("p_expected_marks",observed)
+    })},{listOf("marks","notifications","result_publication_scopes").forEach{refresh(it)}})
   }
   override fun getExamSchedulesFlow()=models<ExamSchedule>("exams")
   override fun getTimetableFlow()=models<TimetableSlot>("timetables")

@@ -17,7 +17,7 @@ class SupabaseStudentSummaryTest {
   @Test fun attendanceUsesStructuredRecordsInsteadOfSeedPercentage() {
     val student=SampleData.initialStudents.first()
     val records=listOf("PRESENT","LATE","ABSENT").mapIndexed { i,status ->
-      SupabaseRow("a$i",student_id=student.id,status=status)
+      SupabaseRow("a$i",school_id=student.schoolId,session_id=student.sessionId,student_id=student.id,status=status,attendance_date="2026-10-01")
     }+SupabaseRow("foreign",student_id="other",status="ABSENT")
     val summary=summarizeSupabaseStudent(student,emptyList(),records)
     assertEquals(200.0/3.0,summary.attendancePercent,0.001)
@@ -33,7 +33,7 @@ class SupabaseStudentSummaryTest {
   @Test fun excusedCountsAsAttendedAndLeaveRemainsInRecordedSessionDenominator() {
     val student=SampleData.initialStudents.first()
     val records=listOf("PRESENT","LATE","EXCUSED","ABSENT","LEAVE").mapIndexed { i,status ->
-      SupabaseRow("status$i",student_id=student.id,status=status)
+      SupabaseRow("status$i",school_id=student.schoolId,session_id=student.sessionId,student_id=student.id,status=status,attendance_date="2026-10-01")
     }+SupabaseRow("unknown",student_id=student.id,status="UNKNOWN")
     assertEquals(60.0,summarizeSupabaseStudent(student,emptyList(),records).attendancePercent,0.001)
   }

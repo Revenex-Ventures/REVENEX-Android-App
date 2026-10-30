@@ -12,5 +12,7 @@ data class SchoolBackendCapabilities(
  val marks:Boolean=false,
  val targeted_notices:Boolean=false,
  val attendance:Boolean=false,
- val leaves:Boolean=false
+ val leaves:Boolean=false,
+ val attendance_summaries:Boolean=false,
+ val result_batches:Boolean=false
 )

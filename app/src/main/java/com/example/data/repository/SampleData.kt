@@ -818,6 +818,7 @@ object SampleData {
   val initialAssignments = listOf(
     HomeworkAssignment(
       id = "hw_101",
+      publicationState = "PUBLISHED",
       title = "Quadratic Equations & AP Problem Set 4.2",
       subject = "Mathematics",
       classGrade = "10",
@@ -833,6 +834,7 @@ object SampleData {
     ),
     HomeworkAssignment(
       id = "hw_102",
+      publicationState = "PUBLISHED",
       title = "Ray Optics: Convex & Concave Mirror Ray Diagrams",
       subject = "Physics",
       classGrade = "10",
@@ -848,6 +850,7 @@ object SampleData {
     ),
     HomeworkAssignment(
       id = "hw_103",
+      publicationState = "PUBLISHED",
       title = "Critical Essay: Themes of 'The Merchant of Venice'",
       subject = "English Literature",
       classGrade = "10",
@@ -863,6 +866,7 @@ object SampleData {
     ),
     HomeworkAssignment(
       id = "hw_104",
+      publicationState = "PUBLISHED",
       title = "Python Binary Search & Bubble Sort Implementation",
       subject = "Computer Science",
       classGrade = "10",
