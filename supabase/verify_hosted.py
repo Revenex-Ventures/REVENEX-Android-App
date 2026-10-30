@@ -16,6 +16,30 @@ ROOT=Path(__file__).resolve().parent.parent
 def require(condition,message):
     if not condition:raise RuntimeError(message)
 
+def safe_auth_failure(status,raw):
+    """Only allowlisted error codes select fixed messages; never echo provider text."""
+    fallback='HTTP '+str(status)+' for /auth/v1/token; Auth sign-in was rejected. Check the assigned account in this project.'
+    try:
+        data=json.loads(raw)
+        if not isinstance(data,dict):return fallback
+        code=data.get('error_code') or data.get('code')
+        return {
+            'invalid_credentials':'The account email or password was rejected. Check the exact existing Auth account and its assigned password locally.',
+            'email_not_confirmed':'The account email is not confirmed. Ask the project operator to check this existing demo Auth account.',
+            'user_banned':'Auth reports this account is disabled. Ask the project operator to review the existing account.',
+            'over_request_rate_limit':'Auth request limit reached. Wait before retrying.',
+            'over_email_send_rate_limit':'Auth email request limit reached. Wait before retrying.'
+        }.get(code,fallback) if isinstance(code,str) else fallback
+    except (ValueError,UnicodeError):return fallback
+
+def save_progress(output,metadata,checks):
+    result={**metadata,'checked_at_utc':datetime.now(timezone.utc).isoformat(),
+            'checks':checks,'complete':len(checks)==len(metadata['requested_roles'])}
+    output.parent.mkdir(parents=True,exist_ok=True)
+    text=json.dumps(result,indent=2)
+    output.write_text(text,encoding='utf-8')
+    (output.parent/'supabase-hosted.json').write_text(text,encoding='utf-8')
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--roles',nargs='+',choices=['PRINCIPAL','TEACHER','STUDENT','PARENT'],default=['PRINCIPAL','TEACHER','STUDENT'])
@@ -49,6 +73,8 @@ def main():
                 return result
         except HTTPError as error:
             # Do not print HTTP bodies/headers; those can contain private service diagnostics.
+            if path.split('?')[0]=='/auth/v1/token':
+                raise RuntimeError(safe_auth_failure(error.code,error.read(4096))) from None
             raise RuntimeError("HTTP "+str(error.code)+" for "+path.split("?")[0]) from None
 
     def read_table(table,token,selection):
@@ -70,14 +96,21 @@ def main():
             after=page[-1]['id']
 
     report=[]
+    run_id=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+    output=ROOT/('app/build/reports/supabase-hosted-'+run_id+'.json')
+    metadata={'environment_host':parsed.hostname,'school':'revenex_demo','session':'demo_2026',
+              'requested_roles':args.roles,'schema_definitions_compared':False,'writes_verified':False,
+              'realtime_transport_verified':False,'storage_service_verified':False}
     for role in args.roles:
         email=role.lower()+"@revenex.demo"
         with warnings.catch_warnings():
             # Never fall back to an echoing password prompt on an unsuitable terminal.
             warnings.simplefilter('error',getpass.GetPassWarning)
             password=getpass.getpass("Password for "+email+" (local, hidden): ")
-        session=call("/auth/v1/token?grant_type=password",method="POST",body={"email":email,"password":password})
-        password=None
+        try:
+            session=call("/auth/v1/token?grant_type=password",method="POST",body={"email":email,"password":password})
+        finally:
+            password=None
         token=session["access_token"]
         try:
             profile=call("/rest/v1/profiles?select=id,role,school_id,session_id",token)
@@ -99,14 +132,12 @@ def main():
             inbox=read_table('notifications',token,'id,recipient_id,school_id,session_id')
             require(all(row["recipient_id"]==profile["id"] for row in inbox),"Inbox recipient boundary failure")
             report.append({"role":role,"passed":True,"schema_capability_version":capabilities['schema_version'],"students_visible":len(rows),"notifications_visible":len(inbox)})
+            save_progress(output,metadata,report)
             print("PASS hosted login, profile, scoped reads and inbox: "+role)
         finally:
             call("/auth/v1/logout?scope=local",token,method="POST")
             token=None
             session=None
-    output=ROOT/"app/build/reports/supabase-hosted.json"
-    output.parent.mkdir(parents=True,exist_ok=True)
-    output.write_text(json.dumps({"checked_at_utc":datetime.now(timezone.utc).isoformat(),"environment_host":parsed.hostname,"school":"revenex_demo","session":"demo_2026","checks":report,"schema_definitions_compared":False,"writes_verified":False,"realtime_transport_verified":False,"storage_service_verified":False},indent=2),encoding="utf-8")
     print("Read-only checks finished. Verify writes, private file delivery and two-device Realtime separately.")
 
 if __name__=="__main__":
