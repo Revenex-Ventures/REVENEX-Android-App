@@ -14,7 +14,9 @@ alter table storage.objects enable row level security;
 grant usage on schema storage to authenticated;grant select,insert,delete on storage.objects to authenticated;
 create publication supabase_realtime; insert into storage.buckets(id,name,public) values('erp-documents','erp-documents',true);`);
 for(const [role,id] of Object.entries(ids)) await db.query('insert into auth.users values($1,$2)',[id,`${role}@revenex.demo`]);
-for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort()) {
+// Exercise legacy contracts first, then verify the strict publication upgrade
+// below. Migration22 intentionally removes the old unpublish/per-student API.
+for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&!f.startsWith('202610300022')).sort()) {
  await db.exec(await readFile(new URL(`../migrations/${f}`,import.meta.url),'utf8'));
  console.log(`APPLIED ${f}`);
 }
@@ -47,6 +49,12 @@ async function saveMark(role,term,subject,obtained,maximum) {
  const prior=(await as(role,'select version from marks where student_id=$1 and term=$2 and subject=$3',['demo_student',term,subject]))[0];
  return as(role,'select save_draft_mark($1,$2,$3,$4,$5,$6) as result',['demo_student',term,subject,obtained,maximum,prior?.version??0]);
 }
+// Positive publication fixtures follow the current submitted-review contract.
+async function publishReviewedTerm(term) {
+ const drafts=await as('principal',"select subject,version from marks where student_id='demo_student' and term=$1 and not published and review_state='DRAFT'",[term]);
+ for(const draft of drafts)await as('principal',"select submit_mark_review('demo_student',$1,$2,$3)",[term,draft.subject,draft.version]);
+ return as('principal',"select set_result_publication('demo_student',$1,true)",[term]);
+}
 await check('existing document bucket is forced private',async()=>assert.equal((await db.query("select public from storage.buckets where id='erp-documents'")).rows[0].public,false));
 await check('RLS enabled on every public table',async()=>assert.equal((await db.query("select count(*)::int as n from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity")).rows[0].n,0));
 await check('anonymous cannot read students',()=>denied('anon','select * from students'));
@@ -61,7 +69,7 @@ await check('parent cannot link another child',()=>denied('parent',"insert into 
 await check('client cannot rewrite session membership',()=>denied('principal',"update profiles set session_id='old_session' where id=auth.uid()"));
 await check('unpublished marks hidden from student',async()=>assert.equal((await as('student','select * from marks')).length,0));
 await check('assigned teacher sees draft marks',async()=>assert.equal((await as('teacher','select * from marks')).length,1));
-await check('principal can publish marks',async()=>assert.equal((await as('principal',"select set_result_publication('demo_student','Term 1',true)")).length,1));
+await check('principal can publish marks',async()=>assert.equal((await publishReviewedTerm('Term 1')).length,1));
 await check('parent reads published child marks',async()=>assert.equal((await as('parent','select * from marks')).length,1));
 await check('student cannot alter marks',async()=>{await denied('student',"update marks set obtained=100 where id='mark1'");assert.equal((await as('teacher',"select obtained from marks where id='mark1'"))[0].obtained,80);});
 await check('invalid mark bounds rejected',()=>denied('teacher',"update marks set obtained=101 where id='mark1'"));
@@ -189,13 +197,13 @@ await check('draft result does not announce to student or parent',async()=>{
  assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent);
 });
 await check('publishing result notifies linked recipients and no other school',async()=>{
- await as('principal',"select set_result_publication('demo_student','Term 1',true)");
+ await publishReviewedTerm('Term 1');
  assert.equal((await as('student',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.student+1);
  assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent+1);
  assert.equal((await as('other',"select * from notifications where category='EXAMS'")).length,0);
 });
 await check('repeated result publication does not duplicate inbox entries',async()=>{
- await as('principal',"select set_result_publication('demo_student','Term 1',true)");
+ await publishReviewedTerm('Term 1');
  assert.equal((await as('parent',"select * from notifications where category='EXAMS'")).length,resultInboxBefore.parent+1);
 });
 await check('draft RPC rejects family and wrong school',async()=>{
@@ -210,9 +218,9 @@ await check('draft save stays private, upserts and validates scores',async()=>{
  await denied('teacher',"select save_draft_mark('demo_student','RPC Term','Mathematics',101,100,2)");
 });
 await check('publication RPC is replay safe and blocks editing published terms',async()=>{
- await as('principal',"select set_result_publication('demo_student','RPC Term',true)");
+ await publishReviewedTerm('RPC Term');
  const count=(await as('student',"select * from notifications where category='EXAMS'")).length;
- await as('principal',"select set_result_publication('demo_student','RPC Term',true)");
+ await publishReviewedTerm('RPC Term');
  assert.equal((await as('student',"select * from notifications where category='EXAMS'")).length,count);
  assert.equal((await as('parent',"select * from marks where term='RPC Term'")).length,1);
  await denied('teacher',"select save_draft_mark('demo_student','RPC Term','English',70,100,0)");
@@ -243,7 +251,7 @@ await check('teacher cannot publish results through the RPC or direct writes',as
  await denied('teacher',"insert into marks(id,school_id,session_id,section_id,student_id,term,subject,obtained,maximum,published) values('unauthorized_publish','revenex_demo','demo_2026','demo_10a','demo_student','Unauthorized','Mathematics',80,100,true)");
 });
 await check('published result values and identity are locked against direct-write bypass',async()=>{
- await as('principal',"select set_result_publication('demo_student','RPC Term',true)");
+ await publishReviewedTerm('RPC Term');
  await denied('teacher',"update marks set published=false where term='RPC Term'");
  await denied('teacher',"update marks set obtained=72 where term='RPC Term'");
  await denied('principal',"update marks set obtained=72 where term='RPC Term'");
@@ -333,7 +341,7 @@ await check('draft attachments stay private and authoring cannot bypass subject 
  await denied('other',"select write_assignment('draft_file','demo_10a',$1::jsonb,'2099-01-01',true,1)",[payload]);
 });
 await check('teacher cannot read or review a different subject even in an assigned class',async()=>{
- await db.query(`insert into assignments(id,school_id,session_id,section_id,payload) values('science_work','revenex_demo','demo_2026','demo_10a','{"title":"Science fixture","subject":"Science"}')`);
+ await db.query(`insert into assignments(id,school_id,session_id,section_id,payload,publication_state) values('science_work','revenex_demo','demo_2026','demo_10a','{"title":"Science fixture","subject":"Science"}','PUBLISHED')`);
  const submission=(await as('student',"select submit_assignment('science_work','','Science solution',0) as result"))[0].result;
  assert.equal((await as('teacher',"select * from assignments where id='science_work'")).length,0);
  assert.equal((await as('teacher',"select * from assignment_submissions where id=$1",[submission.id])).length,0);
@@ -355,16 +363,16 @@ await check('versioned draft marks reject stale edits and submit for authorized 
  const submitted=(await as('teacher',"select submit_mark_review('demo_student','Versioned marks','Mathematics',1) as result"))[0].result;
  assert.equal(submitted.review_state,'SUBMITTED');assert.equal(submitted.version,2);
  await as('teacher',"select submit_mark_review('demo_student','Versioned marks','Mathematics',1)");
- assert.equal((await as('principal',"select * from notifications where event_key like 'mark-review:%' and actionable_id='demo_student'")).length,1);
+ assert.equal((await as('principal',"select * from notifications where event_key like $1 and actionable_id='demo_student'",['mark-review:'+saved.id+':%'])).length,1);
  assert.equal((await as('student',"select * from marks where term='Versioned marks'")).length,0);
- await as('principal',"select set_result_publication('demo_student','Versioned marks',true)");
+ await publishReviewedTerm('Versioned marks');
  assert.equal((await as('student',"select obtained from marks where term='Versioned marks'"))[0].obtained,82);
  await denied('teacher',"select save_draft_mark('demo_student','Versioned marks','Mathematics',84,100,2)");
 });
 await check('publication changes invalidate observed mark versions and invisible subjects lock the term',async()=>{
  await as('principal',"select set_result_publication('demo_student','Versioned marks',false)");
  await denied('teacher',"select save_draft_mark('demo_student','Versioned marks','Mathematics',84,100,2)");
- await as('principal',"select set_result_publication('demo_student','Private science',true)");
+ await publishReviewedTerm('Private science');
  await denied('teacher',"select save_draft_mark('demo_student','Private science','Mathematics',84,100,0)");
  await denied('teacher',"select save_draft_mark('demo_student','Legacy blind update','Mathematics',84,100)");
 });
@@ -377,7 +385,7 @@ await check('private mark documents respect subject privacy and unchanged refere
  await as('principal',"select attach_mark_document('science_private','checkedPaperUrl',$1,$2)",[`supabase://erp-documents/${objectPath}`,current]);
  assert.equal((await as('teacher',"select * from storage.objects where name=$1",[objectPath])).length,0);
  assert.equal((await as('student',"select * from storage.objects where name=$1",[objectPath])).length,0);
- await as('principal',"select set_result_publication('demo_student','Private science',true)");
+ await publishReviewedTerm('Private science');
  assert.equal((await as('parent',"select * from storage.objects where name=$1",[objectPath])).length,1);
  assert.equal((await as('teacher',"select * from storage.objects where name=$1",[objectPath])).length,0);
  const math=(await saveMark('teacher','Shared paper','Mathematics',80,100))[0].result;
@@ -478,6 +486,16 @@ await check('leave retries keep one request and one leadership inbox entry per r
  await denied('teacher',"select request_leave('invalid_leave','Medical Leave','2099-01-05','2099-01-01','Invalid interval')");
  await as('principal',"select decide_leave('stable_leave','APPROVED','Synthetic approval')");
  assert.equal((await as('teacher',sql))[0].saved.payload.status,'APPROVED');
+});
+await db.exec(await readFile(new URL('../migrations/202610300022_result_batch_publication.sql',import.meta.url),'utf8'));
+await check('strict publication upgrade blocks legacy per-student writes and unpublication',async()=>{
+ await denied('principal',"select set_result_publication('demo_student','Versioned marks',false)");
+ await denied('teacher',"select set_result_publication('demo_student','Versioned marks',true)");
+});
+await check('strict publication upgrade retains existing school and student isolation',async()=>{
+ assert.deepEqual((await as('other','select id from students')).map(x=>x.id),['other_student']);
+ assert.deepEqual((await as('student','select id from students')).map(x=>x.id),['demo_student']);
+ assert.equal((await as('student','select id from result_publication_scopes')).length,0);
 });
 console.log(`${passed} PostgreSQL schema/RLS checks passed. Auth/Storage service/Realtime transport require hosted verification.`);
 await db.close();

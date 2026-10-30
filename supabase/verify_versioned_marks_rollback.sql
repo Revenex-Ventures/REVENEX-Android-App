@@ -22,6 +22,7 @@ begin
   raise exception 'Teacher publication was not denied';
  exception when insufficient_privilege then null;
  end;
+ perform public.submit_mark_review('demo_student','Rollback verification 20261026','Mathematics',1);
  perform set_config('request.jwt.claim.sub',parent_id::text,true);
  if exists(select 1 from public.marks where student_id='demo_student' and term='Rollback verification 20261026') then
   raise exception 'Draft leaked to parent'; end if;
