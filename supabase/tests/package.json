@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node rls.test.mjs && node razorpay-edge.test.mjs && node --test backend-remediation.test.mjs attendance-reporting.test.mjs result-batch.test.mjs security-controls.test.mjs document-inspection.test.mjs document-inspection-sql.test.mjs request-body-security.test.mjs",
+    "test": "node rls.test.mjs && node razorpay-edge.test.mjs && node --test backend-remediation.test.mjs attendance-reporting.test.mjs result-batch.test.mjs security-controls.test.mjs document-inspection.test.mjs document-inspection-sql.test.mjs request-body-security.test.mjs upstream-security.test.mjs release-preflight.test.mjs",
     "test:rls": "node rls.test.mjs",
     "test:edge": "node razorpay-edge.test.mjs"
   },

@@ -52,3 +52,6 @@ The focused cached-dependency Kotlin diagnostic from the prior hardening run is 
 
 
 The latest security review adds `request-body-security.test.mjs` to `npm test`: eleven fake-clock/stream tests cover total deadlines, drip feeds, never-completing cancellation, private downloads, byte boundaries and chunk floods. AI tests additionally reject malformed quota acknowledgements before model work. No slow-network test performs a real provider call. See [findings](BACKEND_SECURITY_REVIEW.md).
+
+
+Release acceptance also runs `upstream-security.test.mjs` and `release-preflight.test.mjs` through `npm test`. They verify bounded upstream responses/transport abort plus schema stages 19–24, existing policy fingerprints and non-empty historical publication preservation in isolated fixtures. `python -m unittest discover -s supabase/tests -p 'test_*.py'` includes both existing hidden-account verifier tests and target/inventory-redaction tests. Neither command is authenticated hosted or device acceptance. See [release gates](DEMO_COORDINATED_RELEASE.md).

@@ -1,4 +1,4 @@
-import {BodyReadError,readBoundedBytes} from '../_shared/bounded-body.mjs';
+import {BodyReadError,readBoundedBytes,fetchBoundedJson} from '../_shared/bounded-body.mjs';
 // Format validation, not malware scanning. No untrusted file is rendered here.
 class InspectionError extends Error {constructor(status,message){super(message);this.status=status;}}
 const fail=(status,message)=>{throw new InspectionError(status,message);};
@@ -115,8 +115,8 @@ export function createInspectionDependencies(env,fetcher=fetch){
  const base=env.SUPABASE_URL,key=env.SUPABASE_ANON_KEY,service=env.SUPABASE_SERVICE_ROLE_KEY;
  const admin={apikey:service,Authorization:'Bearer '+service};
  const call=async(path,headers,body)=>{
-  const response=await fetcher(base+path,{method:body===undefined?'GET':'POST',headers:{...headers,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-  const data=await response.json();if(!response.ok){const error=new Error('School service unavailable');error.code=data?.code;throw error;}return data;
+  const {response,data}=await fetchBoundedJson(fetcher,base+path,{method:body===undefined?'GET':'POST',headers:{...headers,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+  if(!response.ok){const error=new Error('School service unavailable');error.code=data?.code;throw error;}return data;
  };
  const rpc=(name,body)=>call('/rest/v1/rpc/'+name,admin,body);
  return {

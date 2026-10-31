@@ -1,4 +1,4 @@
-import {BodyReadError,readBoundedBytes} from '../_shared/bounded-body.mjs';
+import {BodyReadError,readBoundedBytes,fetchBoundedJson} from '../_shared/bounded-body.mjs';
 // Portable Web API handler, exercised by Node tests and hosted by Deno.
 class PaymentError extends Error {
  constructor(status,message){super(message);this.status=status;}
@@ -109,8 +109,7 @@ export function createServerDependencies(env,fetcher=fetch) {
  const service=env.SUPABASE_SERVICE_ROLE_KEY;
  const anon=env.SUPABASE_ANON_KEY;
  const request=async(url,headers,body)=>{
-  const response=await fetcher(url,{method:body===undefined?'GET':'POST',headers:{...headers,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-  let data;try{data=await response.json();}catch{throw new Error('Invalid service response');}
+  const {response,data}=await fetchBoundedJson(fetcher,url,{method:body===undefined?'GET':'POST',headers:{...headers,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
   if(!response.ok){const error=new Error('Service request failed');error.code=data?.code;throw error;}return data;
  };
  const admin={apikey:service,Authorization:'Bearer '+service};

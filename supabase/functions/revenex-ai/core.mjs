@@ -1,4 +1,4 @@
-import {BodyReadError,readBoundedBytes} from '../_shared/bounded-body.mjs';
+import {BodyReadError,readBoundedBytes,fetchBoundedJson} from '../_shared/bounded-body.mjs';
 // The model is never an authorization boundary. All ERP reads retain the user's RLS identity.
 class AssistantError extends Error {
   constructor(status,message){super(message);this.status=status;}
@@ -100,8 +100,8 @@ function project(dataset,row){
 export function createAssistantDependencies(env,prompt,fetcher=fetch){
   const base=env.SUPABASE_URL,key=env.SUPABASE_ANON_KEY;
   const get=async(path,bearer,body)=>{
-    const response=await fetcher(base+path,{method:body===undefined?'GET':'POST',headers:{apikey:key,Authorization:bearer,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-    if(!response.ok)throw new Error('School service unavailable');return response.json();
+    const {response,data}=await fetchBoundedJson(fetcher,base+path,{method:body===undefined?'GET':'POST',headers:{apikey:key,Authorization:bearer,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+    if(!response.ok)throw new Error('School service unavailable');return data;
   };
   const scoped=(context,extra={})=>new URLSearchParams({school_id:'eq.'+context.school_id,session_id:'eq.'+context.session_id,...extra});
   return {
@@ -148,8 +148,8 @@ export function createAssistantDependencies(env,prompt,fetcher=fetch){
       return {records,has_more:rows.length>20,data_kind:context.school_id==='revenex_demo'?'demo':'live'};
     },
     model:async body=>{
-      const response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({...body,model:env.OPENAI_MODEL}),signal:AbortSignal.timeout(45000)});
-      if(!response.ok)throw new Error('Model unavailable');return response.json();
+      const {response,data}=await fetchBoundedJson(fetcher,'https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({...body,model:env.OPENAI_MODEL})},45000);
+      if(!response.ok)throw new Error('Model unavailable');return data;
     }
   };
 }

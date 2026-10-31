@@ -79,3 +79,12 @@ Update this README's migration/command/compatibility entries and the [root chang
 [31 October findings](../docs/BACKEND_SECURITY_REVIEW.md): payment/webhook, AI and inspection now use a shared bounded reader with a 15-second total read deadline, existing byte limits, 16,384-chunk limit and cancellation that cannot hold the error response open. AI quota requires explicit boolean true. These are handler source fixes, requiring coordinated redeployment; no additional SQL migration is prepared or applied.
 
 Fresh anonymous hosted probes reject students/fees/orders/payment requests with 401, but **AI and inspect-document return 404**. Auth health is reachable. No current hosted AI execution, successful new inspection upload, captured payment or authenticated write/Realtime acceptance is established. The source-level CI pass does not close these integration gaps.
+
+
+## Coordinated release preparation from f7b881d1
+
+Follow the [ordered release and acceptance plan](../docs/DEMO_COORDINATED_RELEASE.md), not a blanket migration replay. The prepared [SELECT-only inventory](release_preflight_readonly.sql) captures schema fingerprints and publication preservation evidence; missing migration-history rows do not imply unapplied DDL. Local `release-preflight.test.mjs` generates stage-19–24 comparison snapshots with non-empty published fixtures and unchanged existing policies.
+
+The exact read-only operator command is `python .\supabase\release_inspect.py` from the repository root in an interactive local terminal. It requires an existing project operator token with project/function/database read rights, entered at a hidden prompt; no token is saved or printed, and the script never applies/deploys/repairs anything. If the read-only SQL role cannot confirm the synthetic marker, run the prepared SELECT in the authorized project's SQL editor. Current operator login/schema/function versions remain blocked; historical capability 19 is not fresh reconciliation.
+
+The selected server source adds bounded upstream JSON (2 MiB), total fetch/body deadlines with transport abort and non-hanging cancellation. AI remains planned disabled (`REVENEX_AI_ENABLED=false`); no paid configuration is introduced. Existing target probes show exact AI/inspection route `NOT_FOUND`, but absent versus renamed/inactive status cannot be certified without management inventory. No device is connected, so installed-client compatibility and connected acceptance are not claimed.

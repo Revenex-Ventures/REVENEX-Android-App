@@ -5,6 +5,7 @@
 | `write_public_android_config.py` | Write only public Android Supabase configuration from CI variables |
 | `check_secrets.py` | Redacted credential scan, optionally including Git history |
 | `check_apk_boundary.py` | Reject server prompt/private configuration markers in an APK |
+| `prepare_demo_release.py` | Read-only Git source selection, SHA-256 manifest and immutable ignored server export; refuses source drift and performs no hosted operation |
 | `check_docs.py` | Check maintained documentation links |
 | `check_integration_health.py` | Read-only Auth/data/payment/AI/inspect-document reachability; status-only output, no authenticated acceptance |
 | `check_deployed_functions.py` | Read-only unsigned POST probes require HTTP 401 from AI, payments and inspect-document after gated deployment; no provider calls or login |
@@ -28,3 +29,6 @@ For GitHub verification, authenticated `gh run list --branch codex/project-revie
 
 
 Latest probe coverage includes `inspect-document`. On 31 October the payment route rejected anonymous access (401); AI and inspection were unavailable (404). `python scripts/check_integration_health.py` uses only ignored public configuration and writes a sanitized ignored report; its process exit does not certify integration readiness. Review each status and [the security findings](../docs/BACKEND_SECURITY_REVIEW.md), never call 404 successful setup.
+
+
+Release preparation: after committing and verifying source, run `python scripts/prepare_demo_release.py --source HEAD`. It selects a descendant of `f7b881d1`, hashes the actual function/helper/prompt/config/migration files, exports them under ignored `app/build/release/source-<commit>` and emits structured deploy arguments requiring later reconciliation. It does not migrate, deploy, seed, enable AI or infer pending migrations. The separate [operator inventory script](../supabase/release_inspect.py) uses hidden local input and read-only management endpoints. Exact prerequisites, compatibility, failure containment and acceptance gates are in the [coordinated release plan](../docs/DEMO_COORDINATED_RELEASE.md).

@@ -47,7 +47,7 @@ jobs:
       - name: Exercise real Deno entrypoint and server prompt loading
         run: deno test --allow-read=supabase/functions --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,OPENAI_API_KEY,OPENAI_MODEL,REVENEX_AI_ENABLED --allow-net=127.0.0.1 supabase/tests/assistant-entrypoint.test.mjs
       - name: Hosted verification tool regression tests
-        run: python3 -m unittest discover -s supabase/tests -p test_verify_hosted.py
+        run: python3 -m unittest discover -s supabase/tests -p 'test_*.py'
       - name: Schema and row-level security tests
         run: npm test --prefix supabase/tests
       - name: AI and payment handler security tests

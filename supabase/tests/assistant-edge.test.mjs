@@ -12,6 +12,18 @@ test('malformed quota confirmations cannot authorize model work',async()=>{
   assert.equal(calls.length,0);
  }
 });
+test('missing, denied or failed quota and database errors prevent all model calls',async()=>{
+ for(const mode of ['missing','denied','failed','database']){
+  const {deps,calls}=fixture();
+  if(mode==='missing')delete deps.quota;
+  if(mode==='denied')deps.quota=async()=>false;
+  if(mode==='failed')deps.quota=async()=>{throw Error('PRIVATE_QUOTA_DIAGNOSTIC');};
+  if(mode==='database')deps.context=async()=>{throw Error('PRIVATE_DATABASE_DIAGNOSTIC');};
+  const r=await handleAssistantRequest(call({message:'Hello'}),deps);
+  assert.ok([429,503].includes(r.status));assert.equal(calls.length,0);
+  assert.equal((await r.text()).includes('PRIVATE_'),false);
+ }
+});
 test('assistant rejects missing bearer before model call',async()=>{const {deps,calls}=fixture();assert.equal((await handleAssistantRequest(call({message:'Hello'},false),deps)).status,401);assert.equal(calls.length,0);});
 test('assistant rejects forged authorization and language fields',async()=>{for(const field of ['role','school_id','session_id','permitted_student_ids','tool_permissions','language','model','api_key']){const {deps,calls}=fixture();assert.equal((await handleAssistantRequest(call({message:'Hello',[field]:'PRINCIPAL'},true),deps)).status,400);assert.equal(calls.length,0);}});
 test('verified backend context and server prompt reach model only',async()=>{const {deps,calls}=fixture();const response=await handleAssistantRequest(call({message:'Hello'}),deps);assert.equal(response.status,200);const input=calls[0][1];assert.ok(input.instructions.includes('SERVER PROMPT'));assert.ok(input.instructions.includes('demo_2026'));assert.ok(input.instructions.includes('hi'));assert.equal(input.store,false);assert.equal(JSON.stringify(input).includes('verified-token'),false);});
